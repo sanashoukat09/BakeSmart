@@ -1,0 +1,28 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "bakesmart-app",
+          "appId": "1:919183377256:android:7a4eaf848842395ea64cdd",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "bakesmart-app",
+          "configurations": {
+            "android": "1:919183377256:android:7a4eaf848842395ea64cdd"
+          }
+        }
+      }
+    }
+  }
+}

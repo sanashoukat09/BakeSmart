@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "919183377256",
+    "project_id": "bakesmart-app",
+    "storage_bucket": "bakesmart-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:919183377256:android:7a4eaf848842395ea64cdd",
+        "android_client_info": {
+          "package_name": "com.bakesmart.bakesmart"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDN7GQGRreTzVET-dqKFrRjqtQZvKwl-2g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
