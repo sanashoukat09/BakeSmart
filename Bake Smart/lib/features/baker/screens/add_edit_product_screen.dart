@@ -12,6 +12,7 @@ import '../../products/services/cost_calculator_service.dart';
 import '../models/ingredient_model.dart';
 import '../services/inventory_service.dart';
 import 'seller_verification_screen.dart';
+import '../../customer/screens/product_catalogue_screen.dart';
 
 class AddEditProductScreen extends ConsumerStatefulWidget {
   final ProductModel? product;
@@ -235,6 +236,9 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
       } else {
         await service.updateProduct(product, _localImages);
       }
+      
+      // Invalidate catalogue so customer view updates immediately
+      ref.invalidate(catalogueProvider);
       
       if (mounted) Navigator.pop(context);
     } catch (e) {

@@ -17,25 +17,33 @@ class CatalogueState {
   final bool isLoading;
   final bool hasMore;
   final DocumentSnapshot? lastDoc;
+  final String? errorMessage;
 
   CatalogueState({
     this.products = const [],
     this.isLoading = false,
     this.hasMore = true,
     this.lastDoc,
+    this.errorMessage,
   });
+
+  // Sentinel so callers can explicitly pass null to clear lastDoc/errorMessage.
+  // Using a named copyWith for lastDoc avoids the "null means keep" antipattern.
+  static const Object _absent = Object();
 
   CatalogueState copyWith({
     List<ProductModel>? products,
     bool? isLoading,
     bool? hasMore,
-    DocumentSnapshot? lastDoc,
+    Object? lastDoc = _absent,
+    Object? errorMessage = _absent,
   }) {
     return CatalogueState(
       products: products ?? this.products,
       isLoading: isLoading ?? this.isLoading,
       hasMore: hasMore ?? this.hasMore,
-      lastDoc: lastDoc ?? this.lastDoc,
+      lastDoc: identical(lastDoc, _absent) ? this.lastDoc : lastDoc as DocumentSnapshot?,
+      errorMessage: identical(errorMessage, _absent) ? this.errorMessage : errorMessage as String?,
     );
   }
 }
@@ -47,9 +55,10 @@ class CatalogueNotifier extends Notifier<CatalogueState> {
 
   @override
   CatalogueState build() {
-    // We intentionally delay fetching so UI renders quickly, or we can fetch synchronously
+    // Start with isLoading: true so the UI shows a spinner immediately instead
+    // of flashing "No products found" before the first fetch completes.
     Future.microtask(() => fetchFirstPage());
-    return CatalogueState();
+    return CatalogueState(isLoading: true);
   }
 
   void updateFilter(String newFilter) {
@@ -63,7 +72,8 @@ class CatalogueNotifier extends Notifier<CatalogueState> {
   }
 
   Future<void> fetchFirstPage() async {
-    state = state.copyWith(isLoading: true, products: [], lastDoc: null, hasMore: true);
+    // Passing null for lastDoc and errorMessage explicitly clears them (sentinel pattern).
+    state = state.copyWith(isLoading: true, products: [], lastDoc: null, hasMore: true, errorMessage: null);
     await _fetchData(isNextPage: false);
   }
 
@@ -74,18 +84,19 @@ class CatalogueNotifier extends Notifier<CatalogueState> {
   }
 
   Future<void> _fetchData({required bool isNextPage}) async {
-    Query query = FirebaseFirestore.instance
-        .collection('products')
-        .orderBy('createdAt', descending: true);
+    // Build the query. WHERE clauses must come before orderBy for Firestore
+    // to correctly use composite indexes.
+    Query query = FirebaseFirestore.instance.collection('products');
 
-    // Apply Filter Chips natively
-    if (_currentFilter != 'All') {
-      if (_currentFilter == 'Surplus Deals') {
-        query = query.where('isSurplus', isEqualTo: true);
-      } else {
-        query = query.where('tags', arrayContains: _currentFilter.toLowerCase());
-      }
+    if (_currentFilter == 'Surplus Deals') {
+      // Requires composite index: isSurplus ASC + createdAt DESC
+      query = query.where('isSurplus', isEqualTo: true);
+    } else if (_currentFilter != 'All') {
+      // Requires composite index: tags ARRAY_CONTAINS + createdAt DESC
+      query = query.where('tags', arrayContains: _currentFilter.toLowerCase());
     }
+
+    query = query.orderBy('createdAt', descending: true);
 
     if (isNextPage && state.lastDoc != null) {
       query = query.startAfterDocument(state.lastDoc!);
@@ -95,14 +106,13 @@ class CatalogueNotifier extends Notifier<CatalogueState> {
 
     try {
       final snapshot = await query.get();
-      
+
       List<ProductModel> fetchedProducts = snapshot.docs
           .map((doc) => ProductModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
-          .where((p) => p.isAvailable) // Filter locally to avoid index requirement
+          .where((p) => p.isAvailable && p.bakerIsVerified) // filter unavailable or unverified products client-side
           .toList();
 
-      // Because Firestore full-text substring search requires Algolia/indexes, 
-      // we filter the returned chunk locally if a search query is active.
+      // Firestore doesn't support full-text substring search; filter locally.
       if (_currentQuery.isNotEmpty) {
         fetchedProducts = fetchedProducts.where((p) =>
             p.name.toLowerCase().contains(_currentQuery) ||
@@ -112,16 +122,22 @@ class CatalogueNotifier extends Notifier<CatalogueState> {
       final newProducts = isNextPage ? [...state.products, ...fetchedProducts] : fetchedProducts;
       final bool hasMore = snapshot.docs.length == _pageSize;
 
+      // Pass null explicitly for lastDoc when empty — the sentinel-based copyWith
+      // correctly distinguishes "omitted" from "set to null", so this resets
+      // the pagination cursor when there are no results.
       state = state.copyWith(
         products: newProducts,
-        lastDoc: snapshot.docs.isNotEmpty ? snapshot.docs.last : state.lastDoc,
+        lastDoc: snapshot.docs.isNotEmpty ? snapshot.docs.last : null,
         hasMore: hasMore,
         isLoading: false,
+        errorMessage: null,
       );
     } catch (e) {
-      // In production we would handle errors cleanly here
-      state = state.copyWith(isLoading: false);
-      debugPrint('Error fetching catalogue: $e');
+      debugPrint('Catalogue fetch error: $e');
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Could not load products. Pull down to retry.',
+      );
     }
   }
 }
@@ -304,9 +320,26 @@ class _ProductCatalogueScreenState extends ConsumerState<ProductCatalogueScreen>
             child: RefreshIndicator(
               onRefresh: () async => catNotifier.fetchFirstPage(),
               color: Colors.brown,
-              child: catState.products.isEmpty && !catState.isLoading
-                  ? const SingleChildScrollView(physics: AlwaysScrollableScrollPhysics(), child: Center(child: Padding(padding: EdgeInsets.all(32), child: Text('No products found matching those criteria.'))))
-                  : GridView.builder(
+              child: catState.errorMessage != null
+                  ? SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.cloud_off, size: 48, color: Colors.grey),
+                              const SizedBox(height: 16),
+                              Text(catState.errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  : catState.products.isEmpty && !catState.isLoading
+                      ? const SingleChildScrollView(physics: AlwaysScrollableScrollPhysics(), child: Center(child: Padding(padding: EdgeInsets.all(32), child: Text('No products found matching those criteria.'))))
+                      : GridView.builder(
                       controller: _scrollController,
                       padding: const EdgeInsets.all(16),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
