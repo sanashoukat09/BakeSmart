@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/services/auth_provider.dart';
 import '../models/order_model.dart';
@@ -11,29 +12,39 @@ final orderServiceProvider = Provider<OrderService>((ref) {
   return OrderService(FirebaseFirestore.instance, ref);
 });
 
+// Uses FirebaseAuth.instance.currentUser directly — NOT ref.watch(authStateProvider).
+// Watching authStateProvider caused the stream to be torn down and recreated on
+// every Firebase Auth token refresh, which made Firestore serve from local cache
+// first (showing stale status), then correct from the server ~2 seconds later.
 final bakerOrdersStreamProvider = StreamProvider<List<OrderModel>>((ref) {
-  final user = ref.watch(authStateProvider).value;
-  if (user == null) return const Stream.empty();
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return const Stream.empty();
+
   return FirebaseFirestore.instance
       .collection('orders')
-      .where('bakerId', isEqualTo: user.uid)
+      .where('bakerId', isEqualTo: uid)
       .snapshots()
       .map((snap) {
-        final list = snap.docs.map((doc) => OrderModel.fromMap(doc.data(), doc.id)).toList();
+        final list = snap.docs
+            .map((doc) => OrderModel.fromMap(doc.data(), doc.id))
+            .toList();
         list.sort((a, b) => b.placedAt.compareTo(a.placedAt));
         return list;
       });
 });
 
 final customerOrdersStreamProvider = StreamProvider<List<OrderModel>>((ref) {
-  final user = ref.watch(authStateProvider).value;
-  if (user == null) return const Stream.empty();
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return const Stream.empty();
+
   return FirebaseFirestore.instance
       .collection('orders')
-      .where('customerId', isEqualTo: user.uid)
+      .where('customerId', isEqualTo: uid)
       .snapshots()
       .map((snap) {
-        final list = snap.docs.map((doc) => OrderModel.fromMap(doc.data(), doc.id)).toList();
+        final list = snap.docs
+            .map((doc) => OrderModel.fromMap(doc.data(), doc.id))
+            .toList();
         list.sort((a, b) => b.placedAt.compareTo(a.placedAt));
         return list;
       });
@@ -56,7 +67,6 @@ class OrderService {
     if (user == null) throw Exception('Must be logged in to place an order.');
     if (items.isEmpty) throw Exception('Cart is empty.');
 
-    // Fetch customer details to embed directly into order natively
     final userDoc = await _firestore.collection('users').doc(user.uid).get();
     if (!userDoc.exists) throw Exception('User Document Missing.');
     final customerName = userDoc.data()?['name'] ?? 'Unknown Customer';
@@ -81,65 +91,80 @@ class OrderService {
       statusHistory: [OrderStatusEvent(status: status, timestamp: now)],
     );
 
-    final batch = _firestore.batch();
-    
-    // Write 1: Set order
-    batch.set(docRef, order.toMap());
+    // Write order first.
+    await docRef.set(order.toMap());
 
-    // Write 2: Notify Baker
-    _ref.read(notificationServiceProvider).sendNotificationWithBatch(
-      batch,
-      recipientId: order.bakerId,
-      title: 'New Order Received! 🥐',
-      body: '$customerName placed an order for ${items.length} items.',
-      type: NotificationType.orderUpdate,
-      referenceId: order.orderId,
-    );
+    // Notify baker separately — if this fails the order is already placed.
+    try {
+      await _ref.read(notificationServiceProvider).sendNotification(
+        recipientId: order.bakerId,
+        title: 'New Order Received! 🥐',
+        body: '$customerName placed an order for ${items.length} items.',
+        type: NotificationType.orderUpdate,
+        referenceId: order.orderId,
+      );
+    } catch (e) {
+      // Notification failure is non-fatal — the order is already committed.
+    }
 
-    await batch.commit();
     return docRef.id;
   }
 
-  Future<void> updateOrderStatus(OrderModel order, String newStatus, {DateTime? estimatedReadyTime}) async {
+  /// Updates the order status in Firestore.
+  /// CRITICAL: The order status write and the customer notification are now
+  /// TWO SEPARATE writes. Previously they were in the same batch — if the
+  /// notification write failed (e.g. missing index, rules error), the ENTIRE
+  /// batch would fail and Firestore would revert the local cache, making the
+  /// order snap back to 'placed' after ~2 seconds. Now only the order write
+  /// is critical; the notification is best-effort.
+  Future<void> updateOrderStatus(
+    OrderModel order,
+    String newStatus, {
+    DateTime? estimatedReadyTime,
+  }) async {
     final now = DateTime.now();
     final newEvent = {
-        'status': newStatus,
-        'timestamp': Timestamp.fromDate(now),
+      'status': newStatus,
+      'timestamp': Timestamp.fromDate(now),
     };
-    
-    final batch = _firestore.batch();
+
     final docRef = _firestore.collection('orders').doc(order.orderId);
 
-    final updates = {
+    final updates = <String, dynamic>{
       'status': newStatus,
       'updatedAt': Timestamp.fromDate(now),
       'statusHistory': FieldValue.arrayUnion([newEvent]),
     };
-    
+
     if (estimatedReadyTime != null) {
       updates['estimatedReadyTime'] = Timestamp.fromDate(estimatedReadyTime);
     }
 
-    batch.update(docRef, updates);
+    // Write 1 — ORDER STATUS. This must succeed. If it throws, the caller
+    // will catch it and show the user an error message.
+    await docRef.update(updates);
 
-    // Notify Customer
-    String body = 'Your order status is now: $newStatus';
-    if (newStatus == 'accepted') body = 'Baker has accepted your order!';
-    if (newStatus == 'ready') body = 'Your order is ready for ${order.fulfillmentType}!';
+    // Write 2 — CUSTOMER NOTIFICATION. Best-effort. A failure here does NOT
+    // revert the order status because it is a separate write.
+    try {
+      String body = 'Your order status is now: $newStatus';
+      if (newStatus == 'accepted') body = 'Baker has accepted your order!';
+      if (newStatus == 'ready') {
+        body = 'Your order is ready for ${order.fulfillmentType}!';
+      }
 
-    _ref.read(notificationServiceProvider).sendNotificationWithBatch(
-      batch,
-      recipientId: order.customerId,
-      title: 'Order Tracking Update',
-      body: body,
-      type: NotificationType.orderUpdate,
-      referenceId: order.orderId,
-    );
-
-    await batch.commit();
+      await _ref.read(notificationServiceProvider).sendNotification(
+        recipientId: order.customerId,
+        title: 'Order Tracking Update',
+        body: body,
+        type: NotificationType.orderUpdate,
+        referenceId: order.orderId,
+      );
+    } catch (e) {
+      // Notification failure is non-fatal — the status update is committed.
+    }
   }
 
-  // Validates items against firestore to ensure isAvailable == true
   Future<List<String>> validateCartAvailability(List<CartItemModel> items) async {
     List<String> unavailableProductIds = [];
     for (var item in items) {

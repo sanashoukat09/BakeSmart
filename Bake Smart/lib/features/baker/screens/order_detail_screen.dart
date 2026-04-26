@@ -1,24 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../customer/models/order_model.dart';
 import '../../customer/services/order_service.dart';
 import 'package:intl/intl.dart';
 
+// OrderDetailScreen now accepts only orderId instead of a full OrderModel
+// snapshot. This prevents stale data from the navigation moment from ever
+// being displayed — the screen derives all state exclusively from the live
+// bakerOrdersStreamProvider stream.
 class OrderDetailScreen extends ConsumerWidget {
-  final OrderModel order;
-  const OrderDetailScreen({super.key, required this.order});
+  final String orderId;
+  const OrderDetailScreen({super.key, required this.orderId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // We observe the stream to keep the order document auto-updated on this screen
     final ordersAsync = ref.watch(bakerOrdersStreamProvider);
 
     return Scaffold(
       backgroundColor: Colors.brown[50],
-      appBar: AppBar(title: Text('Order ${order.orderId.substring(0, 6)}'), backgroundColor: Colors.brown, foregroundColor: Colors.white),
+      appBar: AppBar(
+        title: Text('Order ${orderId.substring(0, 6)}'),
+        backgroundColor: Colors.brown,
+        foregroundColor: Colors.white,
+      ),
       body: ordersAsync.when(
         data: (allOrders) {
-          final activeOrder = allOrders.firstWhere((o) => o.orderId == order.orderId, orElse: () => order);
+          // Safely look up the live order by ID from the stream.
+          // If the order is no longer in the stream (e.g. deleted), show a
+          // friendly error rather than crashing.
+          final matches = allOrders.where((o) => o.orderId == orderId);
+          if (matches.isEmpty) {
+            return const Center(child: Text('Order not found.'));
+          }
+          final activeOrder = matches.first;
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -36,12 +50,12 @@ class OrderDetailScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e,s) => const Center(child: Text('Error loading live order')),
-      )
+        error: (e, s) => const Center(child: Text('Error loading live order')),
+      ),
     );
   }
 
-  Widget _buildCustomerCard(OrderModel o) {
+  Widget _buildCustomerCard(activeOrder) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -50,12 +64,12 @@ class OrderDetailScreen extends ConsumerWidget {
           children: [
             const Text('Customer Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const Divider(),
-            Text('Name: ${o.customerName}', style: const TextStyle(fontSize: 16)),
+            Text('Name: ${activeOrder.customerName}', style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 8),
-            Text('Fulfillment: ${o.fulfillmentType.toUpperCase()}', style: TextStyle(color: Colors.brown[700], fontWeight: FontWeight.bold)),
-            if (o.fulfillmentType == 'delivery' && o.deliveryAddress != null) ...[
+            Text('Fulfillment: ${activeOrder.fulfillmentType.toUpperCase()}', style: TextStyle(color: Colors.brown[700], fontWeight: FontWeight.bold)),
+            if (activeOrder.fulfillmentType == 'delivery' && activeOrder.deliveryAddress != null) ...[
               const SizedBox(height: 8),
-              Text('Address: ${o.deliveryAddress}'),
+              Text('Address: ${activeOrder.deliveryAddress}'),
             ]
           ],
         ),
@@ -63,7 +77,7 @@ class OrderDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildItemsList(OrderModel o) {
+  Widget _buildItemsList(activeOrder) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -72,7 +86,7 @@ class OrderDetailScreen extends ConsumerWidget {
           children: [
             const Text('Order Items', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const Divider(),
-            ...o.items.map((item) => Padding(
+            ...activeOrder.items.map((item) => Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -87,7 +101,7 @@ class OrderDetailScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Total:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                Text('\$${o.totalAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.brown)),
+                Text('\$${activeOrder.totalAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.brown)),
               ],
             )
           ],
@@ -96,32 +110,47 @@ class OrderDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatusActionBox(BuildContext context, WidgetRef ref, OrderModel o) {
-    String nextLabel = '';
-    String nextStatus = '';
-    
-    if (o.status == 'placed') {
+  Widget _buildStatusActionBox(BuildContext context, WidgetRef ref, activeOrder) {
+    // All button logic is driven by activeOrder.status from the live stream.
+    // No local variable. No optimistic state.
+    if (activeOrder.status == 'placed') {
       return Row(
         children: [
-          Expanded(child: OutlinedButton(onPressed: () => ref.read(orderServiceProvider).updateOrderStatus(o, 'rejected'), style: OutlinedButton.styleFrom(foregroundColor: Colors.red), child: const Text('Reject'))),
+          Expanded(child: OutlinedButton(
+            onPressed: () => ref.read(orderServiceProvider).updateOrderStatus(activeOrder, 'rejected'),
+            style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Reject'),
+          )),
           const SizedBox(width: 16),
-          Expanded(child: ElevatedButton(onPressed: () => ref.read(orderServiceProvider).updateOrderStatus(o, 'accepted'), style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white), child: const Text('Accept'))),
+          Expanded(child: ElevatedButton(
+            onPressed: () => ref.read(orderServiceProvider).updateOrderStatus(activeOrder, 'accepted'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+            child: const Text('Accept'),
+          )),
         ],
       );
-    } else if (o.status == 'accepted') { nextLabel = 'Mark as Preparing'; nextStatus = 'preparing'; }
-    else if (o.status == 'preparing') { nextLabel = 'Mark as Ready'; nextStatus = 'ready'; }
-    else if (o.status == 'ready') { nextLabel = 'Mark as Delivered'; nextStatus = 'delivered'; }
-    
+    }
+
+    String nextLabel = '';
+    String nextStatus = '';
+    if (activeOrder.status == 'accepted') { nextLabel = 'Mark as Preparing'; nextStatus = 'preparing'; }
+    else if (activeOrder.status == 'preparing') { nextLabel = 'Mark as Ready'; nextStatus = 'ready'; }
+    else if (activeOrder.status == 'ready') { nextLabel = 'Mark as Delivered'; nextStatus = 'delivered'; }
+
     if (nextLabel.isEmpty) return const SizedBox.shrink();
 
     return ElevatedButton(
-      onPressed: () => ref.read(orderServiceProvider).updateOrderStatus(o, nextStatus),
-      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), backgroundColor: Colors.brown, foregroundColor: Colors.white),
+      onPressed: () => ref.read(orderServiceProvider).updateOrderStatus(activeOrder, nextStatus),
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        backgroundColor: Colors.brown,
+        foregroundColor: Colors.white,
+      ),
       child: Text(nextLabel, style: const TextStyle(fontSize: 16)),
     );
   }
 
-  Widget _buildTimeline(OrderModel o) {
+  Widget _buildTimeline(activeOrder) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -130,7 +159,7 @@ class OrderDetailScreen extends ConsumerWidget {
           children: [
             const Text('Status History', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const Divider(),
-            ...o.statusHistory.map((history) => Padding(
+            ...activeOrder.statusHistory.map((history) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Row(
                 children: [

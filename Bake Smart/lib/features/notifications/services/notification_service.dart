@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/services/auth_provider.dart';
 import '../models/notification_model.dart';
@@ -8,29 +9,38 @@ final notificationServiceProvider = Provider<NotificationService>((ref) {
 });
 
 final unreadNotificationsCountProvider = StreamProvider<int>((ref) {
-  final user = ref.watch(authStateProvider).value;
-  if (user == null) return Stream.value(0);
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return Stream.value(0);
 
+  // Only filter by recipientId — no compound query, no index required.
+  // We count unread client-side to avoid needing a composite index.
   return ref.watch(firestoreProvider)
       .collection('notifications')
-      .where('recipientId', isEqualTo: user.uid)
-      .where('isRead', isEqualTo: false)
+      .where('recipientId', isEqualTo: uid)
       .snapshots()
-      .map((snapshot) => snapshot.docs.length);
+      .map((snapshot) =>
+          snapshot.docs.where((d) => d.data()['isRead'] == false).length);
 });
 
 final notificationsStreamProvider = StreamProvider<List<NotificationModel>>((ref) {
-  final user = ref.watch(authStateProvider).value;
-  if (user == null) return Stream.value([]);
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return Stream.value([]);
 
+  // No orderBy on the server — sort client-side to avoid requiring a
+  // composite index on (recipientId, createdAt). This index can be added
+  // later via Firebase Console for better performance at scale.
   return ref.watch(firestoreProvider)
       .collection('notifications')
-      .where('recipientId', isEqualTo: user.uid)
-      .orderBy('createdAt', descending: true)
+      .where('recipientId', isEqualTo: uid)
       .snapshots()
-      .map((snapshot) => snapshot.docs
-          .map((doc) => NotificationModel.fromMap(doc.data(), doc.id))
-          .toList());
+      .map((snapshot) {
+        final list = snapshot.docs
+            .map((doc) => NotificationModel.fromMap(doc.data(), doc.id))
+            .toList();
+        // Sort newest-first client-side.
+        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return list;
+      });
 });
 
 class NotificationService {
@@ -60,7 +70,28 @@ class NotificationService {
     batch.set(docRef, notification.toMap());
   }
 
-  /// Mark all notifications as read for a specific user in a batch
+  /// Send a standalone notification (not in a batch)
+  Future<void> sendNotification({
+    required String recipientId,
+    required String title,
+    required String body,
+    required NotificationType type,
+    required String referenceId,
+  }) async {
+    final docRef = _firestore.collection('notifications').doc();
+    final notification = NotificationModel(
+      notificationId: docRef.id,
+      recipientId: recipientId,
+      title: title,
+      body: body,
+      type: type,
+      referenceId: referenceId,
+      createdAt: DateTime.now(),
+    );
+    await docRef.set(notification.toMap());
+  }
+
+  /// Mark all notifications as read for a specific user
   Future<void> markAllAsRead(String userId) async {
     final query = await _firestore
         .collection('notifications')

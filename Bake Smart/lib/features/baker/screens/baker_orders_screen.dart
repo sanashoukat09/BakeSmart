@@ -3,37 +3,63 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../customer/services/order_service.dart';
 import 'order_detail_screen.dart';
 
-class BakerOrdersScreen extends ConsumerWidget {
+// BakerOrdersScreen is a ConsumerStatefulWidget so that the TabController
+// is created once in initState() and NEVER recreated on stream rebuilds.
+// Previously it was a ConsumerWidget, which meant every Firestore emission
+// triggered build(), re-creating DefaultTabController and resetting to tab 0.
+// Track which order IDs are currently being updated to show a processing indicator
+final orderProcessingProvider = StateProvider.family<bool, String>((ref, orderId) => false);
+
+class BakerOrdersScreen extends ConsumerStatefulWidget {
   const BakerOrdersScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        backgroundColor: Colors.brown[50],
-        appBar: AppBar(
-          title: const Text('Order Management'),
-          backgroundColor: Colors.brown,
-          foregroundColor: Colors.white,
-          bottom: const TabBar(
-            indicatorColor: Colors.white,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white54,
-            tabs: [
-              Tab(text: 'Pending'),
-              Tab(text: 'Active'),
-              Tab(text: 'Completed'),
-            ],
-          ),
-        ),
-        body: const TabBarView(
-          children: [
-            _OrdersList(tabFilter: 'pending'),
-            _OrdersList(tabFilter: 'active'),
-            _OrdersList(tabFilter: 'completed'),
+  ConsumerState<BakerOrdersScreen> createState() => _BakerOrdersScreenState();
+}
+
+class _BakerOrdersScreenState extends ConsumerState<BakerOrdersScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.brown[50],
+      appBar: AppBar(
+        title: const Text('Order Management'),
+        backgroundColor: Colors.brown,
+        foregroundColor: Colors.white,
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.white,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white54,
+          tabs: const [
+            Tab(text: 'Pending'),
+            Tab(text: 'Active'),
+            Tab(text: 'Completed'),
           ],
         ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: const [
+          _OrdersList(tabFilter: 'pending'),
+          _OrdersList(tabFilter: 'active'),
+          _OrdersList(tabFilter: 'completed'),
+        ],
       ),
     );
   }
@@ -75,14 +101,41 @@ class _OrdersList extends ConsumerWidget {
           itemCount: filteredOrders.length,
           itemBuilder: (ctx, i) {
             final order = filteredOrders[i];
-            
-            Widget actionButtons = const SizedBox.shrink();
-            if (tabFilter == 'pending') {
+
+            final isProcessing = ref.watch(orderProcessingProvider(order.orderId));
+
+            // Helper: await the status update and show any error as a snackbar.
+            Future<void> doUpdate(String newStatus) async {
+              ref.read(orderProcessingProvider(order.orderId).notifier).state = true;
+              try {
+                await ref.read(orderServiceProvider).updateOrderStatus(order, newStatus);
+              } catch (e) {
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to update order: $e'),
+                      backgroundColor: Colors.red[700],
+                    ),
+                  );
+                }
+              } finally {
+                ref.read(orderProcessingProvider(order.orderId).notifier).state = false;
+              }
+            }
+
+            if (isProcessing) {
+              actionButtons = const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              );
+            } else if (order.status == 'placed') {
               actionButtons = Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => ref.read(orderServiceProvider).updateOrderStatus(order, 'rejected'),
+                      onPressed: () => doUpdate('rejected'),
                       style: OutlinedButton.styleFrom(foregroundColor: Colors.red, side: const BorderSide(color: Colors.red)),
                       child: const Text('Reject'),
                     )
@@ -90,14 +143,14 @@ class _OrdersList extends ConsumerWidget {
                   const SizedBox(width: 16),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () => ref.read(orderServiceProvider).updateOrderStatus(order, 'accepted'),
+                      onPressed: () => doUpdate('accepted'),
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
                       child: const Text('Accept'),
                     )
                   ),
                 ],
               );
-            } else if (tabFilter == 'active') {
+            } else if (['accepted', 'preparing', 'ready'].contains(order.status)) {
               String nextLabel = '';
               String nextStatus = '';
               if (order.status == 'accepted') { nextLabel = 'Mark as Preparing'; nextStatus = 'preparing'; }
@@ -107,7 +160,7 @@ class _OrdersList extends ConsumerWidget {
               actionButtons = SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => ref.read(orderServiceProvider).updateOrderStatus(order, nextStatus),
+                  onPressed: () => doUpdate(nextStatus),
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.brown, foregroundColor: Colors.white),
                   child: Text(nextLabel),
                 ),
@@ -115,7 +168,9 @@ class _OrdersList extends ConsumerWidget {
             }
 
             return GestureDetector(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OrderDetailScreen(order: order))),
+              // Pass only orderId — OrderDetailScreen will look up the live
+              // order from the stream instead of using a stale snapshot.
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OrderDetailScreen(orderId: order.orderId))),
               child: Card(
                 elevation: 2,
                 margin: const EdgeInsets.only(bottom: 16),
