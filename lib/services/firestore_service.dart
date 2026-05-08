@@ -68,6 +68,16 @@ class FirestoreService {
     return doc.exists;
   }
 
+  // Check if email is already registered
+  Future<bool> isEmailRegistered(String email) async {
+    final snapshot = await _db
+        .collection(AppConstants.usersCollection)
+        .where('email', isEqualTo: email.trim())
+        .limit(1)
+        .get();
+    return snapshot.docs.isNotEmpty;
+  }
+
   // Get baker public profile by ID
   Future<UserModel?> getBakerProfile(String bakerId) async {
     return getUser(bakerId);

@@ -132,6 +132,12 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
   Future<String?> sendPasswordReset(String email) async {
     state = const AsyncValue.loading();
     try {
+      final isRegistered = await _firestoreService.isEmailRegistered(email);
+      if (!isRegistered) {
+        state = const AsyncValue.data(null);
+        return 'No account found with this email address.';
+      }
+      
       await _authService.sendPasswordResetEmail(email);
       state = const AsyncValue.data(null);
       return null;
