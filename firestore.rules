@@ -1,0 +1,67 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users: can read own doc, baker storefronts are public
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Products: bakers can write own, all auth users can read
+    match /products/{productId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if request.auth != null
+        && request.auth.uid == resource.data.bakerId;
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.bakerId;
+    }
+
+    // Ingredients: only owning baker can read/write
+    match /ingredients/{ingredientId} {
+      allow read, write: if request.auth != null
+        && request.auth.uid == resource.data.bakerId;
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.bakerId;
+    }
+
+    // Orders: baker or customer involved can read/write
+    match /orders/{orderId} {
+      allow read: if request.auth != null
+        && (request.auth.uid == resource.data.bakerId
+         || request.auth.uid == resource.data.customerId);
+      allow create: if request.auth != null;
+      allow update: if request.auth != null
+        && (request.auth.uid == resource.data.bakerId
+         || request.auth.uid == resource.data.customerId);
+    }
+
+    // Reviews: public read, only authenticated writers after delivery
+    match /reviews/{reviewId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.customerId;
+    }
+
+    // Surplus: public read, only baker can write
+    match /surplusItems/{itemId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.auth.uid == resource.data.bakerId;
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.bakerId;
+    }
+
+    // Wishlists: only owning customer
+    match /wishlists/{wishlistId} {
+      allow read, write: if request.auth != null
+        && request.auth.uid == resource.data.customerId;
+    }
+
+    // Delivery schedules: baker can manage own
+    match /deliverySchedules/{scheduleId} {
+      allow read, write: if request.auth != null
+        && request.auth.uid == resource.data.bakerId;
+    }
+  }
+}

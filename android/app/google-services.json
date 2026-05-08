@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "74225525286",
+    "project_id": "bakesmart-5efda",
+    "storage_bucket": "bakesmart-5efda.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:74225525286:android:5b595a2663d4ab18183ce7",
+        "android_client_info": {
+          "package_name": "com.bakesmart.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAQBGu3cMgwB8S4lUdsmc32b6ASqnxZUag"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
