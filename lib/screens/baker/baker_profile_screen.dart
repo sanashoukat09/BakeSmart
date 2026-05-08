@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/constants/app_constants.dart';
@@ -7,6 +8,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/cloudinary_service.dart';
 import '../../core/theme/baker_theme.dart';
 import '../../widgets/baker/baker_bottom_nav.dart';
+import '../../core/utils/validation_util.dart';
 
 
 class BakerProfileScreen extends ConsumerStatefulWidget {
@@ -23,6 +25,7 @@ class _BakerProfileScreenState extends ConsumerState<BakerProfileScreen> {
   final _phoneController = TextEditingController();
   bool _isEditing = false;
   bool _isSaving = false;
+  final _formKey = GlobalKey<FormState>();
   bool _isUploadingImage = false;
   double _uploadProgress = 0;
   bool _notificationsEnabled = true;
@@ -53,6 +56,8 @@ class _BakerProfileScreenState extends ConsumerState<BakerProfileScreen> {
   }
 
   Future<void> _saveProfile(String uid) async {
+    if (!_formKey.currentState!.validate()) return;
+    
     setState(() => _isSaving = true);
     await ref.read(firestoreServiceProvider).updateUser(uid, {
       'bakeryName': _bakeryNameController.text.trim(),
@@ -146,12 +151,10 @@ class _BakerProfileScreenState extends ConsumerState<BakerProfileScreen> {
           bottomNavigationBar: const BakerBottomNav(currentIndex: 4),
           appBar: AppBar(
             backgroundColor: BakerTheme.background,
+            elevation: 0,
+            centerTitle: false,
             title: const Text('Profile',
                 style: TextStyle(color: BakerTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w700)),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: BakerTheme.textPrimary),
-              onPressed: () => Navigator.pop(context),
-            ),
 
             actions: [
               if (!_isEditing)
@@ -178,11 +181,14 @@ class _BakerProfileScreenState extends ConsumerState<BakerProfileScreen> {
                 ),
             ],
           ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+          body: Form(
+            key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 // Avatar section
                 Center(
                   child: Column(
@@ -318,6 +324,7 @@ class _BakerProfileScreenState extends ConsumerState<BakerProfileScreen> {
                   isEditing: _isEditing,
                   icon: Icons.phone_outlined,
                   keyboardType: TextInputType.phone,
+                  validator: ValidationUtil.validatePhoneNumber,
                 ),
                 const SizedBox(height: 12),
                 _ProfileField(
@@ -578,7 +585,8 @@ class _BakerProfileScreenState extends ConsumerState<BakerProfileScreen> {
               ],
             ),
           ),
-        );
+        ),
+      );
       },
     );
   }
@@ -609,6 +617,7 @@ class _ProfileField extends StatelessWidget {
   final IconData icon;
   final int maxLines;
   final TextInputType? keyboardType;
+  final String? Function(String?)? validator;
 
   const _ProfileField({
     required this.label,
@@ -617,6 +626,7 @@ class _ProfileField extends StatelessWidget {
     required this.icon,
     this.maxLines = 1,
     this.keyboardType,
+    this.validator,
   });
 
   @override
@@ -666,6 +676,10 @@ class _ProfileField extends StatelessWidget {
       controller: controller,
       maxLines: maxLines,
       keyboardType: keyboardType,
+      validator: validator,
+      inputFormatters: keyboardType == TextInputType.phone
+          ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9+]'))]
+          : null,
       style: const TextStyle(color: BakerTheme.textPrimary, fontSize: 14),
       decoration: InputDecoration(
         labelText: label,

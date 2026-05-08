@@ -7,6 +7,8 @@ import '../../providers/auth_provider.dart';
 import '../../models/order_model.dart';
 import '../../core/router/app_router.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/services.dart';
+import '../../core/utils/validation_util.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -233,11 +235,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               TextFormField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
+                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9+]'))],
                 decoration: InputDecoration(
                   hintText: '03xx xxxxxxx',
                   fillColor: Colors.white,
                 ),
-                validator: (v) => v!.isEmpty ? 'Required' : null,
+                validator: ValidationUtil.validatePhoneNumber,
               ),
               const SizedBox(height: 20),
 

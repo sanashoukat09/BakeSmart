@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/router/app_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/theme/baker_theme.dart';
+import '../../core/utils/validation_util.dart';
 
 
 class BakerOnboardingScreen extends ConsumerStatefulWidget {
@@ -20,6 +22,7 @@ class _BakerOnboardingScreenState
   final PageController _pageController = PageController();
   int _currentPage = 0;
   bool _isLoading = false;
+  final _formKeyPage1 = GlobalKey<FormState>();
 
   // Page 1 — Bakery Info
   final _bakeryNameController = TextEditingController();
@@ -46,6 +49,10 @@ class _BakerOnboardingScreenState
   }
 
   void _nextPage() {
+    if (_currentPage == 0) {
+      if (!_formKeyPage1.currentState!.validate()) return;
+    }
+
     if (_currentPage < 2) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
@@ -191,6 +198,7 @@ class _BakerOnboardingScreenState
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
                   _Page1(
+                    formKey: _formKeyPage1,
                     bakeryNameController: _bakeryNameController,
                     locationController: _locationController,
                     phoneController: _phoneController,
@@ -294,6 +302,7 @@ class _BakerOnboardingScreenState
 
 // ─── Page 1: Bakery Info ──────────────────────────────────────
 class _Page1 extends StatelessWidget {
+  final GlobalKey<FormState> formKey;
   final TextEditingController bakeryNameController;
   final TextEditingController locationController;
   final TextEditingController phoneController;
@@ -301,6 +310,7 @@ class _Page1 extends StatelessWidget {
   final VoidCallback onChanged;
 
   const _Page1({
+    required this.formKey,
     required this.bakeryNameController,
     required this.locationController,
     required this.phoneController,
@@ -312,58 +322,63 @@ class _Page1 extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Set up your\nbakery 🏪",
-            style: TextStyle(
-              color: BakerTheme.textPrimary,
-              fontSize: 30,
-              fontWeight: FontWeight.w700,
-              height: 1.2,
+      child: Form(
+        key: formKey,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Set up your\nbakery 🏪",
+              style: TextStyle(
+                color: BakerTheme.textPrimary,
+                fontSize: 30,
+                fontWeight: FontWeight.w700,
+                height: 1.2,
+              ),
             ),
-
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'This is how your clients will find your bakery.',
-            style: TextStyle(color: BakerTheme.textSecondary, fontSize: 15),
-
-          ),
-          const SizedBox(height: 32),
-          _OnboardingField(
-            controller: bakeryNameController,
-            label: 'Bakery name *',
-            hint: "e.g. Zara's Sweet Kitchen",
-            icon: Icons.store_rounded,
-            onChanged: (_) => onChanged(),
-          ),
-          const SizedBox(height: 16),
-          _OnboardingField(
-            controller: locationController,
-            label: 'Location / City *',
-            hint: 'e.g. Lahore, DHA Phase 5',
-            icon: Icons.location_on_outlined,
-            onChanged: (_) => onChanged(),
-          ),
-          const SizedBox(height: 16),
-          _OnboardingField(
-            controller: phoneController,
-            label: 'Phone number',
-            hint: '+92 300 0000000',
-            icon: Icons.phone_outlined,
-            keyboardType: TextInputType.phone,
-          ),
-          const SizedBox(height: 16),
-          _OnboardingField(
-            controller: emailController,
-            label: 'Contact email (optional)',
-            hint: 'orders@yourbakery.com',
-            icon: Icons.email_outlined,
-            keyboardType: TextInputType.emailAddress,
-          ),
-        ],
+            const SizedBox(height: 8),
+            const Text(
+              'This is how your clients will find your bakery.',
+              style: TextStyle(color: BakerTheme.textSecondary, fontSize: 15),
+            ),
+            const SizedBox(height: 32),
+            _OnboardingField(
+              controller: bakeryNameController,
+              label: 'Bakery name *',
+              hint: "e.g. Zara's Sweet Kitchen",
+              icon: Icons.store_rounded,
+              onChanged: (_) => onChanged(),
+              validator: (v) => v!.isEmpty ? 'Required' : null,
+            ),
+            const SizedBox(height: 16),
+            _OnboardingField(
+              controller: locationController,
+              label: 'Location / City *',
+              hint: 'e.g. Lahore, DHA Phase 5',
+              icon: Icons.location_on_outlined,
+              onChanged: (_) => onChanged(),
+              validator: (v) => v!.isEmpty ? 'Required' : null,
+            ),
+            const SizedBox(height: 16),
+            _OnboardingField(
+              controller: phoneController,
+              label: 'Phone number',
+              hint: '+92 300 0000000',
+              icon: Icons.phone_outlined,
+              keyboardType: TextInputType.phone,
+              validator: ValidationUtil.validatePhoneNumber,
+            ),
+            const SizedBox(height: 16),
+            _OnboardingField(
+              controller: emailController,
+              label: 'Contact email (optional)',
+              hint: 'orders@yourbakery.com',
+              icon: Icons.email_outlined,
+              keyboardType: TextInputType.emailAddress,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -601,6 +616,7 @@ class _OnboardingField extends StatelessWidget {
   final IconData icon;
   final TextInputType? keyboardType;
   final void Function(String)? onChanged;
+  final String? Function(String?)? validator;
 
   const _OnboardingField({
     required this.controller,
@@ -609,6 +625,7 @@ class _OnboardingField extends StatelessWidget {
     required this.icon,
     this.keyboardType,
     this.onChanged,
+    this.validator,
   });
 
   @override
@@ -617,6 +634,10 @@ class _OnboardingField extends StatelessWidget {
       controller: controller,
       keyboardType: keyboardType,
       onChanged: onChanged,
+      validator: validator,
+      inputFormatters: keyboardType == TextInputType.phone
+          ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9+]'))]
+          : null,
       style: const TextStyle(color: BakerTheme.textPrimary, fontSize: 15),
 
       decoration: InputDecoration(

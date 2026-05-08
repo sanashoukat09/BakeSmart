@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/router/app_router.dart';
+import '../../core/utils/validation_util.dart';
 
 class CustomerProfileScreen extends ConsumerStatefulWidget {
   const CustomerProfileScreen({super.key});
@@ -793,33 +794,44 @@ class _CustomerProfileScreenState
   }
 
   void _showAddAddressDialog(String uid, List<Map<String, dynamic>> currentAddresses) {
+    final formKey = GlobalKey<FormState>();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Add New Address'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _addressNameController,
-              decoration: const InputDecoration(labelText: 'Label (e.g. Home, Work)'),
-            ),
-            TextField(
-              controller: _addressDetailController,
-              decoration: const InputDecoration(labelText: 'Full Address'),
-              maxLines: 2,
-            ),
-            TextField(
-              controller: _phoneController,
-              decoration: const InputDecoration(labelText: 'Contact Phone'),
-              keyboardType: TextInputType.phone,
-            ),
-          ],
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _addressNameController,
+                decoration: const InputDecoration(labelText: 'Label (e.g. Home, Work)'),
+                validator: (v) => v!.isEmpty ? 'Required' : null,
+              ),
+              TextFormField(
+                controller: _addressDetailController,
+                decoration: const InputDecoration(labelText: 'Full Address'),
+                maxLines: 2,
+                validator: (v) => v!.isEmpty ? 'Required' : null,
+              ),
+              TextFormField(
+                controller: _phoneController,
+                decoration: const InputDecoration(labelText: 'Contact Phone'),
+                keyboardType: TextInputType.phone,
+                validator: ValidationUtil.validatePhoneNumber,
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
-            onPressed: () => _addAddress(uid, currentAddresses),
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                _addAddress(uid, currentAddresses);
+              }
+            },
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFC2410C), foregroundColor: Colors.white),
             child: const Text('Add Address'),
           ),
