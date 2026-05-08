@@ -70,67 +70,14 @@ class AppRoutes {
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(firebaseAuthStateProvider);
-  final currentUser = ref.watch(currentUserProvider);
+  // Use ref.read instead of ref.watch to ensure this provider only runs ONCE.
+  // This keeps the GoRouter instance stable across the entire app lifecycle.
+  final notifier = ref.read(routerNotifierProvider);
 
   return GoRouter(
     initialLocation: AppRoutes.splash,
-    refreshListenable: GoRouterRefreshStream(
-      ref.watch(firebaseAuthStateProvider.stream),
-    ),
-    redirect: (context, state) {
-      final isLoading = authState.isLoading || currentUser.isLoading;
-      if (isLoading) return null;
-
-      final firebaseUser = authState.valueOrNull;
-      final isLoggedIn = firebaseUser != null;
-      final isAuthRoute = state.matchedLocation == AppRoutes.login ||
-          state.matchedLocation == AppRoutes.register ||
-          state.matchedLocation == AppRoutes.forgotPassword ||
-          state.matchedLocation == AppRoutes.splash;
-
-      final user = currentUser.valueOrNull;
-
-      // Special handling for Splash screen to ensure we move forward
-      if (state.matchedLocation == AppRoutes.splash) {
-        if (!isLoggedIn) return AppRoutes.login;
-        if (user != null) {
-          if (user.isBaker) {
-            return user.onboardingComplete ? AppRoutes.bakerDashboard : AppRoutes.bakerOnboarding;
-          } else {
-            return user.onboardingComplete ? AppRoutes.customerHome : AppRoutes.customerOnboarding;
-          }
-        }
-        // If logged in but user doc is null, wait or redirect to login/onboarding
-        // For now, if loading is done and user is still null, go to login (inconsistent state)
-        if (!currentUser.isLoading) return AppRoutes.login;
-        return null;
-      }
-
-      if (!isLoggedIn && !isAuthRoute) return AppRoutes.login;
-      if (!isLoggedIn) return null;
-      if (user == null) return null;
-
-
-      // Already on auth route but logged in → redirect to correct home
-      if (isAuthRoute) {
-        if (user.isBaker) {
-          return user.onboardingComplete ? AppRoutes.bakerDashboard : AppRoutes.bakerOnboarding;
-        } else {
-          return user.onboardingComplete ? AppRoutes.customerHome : AppRoutes.customerOnboarding;
-        }
-      }
-
-      // Role-based access control (Basic)
-      if (state.matchedLocation.startsWith('/baker') && !user.isBaker) {
-        return AppRoutes.customerHome;
-      }
-      if (state.matchedLocation.startsWith('/customer') && !user.isCustomer) {
-        return AppRoutes.bakerDashboard;
-      }
-
-      return null;
-    },
+    refreshListenable: notifier,
+    redirect: (context, state) => notifier.redirect(context, state),
     routes: [
       GoRoute(
         path: AppRoutes.splash,
@@ -276,6 +223,96 @@ final routerProvider = Provider<GoRouter>((ref) {
     ),
   );
 });
+
+final routerNotifierProvider = Provider<RouterNotifier>((ref) {
+  return RouterNotifier(ref);
+});
+
+class RouterNotifier extends ChangeNotifier {
+  final Ref _ref;
+
+  RouterNotifier(this._ref) {
+    _ref.listen(firebaseAuthStateProvider, (_, __) => notifyListeners());
+    _ref.listen(
+      currentUserProvider.select((userAsync) {
+        final user = userAsync.valueOrNull;
+        if (user == null) return null;
+        return '${user.role}_${user.onboardingComplete}';
+      }),
+      (_, __) => notifyListeners(),
+    );
+  }
+
+  String? redirect(BuildContext context, GoRouterState state) {
+    final authState = _ref.read(firebaseAuthStateProvider);
+    final currentUser = _ref.read(currentUserProvider);
+
+    final isLoading = authState.isLoading || currentUser.isLoading;
+    if (isLoading) return null;
+
+    final firebaseUser = authState.valueOrNull;
+    final isLoggedIn = firebaseUser != null;
+    final isAuthRoute = state.matchedLocation == AppRoutes.login ||
+        state.matchedLocation == AppRoutes.register ||
+        state.matchedLocation == AppRoutes.forgotPassword ||
+        state.matchedLocation == AppRoutes.splash;
+
+    final user = currentUser.valueOrNull;
+
+    // DEFENSIVE: If already on a role-appropriate screen, do NOT redirect anywhere.
+    // This stops the "jump to dashboard" when profile data (like notifications) updates.
+    if (user != null) {
+      if (user.isBaker && state.matchedLocation.startsWith('/baker')) {
+        return null;
+      }
+      if (user.isCustomer && state.matchedLocation.startsWith('/customer')) {
+        return null;
+      }
+    }
+
+    if (state.matchedLocation == AppRoutes.splash) {
+      if (!isLoggedIn) return AppRoutes.login;
+      if (user != null) {
+        if (user.isBaker) {
+          return user.onboardingComplete
+              ? AppRoutes.bakerDashboard
+              : AppRoutes.bakerOnboarding;
+        } else {
+          return user.onboardingComplete
+              ? AppRoutes.customerHome
+              : AppRoutes.customerOnboarding;
+        }
+      }
+      if (!currentUser.isLoading) return AppRoutes.login;
+      return null;
+    }
+
+    if (!isLoggedIn && !isAuthRoute) return AppRoutes.login;
+    if (!isLoggedIn) return null;
+    if (user == null) return null;
+
+    if (isAuthRoute) {
+      if (user.isBaker) {
+        return user.onboardingComplete
+            ? AppRoutes.bakerDashboard
+            : AppRoutes.bakerOnboarding;
+      } else {
+        return user.onboardingComplete
+            ? AppRoutes.customerHome
+            : AppRoutes.customerOnboarding;
+      }
+    }
+
+    if (state.matchedLocation.startsWith('/baker') && !user.isBaker) {
+      return AppRoutes.customerHome;
+    }
+    if (state.matchedLocation.startsWith('/customer') && !user.isCustomer) {
+      return AppRoutes.bakerDashboard;
+    }
+
+    return null;
+  }
+}
 
 // Helper to make GoRouter work with Riverpod streams
 class GoRouterRefreshStream extends ChangeNotifier {

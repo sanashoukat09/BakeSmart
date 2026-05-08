@@ -60,6 +60,7 @@ class _CustomerProductDetailsScreenState extends ConsumerState<CustomerProductDe
         price: _calculateTotalPrice(product, basePrice: basePrice),
         imageUrl: product.images.isNotEmpty ? product.images.first : null,
         maxQuantity: surplus?.quantity,
+        surplusId: surplus?.id,
         selectedAddOns: _selectedAddOns,
         referencePhotos: photoUrls,
       );

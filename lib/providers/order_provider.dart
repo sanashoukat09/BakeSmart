@@ -55,6 +55,17 @@ class OrderNotifier extends StateNotifier<AsyncValue<void>> {
         }
       }
 
+      if (newStatus == AppConstants.orderCancelled) {
+        final order = await firestore.getOrder(orderId);
+        if (order != null) {
+          for (var item in order.items) {
+            if (item.surplusId != null && item.surplusId!.isNotEmpty) {
+              await firestore.incrementSurplusQuantity(item.surplusId!, item.quantity);
+            }
+          }
+        }
+      }
+
       await firestore.updateOrderStatus(orderId, newStatus);
       state = const AsyncValue.data(null);
     } catch (e, st) {

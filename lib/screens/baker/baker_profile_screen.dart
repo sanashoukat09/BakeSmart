@@ -130,23 +130,19 @@ class _BakerProfileScreenState extends ConsumerState<BakerProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(currentUserProvider);
+    final user = userAsync.valueOrNull;
 
-    return userAsync.when(
-      loading: () => const Scaffold(
+    if (user == null) {
+      return const Scaffold(
         backgroundColor: BakerTheme.background,
         body: Center(
             child: CircularProgressIndicator(color: BakerTheme.secondary)),
-      ),
+      );
+    }
 
-      error: (e, _) => Scaffold(
-          backgroundColor: BakerTheme.background,
-          body: Center(child: Text('$e', style: const TextStyle(color: BakerTheme.textPrimary)))),
+    _populateControllers(user);
 
-      data: (user) {
-        if (user == null) return const SizedBox.shrink();
-        _populateControllers(user);
-
-        return Scaffold(
+    return Scaffold(
           backgroundColor: BakerTheme.background,
           bottomNavigationBar: const BakerBottomNav(currentIndex: 4),
           appBar: AppBar(
@@ -587,8 +583,6 @@ class _BakerProfileScreenState extends ConsumerState<BakerProfileScreen> {
           ),
         ),
       );
-      },
-    );
   }
 }
 

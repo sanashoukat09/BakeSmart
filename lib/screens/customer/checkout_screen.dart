@@ -133,6 +133,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 price: item.price,
                 imageUrl: item.imageUrl,
                 selectedAddOns: item.selectedAddOns,
+                surplusId: item.surplusId,
               ))
           .toList(),
       totalAmount: total,

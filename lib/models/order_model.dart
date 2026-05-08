@@ -97,6 +97,7 @@ class OrderItem {
   final double price;
   final String? imageUrl;
   final List<String> selectedAddOns;
+  final String? surplusId;
 
   OrderItem({
     required this.productId,
@@ -105,6 +106,7 @@ class OrderItem {
     required this.price,
     this.imageUrl,
     this.selectedAddOns = const [],
+    this.surplusId,
   });
 
   factory OrderItem.fromMap(Map<String, dynamic> map) {
@@ -115,6 +117,7 @@ class OrderItem {
       price: (map['price'] ?? 0.0).toDouble(),
       imageUrl: map['imageUrl'],
       selectedAddOns: List<String>.from(map['selectedAddOns'] ?? []),
+      surplusId: map['surplusId'],
     );
   }
 
@@ -126,6 +129,7 @@ class OrderItem {
       'price': price,
       'imageUrl': imageUrl,
       'selectedAddOns': selectedAddOns,
+      'surplusId': surplusId,
     };
   }
 }

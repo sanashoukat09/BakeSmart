@@ -44,6 +44,7 @@ class AppConstants {
   static const String orderReady = 'ready';
   static const String orderDelivered = 'delivered';
   static const String orderRejected = 'rejected';
+  static const String orderCancelled = 'cancelled';
 
   // Product Categories
   static const List<String> productCategories = [

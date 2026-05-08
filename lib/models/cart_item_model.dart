@@ -8,6 +8,7 @@ class CartItemModel {
   final int? maxQuantity;
   final List<String> selectedAddOns;
   final List<String> referencePhotos;
+  final String? surplusId;
 
   CartItemModel({
     required this.productId,
@@ -19,6 +20,7 @@ class CartItemModel {
     this.maxQuantity,
     this.selectedAddOns = const [],
     this.referencePhotos = const [],
+    this.surplusId,
   });
 
   String get lineKey {
@@ -28,7 +30,7 @@ class CartItemModel {
       productId,
       bakerId,
       price.toStringAsFixed(2),
-      maxQuantity?.toString() ?? '',
+      surplusId ?? '',
       addOns.join('|'),
       photos.join('|'),
     ].join('::');
@@ -39,6 +41,7 @@ class CartItemModel {
     int? maxQuantity,
     List<String>? selectedAddOns,
     List<String>? referencePhotos,
+    String? surplusId,
   }) {
     return CartItemModel(
       productId: productId,
@@ -50,6 +53,7 @@ class CartItemModel {
       maxQuantity: maxQuantity ?? this.maxQuantity,
       selectedAddOns: selectedAddOns ?? this.selectedAddOns,
       referencePhotos: referencePhotos ?? this.referencePhotos,
+      surplusId: surplusId ?? this.surplusId,
     );
   }
 
@@ -66,6 +70,7 @@ class CartItemModel {
       'maxQuantity': maxQuantity,
       'selectedAddOns': selectedAddOns,
       'referencePhotos': referencePhotos,
+      'surplusId': surplusId,
     };
   }
 
@@ -80,6 +85,7 @@ class CartItemModel {
       maxQuantity: map['maxQuantity'],
       selectedAddOns: List<String>.from(map['selectedAddOns'] ?? []),
       referencePhotos: List<String>.from(map['referencePhotos'] ?? []),
+      surplusId: map['surplusId'],
     );
   }
 }

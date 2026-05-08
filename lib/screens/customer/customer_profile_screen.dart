@@ -128,19 +128,18 @@ class _CustomerProfileScreenState
     const borderColor = Color(0xFFE7E5E4);
 
     final userAsync = ref.watch(currentUserProvider);
+    final user = userAsync.valueOrNull;
 
-    return userAsync.when(
-      loading: () => const Scaffold(
+    if (user == null) {
+      return const Scaffold(
         backgroundColor: bg,
         body: Center(child: CircularProgressIndicator(color: primary)),
-      ),
-      error: (e, _) =>
-          Scaffold(backgroundColor: bg, body: Center(child: Text('$e'))),
-      data: (user) {
-        if (user == null) return const SizedBox.shrink();
-        _populate(user);
+      );
+    }
 
-        return Scaffold(
+    _populate(user);
+
+    return Scaffold(
           backgroundColor: bg,
           appBar: AppBar(
             backgroundColor: Colors.white,
@@ -711,8 +710,6 @@ class _CustomerProfileScreenState
             ),
           ),
         );
-      },
-    );
   }
 
   Widget _sectionTitle(String title) {

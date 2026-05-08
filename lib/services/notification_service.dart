@@ -96,7 +96,7 @@ class NotificationService {
 
   void _updateToken(String token) {
     final user = _ref.read(currentUserProvider).valueOrNull;
-    if (user != null) {
+    if (user != null && user.fcmToken != token) {
       _ref.read(firestoreServiceProvider).updateUser(user.uid, {
         'fcmToken': token,
       });

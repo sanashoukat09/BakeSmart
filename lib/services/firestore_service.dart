@@ -248,6 +248,17 @@ class FirestoreService {
         .update({'active': false});
   }
 
+  // Increment surplus quantity (e.g. on cancellation)
+  Future<void> incrementSurplusQuantity(String surplusId, int amount) async {
+    await _db
+        .collection(AppConstants.surplusItemsCollection)
+        .doc(surplusId)
+        .update({
+      'quantity': FieldValue.increment(amount),
+      'active': true,
+    });
+  }
+
   // Stream all active surplus items for discovery
   Stream<List<SurplusItemModel>> streamAllSurplus() {
     return _db
@@ -298,26 +309,30 @@ class FirestoreService {
     final batch = _db.batch();
 
     for (final item in order.items) {
-      final surplusSnapshot = await _db
-          .collection(AppConstants.surplusItemsCollection)
-          .where('productId', isEqualTo: item.productId)
-          .where('active', isEqualTo: true)
-          .limit(1)
-          .get();
-      if (surplusSnapshot.docs.isEmpty) continue;
+      if (item.surplusId != null && item.surplusId!.isNotEmpty) {
+        final surplusDoc = await _db
+            .collection(AppConstants.surplusItemsCollection)
+            .doc(item.surplusId)
+            .get();
 
-      final surplusDoc = surplusSnapshot.docs.first;
-      final available = surplusDoc.data()['quantity'] ?? 0;
-      if (item.quantity > available) {
-        throw Exception(
-          'Only $available ${item.productName} flash deal item(s) left.',
-        );
+        if (!surplusDoc.exists || !(surplusDoc.data()?['active'] ?? false)) {
+          throw Exception(
+            'The flash deal for ${item.productName} is no longer available.',
+          );
+        }
+
+        final available = surplusDoc.data()?['quantity'] ?? 0;
+        if (item.quantity > available) {
+          throw Exception(
+            'Only $available ${item.productName} flash deal item(s) left.',
+          );
+        }
+
+        batch.update(surplusDoc.reference, {
+          'quantity': available - item.quantity,
+          'active': (available - item.quantity) > 0,
+        });
       }
-
-      batch.update(surplusDoc.reference, {
-        'quantity': available - item.quantity,
-        'active': available - item.quantity > 0,
-      });
     }
 
     batch.set(

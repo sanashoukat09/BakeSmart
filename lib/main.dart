@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/baker_theme.dart';
-import 'providers/auth_provider.dart';
 import 'services/notification_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
@@ -36,14 +35,26 @@ void main() async {
   );
 }
 
-class BakeSmartApp extends ConsumerWidget {
+class BakeSmartApp extends ConsumerStatefulWidget {
   const BakeSmartApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BakeSmartApp> createState() => _BakeSmartAppState();
+}
+
+class _BakeSmartAppState extends ConsumerState<BakeSmartApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Initialize Notifications only ONCE when the app starts
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(notificationServiceProvider).init();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
-    // Initialize Notifications
-    ref.read(notificationServiceProvider).init();
 
     return MaterialApp.router(
       title: 'BakeSmart',

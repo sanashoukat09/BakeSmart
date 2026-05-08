@@ -8,6 +8,7 @@ class UserModel {
   final String? photoUrl;
   final bool onboardingComplete;
   final DateTime createdAt;
+  final String? fcmToken;
 
   // Baker-specific fields
   final String? bakeryName;
@@ -38,6 +39,7 @@ class UserModel {
     this.photoUrl,
     this.onboardingComplete = false,
     required this.createdAt,
+    this.fcmToken,
     // Baker
     this.bakeryName,
     this.location,
@@ -72,6 +74,7 @@ class UserModel {
       photoUrl: data['photoUrl'],
       onboardingComplete: data['onboardingComplete'] ?? false,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      fcmToken: data['fcmToken'],
       // Baker
       bakeryName: data['bakeryName'],
       location: data['location'],
@@ -103,6 +106,7 @@ class UserModel {
       'photoUrl': photoUrl,
       'onboardingComplete': onboardingComplete,
       'createdAt': Timestamp.fromDate(createdAt),
+      'fcmToken': fcmToken,
       // Baker
       'bakeryName': bakeryName,
       'location': location,
@@ -129,6 +133,7 @@ class UserModel {
     String? displayName,
     String? photoUrl,
     bool? onboardingComplete,
+    String? fcmToken,
     String? bakeryName,
     String? location,
     List<String>? specialties,
@@ -155,6 +160,7 @@ class UserModel {
       photoUrl: photoUrl ?? this.photoUrl,
       onboardingComplete: onboardingComplete ?? this.onboardingComplete,
       createdAt: createdAt,
+      fcmToken: fcmToken ?? this.fcmToken,
       bakeryName: bakeryName ?? this.bakeryName,
       location: location ?? this.location,
       specialties: specialties ?? this.specialties,

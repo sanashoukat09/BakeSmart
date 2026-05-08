@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../core/router/app_router.dart';
 import '../../core/utils/share_util.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/order_provider.dart';
+import '../../providers/product_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/baker_theme.dart';
 import '../../widgets/baker/baker_bottom_nav.dart';
@@ -113,11 +116,24 @@ class _DashboardHome extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final ordersAsync = ref.watch(bakerOrdersProvider);
+    final productsAsync = ref.watch(bakerProductsProvider);
+    final earningsAsync = ref.watch(totalEarningsProvider);
+
     final bakerySlug = (user.bakeryName ?? 'bakery')
         .toLowerCase()
         .replaceAll(RegExp(r'\s+'), '-')
         .replaceAll(RegExp(r'[^a-z0-9-]'), '');
     final storefrontUrl = '$bakerySlug/bakesmart.com';
+
+    final today = DateTime.now();
+    final todaysOrders = ordersAsync.valueOrNull?.where((o) =>
+            o.createdAt.year == today.year &&
+            o.createdAt.month == today.month &&
+            o.createdAt.day == today.day) ??
+        [];
+    final productCount = productsAsync.valueOrNull?.length ?? 0;
+    final totalEarnings = earningsAsync.valueOrNull ?? 0.0;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -155,7 +171,7 @@ class _DashboardHome extends ConsumerWidget {
               Expanded(
                 child: _StatCard(
                   label: "Today's Orders",
-                  value: '0',
+                  value: todaysOrders.length.toString(),
                   icon: Icons.receipt_long_outlined,
                   color: BakerTheme.secondary,
                   onTap: () => context.push(AppRoutes.bakerEarnings),
@@ -165,7 +181,7 @@ class _DashboardHome extends ConsumerWidget {
               Expanded(
                 child: _StatCard(
                   label: 'Products',
-                  value: '0',
+                  value: productCount.toString(),
                   icon: Icons.cake_outlined,
                   color: const Color(0xFF10B981),
                   onTap: () => context.push(AppRoutes.bakerProducts),
@@ -188,7 +204,7 @@ class _DashboardHome extends ConsumerWidget {
               Expanded(
                 child: _StatCard(
                   label: 'Earnings',
-                  value: 'Rs. 0',
+                  value: 'Rs. ${NumberFormat.compact().format(totalEarnings)}',
                   icon: Icons.account_balance_wallet_outlined,
                   color: const Color(0xFFF97316),
                   onTap: () => context.push(AppRoutes.bakerEarnings),
@@ -327,7 +343,7 @@ class _DashboardHome extends ConsumerWidget {
 
           const SizedBox(height: 24),
 
-          // Recent orders placeholder
+          // Recent orders
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -338,53 +354,125 @@ class _DashboardHome extends ConsumerWidget {
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
                 ),
-
               ),
               TextButton(
                 onPressed: () => context.push(AppRoutes.bakerOrders),
                 child: const Text('View all',
                     style: TextStyle(
-                        color: BakerTheme.textSecondary, fontWeight: FontWeight.w700)),
-
+                        color: BakerTheme.textSecondary,
+                        fontWeight: FontWeight.w700)),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: BakerTheme.divider, width: 1.5),
-
-            ),
-            child: Center(
-              child: Column(
-                children: [
-                  const Icon(Icons.receipt_long_outlined,
-                      color: BakerTheme.divider, size: 48),
-
-                  const SizedBox(height: 12),
-                  const Text(
-                    'No orders yet',
-                    style: TextStyle(
-                      color: BakerTheme.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
+          ordersAsync.when(
+            data: (orders) {
+              if (orders.isEmpty) {
+                return Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: BakerTheme.divider, width: 1.5),
+                  ),
+                  child: const Center(
+                    child: Column(
+                      children: [
+                        Icon(Icons.receipt_long_outlined,
+                            color: BakerTheme.divider, size: 48),
+                        SizedBox(height: 12),
+                        Text(
+                          'No orders yet',
+                          style: TextStyle(
+                            color: BakerTheme.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Orders will appear here once customers start ordering.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: BakerTheme.textSecondary, fontSize: 13),
+                        ),
+                      ],
                     ),
-
                   ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Orders will appear here once customers start ordering.',
-                    textAlign: TextAlign.center,
-                    style:
-                        const TextStyle(color: BakerTheme.textSecondary, fontSize: 13),
+                );
+              }
 
-                  ),
-                ],
-              ),
-            ),
+              final recentOrders = orders.toList()
+                ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+              final top3 = recentOrders.take(3).toList();
+
+              return Column(
+                children: top3.map((order) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: BakerTheme.divider, width: 1.5),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 45,
+                          height: 45,
+                          decoration: BoxDecoration(
+                            color: BakerTheme.primary.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.shopping_bag_outlined,
+                              color: BakerTheme.primary, size: 20),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                order.customerName,
+                                style: const TextStyle(
+                                    color: BakerTheme.textPrimary,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 15),
+                              ),
+                              Text(
+                                '${order.items.length} items • Rs. ${order.totalAmount}',
+                                style: const TextStyle(
+                                    color: BakerTheme.textSecondary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(order.status).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            order.status.toUpperCase(),
+                            style: TextStyle(
+                                color: _getStatusColor(order.status),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Text('Error: $e'),
           ),
           const SizedBox(height: 24),
         ],
@@ -540,5 +628,23 @@ class _ActionChip extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+Color _getStatusColor(String status) {
+  switch (status.toLowerCase()) {
+    case 'pending':
+    case 'placed':
+      return const Color(0xFFF59E0B);
+    case 'preparing':
+      return const Color(0xFF3B82F6);
+    case 'ready':
+      return const Color(0xFF10B981);
+    case 'delivered':
+      return const Color(0xFF059669);
+    case 'cancelled':
+      return const Color(0xFFEF4444);
+    default:
+      return BakerTheme.textSecondary;
   }
 }
