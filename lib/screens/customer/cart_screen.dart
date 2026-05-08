@@ -136,6 +136,13 @@ class _CartItemTile extends StatelessWidget {
                 child: Text('${item.quantity}', style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
               _QtyBtn(icon: Icons.add, onTap: () => notifier.updateLineQuantity(item.lineKey, 1)),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                onPressed: () => notifier.removeLine(item.lineKey),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
             ],
           ),
         ],

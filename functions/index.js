@@ -4,6 +4,27 @@ const admin = require('firebase-admin');
 admin.initializeApp();
 const db = admin.firestore();
 
+async function sendToUser(userId, title, body, data = {}) {
+  if (!userId) return;
+  const userDoc = await db.collection('users').doc(userId).get();
+  if (!userDoc.exists) return;
+
+  const user = userDoc.data();
+  if (user.notificationsEnabled === false || !user.fcmToken) return;
+
+  try {
+    await admin.messaging().send({
+      token: user.fcmToken,
+      notification: { title, body },
+      data: Object.fromEntries(
+        Object.entries(data).map(([key, value]) => [key, String(value)])
+      ),
+    });
+  } catch (error) {
+    console.error(`Failed to send notification to ${userId}`, error);
+  }
+}
+
 // ─────────────────────────────────────────────────────────────
 // Module 2 — Reduce ingredient stock when order is placed
 // ─────────────────────────────────────────────────────────────
@@ -13,32 +34,28 @@ exports.onOrderPlaced = functions.firestore
     const order = snap.data();
     if (!order || !order.items) return;
 
-    const batch = db.batch();
+    await sendToUser(
+      order.bakerId,
+      'New order received',
+      `${order.customerName || 'A customer'} placed an order for Rs. ${order.totalAmount || 0}.`,
+      { type: 'new_order', orderId: context.params.orderId }
+    );
+    console.log(`Baker notified for order ${context.params.orderId}`);
+  });
 
-    for (const item of order.items) {
-      if (!item.productId || !item.quantity) continue;
+exports.onOrderStatusChanged = functions.firestore
+  .document('orders/{orderId}')
+  .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+    if (!before || !after || before.status === after.status) return;
 
-      // Get product to find linked ingredients
-      const productDoc = await db.collection('products').doc(item.productId).get();
-      if (!productDoc.exists) continue;
-
-      const product = productDoc.data();
-      if (!product.ingredients) continue;
-
-      // ingredients is a Map: { ingredientId: quantityNeeded }
-      for (const [ingredientId, quantityNeeded] of Object.entries(product.ingredients)) {
-        const ingRef = db.collection('ingredients').doc(ingredientId);
-        const reduction = quantityNeeded * item.quantity;
-
-        batch.update(ingRef, {
-          quantity: admin.firestore.FieldValue.increment(-reduction),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-      }
-    }
-
-    await batch.commit();
-    console.log(`Ingredient stock updated for order ${context.params.orderId}`);
+    await sendToUser(
+      after.customerId,
+      'Order status updated',
+      `Your order is now ${after.status}.`,
+      { type: 'order_status', orderId: context.params.orderId, status: after.status }
+    );
   });
 
 // ─────────────────────────────────────────────────────────────
@@ -48,6 +65,19 @@ exports.onIngredientUpdated = functions.firestore
   .document('ingredients/{ingredientId}')
   .onUpdate(async (change, context) => {
     const after = change.after.data();
+    const before = change.before.data();
+    if (
+      after.quantity <= (after.lowStockThreshold || 1) &&
+      before.quantity > (after.lowStockThreshold || 1)
+    ) {
+      await sendToUser(
+        after.bakerId,
+        'Low stock alert',
+        `${after.name || 'An ingredient'} is running low.`,
+        { type: 'low_stock', ingredientId: context.params.ingredientId }
+      );
+    }
+
     if (after.quantity > 0) return;
 
     // Find surplus items using this ingredient's baker

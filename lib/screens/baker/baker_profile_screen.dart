@@ -6,6 +6,7 @@ import '../../core/constants/app_constants.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/cloudinary_service.dart';
 import '../../core/theme/baker_theme.dart';
+import '../../widgets/baker/baker_bottom_nav.dart';
 
 
 class BakerProfileScreen extends ConsumerStatefulWidget {
@@ -142,6 +143,7 @@ class _BakerProfileScreenState extends ConsumerState<BakerProfileScreen> {
 
         return Scaffold(
           backgroundColor: BakerTheme.background,
+          bottomNavigationBar: const BakerBottomNav(currentIndex: 4),
           appBar: AppBar(
             backgroundColor: BakerTheme.background,
             title: const Text('Profile',
@@ -411,8 +413,8 @@ class _BakerProfileScreenState extends ConsumerState<BakerProfileScreen> {
                       const SizedBox(height: 4),
                       LinearProgressIndicator(
                         value: _uploadProgress,
-                        color: const Color(0xFFF59E0B),
-                        backgroundColor: const Color(0xFF30363D),
+                        color: BakerTheme.secondary,
+                        backgroundColor: BakerTheme.divider,
                       ),
                     ],
                   ),
@@ -664,21 +666,21 @@ class _ProfileField extends StatelessWidget {
       controller: controller,
       maxLines: maxLines,
       keyboardType: keyboardType,
-      style: const TextStyle(color: Color(0xFFF0F6FC), fontSize: 14),
+      style: const TextStyle(color: BakerTheme.textPrimary, fontSize: 14),
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, size: 18),
         filled: true,
-        fillColor: const Color(0xFF161B22),
-        labelStyle: const TextStyle(color: Color(0xFF8B949E)),
-        prefixIconColor: const Color(0xFF8B949E),
+        fillColor: Colors.white,
+        labelStyle: const TextStyle(color: BakerTheme.textSecondary),
+        prefixIconColor: BakerTheme.textSecondary,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF30363D)),
+          borderSide: const BorderSide(color: BakerTheme.divider),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF30363D)),
+          borderSide: const BorderSide(color: BakerTheme.divider),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

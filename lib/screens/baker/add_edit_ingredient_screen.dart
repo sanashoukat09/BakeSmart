@@ -112,15 +112,18 @@ class _AddEditIngredientScreenState extends ConsumerState<AddEditIngredientScree
     final isSaving = ref.watch(inventoryNotifierProvider).isLoading;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1117),
+      backgroundColor: const Color(0xFFFDFCF9),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF161B22),
-        title: Text(widget.ingredientId == null ? 'Add Ingredient' : 'Edit Ingredient'),
+        backgroundColor: const Color(0xFFFDFCF9),
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Color(0xFF451A03)),
+        title: Text(widget.ingredientId == null ? 'Add Ingredient' : 'Edit Ingredient', 
+          style: const TextStyle(color: Color(0xFF451A03))),
         actions: [
           if (isSaving)
-            const Center(child: Padding(padding: EdgeInsets.only(right: 16), child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFF59E0B))))
+            const Center(child: Padding(padding: EdgeInsets.only(right: 16), child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF78350F))))
           else
-            IconButton(icon: const Icon(Icons.check, color: Color(0xFFF59E0B)), onPressed: _save),
+            IconButton(icon: const Icon(Icons.check, color: Color(0xFF78350F)), onPressed: _save),
         ],
       ),
       body: SingleChildScrollView(
@@ -150,23 +153,23 @@ class _AddEditIngredientScreenState extends ConsumerState<AddEditIngredientScree
                 child: Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF161B22),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFF30363D)),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFFEF3C7), width: 1.5),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.calendar_today_outlined, color: Color(0xFF8B949E), size: 18),
+                      const Icon(Icons.calendar_today_outlined, color: Color(0xFF92400E), size: 18),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Expiry Date (Optional)', style: TextStyle(color: Color(0xFF8B949E), fontSize: 11)),
+                            const Text('Expiry Date (Optional)', style: TextStyle(color: Color(0xFF92400E), fontSize: 11)),
                             const SizedBox(height: 2),
                             Text(
                               _selectedExpiry == null ? 'Not set' : DateFormat('MMM dd, yyyy').format(_selectedExpiry!),
-                              style: TextStyle(color: _selectedExpiry == null ? const Color(0xFF484F58) : const Color(0xFFF0F6FC), fontSize: 14),
+                              style: TextStyle(color: _selectedExpiry == null ? const Color(0xFFA8A29E) : const Color(0xFF451A03), fontSize: 14),
                             ),
                           ],
                         ),
@@ -217,21 +220,21 @@ class _Field extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Color(0xFF8B949E), fontSize: 12)),
+        Text(label, style: const TextStyle(color: Color(0xFF92400E), fontSize: 12)),
         const SizedBox(height: 4),
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
           validator: validator,
-          style: const TextStyle(color: Color(0xFFF0F6FC)),
+          style: const TextStyle(color: Color(0xFF451A03)),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: Color(0xFF484F58), fontSize: 14),
+            hintStyle: const TextStyle(color: Color(0xFFA8A29E), fontSize: 14),
             filled: true,
-            fillColor: const Color(0xFF161B22),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF30363D))),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF30363D))),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFF59E0B))),
+            fillColor: Colors.white,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFFEF3C7), width: 1.5)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFFEF3C7), width: 1.5)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF78350F), width: 1.5)),
           ),
         ),
       ],

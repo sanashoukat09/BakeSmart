@@ -71,24 +71,35 @@ class CartNotifier extends StateNotifier<List<CartItemModel>> {
     _saveCart();
   }
 
-  void addItemFromModel(CartItemModel newItem) {
+  bool addItemFromModel(CartItemModel newItem) {
     if (state.isNotEmpty && state.first.bakerId != newItem.bakerId) {
       state = [newItem];
+      _saveCart();
+      return true;
     } else {
       final existingIndex = state.indexWhere((item) => item.lineKey == newItem.lineKey);
       if (existingIndex != -1) {
+        final currentQty = state[existingIndex].quantity;
+        final newQty = _clampQuantity(state[existingIndex], currentQty + 1);
+        if (newQty == currentQty) {
+          // Already at max
+          return false;
+        }
         state = [
           for (int i = 0; i < state.length; i++)
             if (i == existingIndex)
-              state[i].copyWith(quantity: state[i].quantity + 1)
+              state[i].copyWith(quantity: newQty)
             else
               state[i]
         ];
+        _saveCart();
+        return true;
       } else {
         state = [...state, newItem];
+        _saveCart();
+        return true;
       }
     }
-    _saveCart();
   }
 
   void updateQuantity(String productId, int delta) {
@@ -101,7 +112,7 @@ class CartNotifier extends StateNotifier<List<CartItemModel>> {
     state = [
       for (final item in state)
         if (item.lineKey == lineKey)
-          item.copyWith(quantity: (item.quantity + delta).clamp(1, 99))
+          item.copyWith(quantity: _clampQuantity(item, item.quantity + delta))
         else
           item
     ];
@@ -125,4 +136,8 @@ class CartNotifier extends StateNotifier<List<CartItemModel>> {
 
   double get totalAmount => state.fold(0, (sum, item) => sum + item.total);
   int get itemCount => state.fold(0, (sum, item) => sum + item.quantity);
+
+  int _clampQuantity(CartItemModel item, int quantity) {
+    return quantity.clamp(1, item.maxQuantity ?? 99).toInt();
+  }
 }

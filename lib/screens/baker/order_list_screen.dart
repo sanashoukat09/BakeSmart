@@ -7,6 +7,7 @@ import '../../models/order_model.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/baker_theme.dart';
+import '../../widgets/baker/baker_bottom_nav.dart';
 
 
 class OrderListScreen extends ConsumerWidget {
@@ -18,6 +19,7 @@ class OrderListScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: BakerTheme.background,
+      bottomNavigationBar: const BakerBottomNav(currentIndex: 2),
 
       appBar: AppBar(
         backgroundColor: BakerTheme.background,

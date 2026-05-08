@@ -8,29 +8,44 @@ import '../../models/order_model.dart';
 import '../../models/product_model.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/baker_theme.dart';
+import '../../widgets/baker/baker_bottom_nav.dart';
 
-class BakerEarningsScreen extends ConsumerWidget {
+enum AnalyticsRange { week, month }
+
+class BakerEarningsScreen extends ConsumerStatefulWidget {
   const BakerEarningsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BakerEarningsScreen> createState() =>
+      _BakerEarningsScreenState();
+}
+
+class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
+  AnalyticsRange _range = AnalyticsRange.week;
+
+  @override
+  Widget build(BuildContext context) {
     final ordersAsync = ref.watch(bakerOrdersProvider);
     final productsAsync = ref.watch(bakerProductsProvider);
 
     return Scaffold(
       backgroundColor: BakerTheme.background,
+      bottomNavigationBar: const BakerBottomNav(currentIndex: 3),
       appBar: AppBar(
         backgroundColor: BakerTheme.background,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Bakery Analytics', style: TextStyle(color: BakerTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 22)),
-            Text(DateFormat('MMMM yyyy').format(DateTime.now()), style: const TextStyle(color: BakerTheme.textSecondary, fontSize: 12)),
+            Text(_range == AnalyticsRange.week ? 'Weekly report' : DateFormat('MMMM yyyy').format(DateTime.now()), style: const TextStyle(color: BakerTheme.textSecondary, fontSize: 12)),
           ],
         ),
         elevation: 0,
         actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.calendar_month_outlined, color: BakerTheme.primary)),
+          _DateRangeSelector(
+            currentRange: _range,
+            onChanged: (value) => setState(() => _range = value),
+          ),
           const SizedBox(width: 8),
         ],
       ),
@@ -38,19 +53,28 @@ class BakerEarningsScreen extends ConsumerWidget {
         data: (orders) {
           return productsAsync.when(
             data: (products) {
-              final deliveredOrders = orders.where((o) => o.status == AppConstants.orderDelivered).toList();
-              
-              // DATA PROCESSING
               final now = DateTime.now();
               final today = DateTime(now.year, now.month, now.day);
-              final startOfThisWeek = today.subtract(Duration(days: now.weekday - 1));
-              final startOfLastWeek = startOfThisWeek.subtract(const Duration(days: 7));
+              final periodStart = _range == AnalyticsRange.week
+                  ? today.subtract(Duration(days: now.weekday - 1))
+                  : DateTime(now.year, now.month, 1);
+              final previousPeriodStart = _range == AnalyticsRange.week
+                  ? periodStart.subtract(const Duration(days: 7))
+                  : DateTime(now.year, now.month - 1, 1);
+              final previousPeriodEnd = periodStart;
+              final bucketCount = _range == AnalyticsRange.week ? 7 : 5;
 
+              final deliveredOrders = orders.where((order) {
+                if (order.status != AppConstants.orderDelivered) return false;
+                return !order.deliveryDate.isBefore(periodStart);
+              }).toList();
+
+              // DATA PROCESSING
               double totalRevenue = 0;
               double totalProfit = 0;
-              double lastWeekRevenue = 0;
-              double thisWeekRevenue = 0;
-              
+              double previousRevenue = 0;
+              double previousProfit = 0;
+
               Map<int, double> dailyRevenue = {};
               Map<int, double> dailyProfit = {};
               Map<int, int> dailyOrders = {};
@@ -58,7 +82,7 @@ class BakerEarningsScreen extends ConsumerWidget {
               Map<String, int> productSalesCount = {};
               Map<String, double> categoryProfit = {};
 
-              for (int i = 0; i < 7; i++) {
+              for (int i = 0; i < bucketCount; i++) {
                 dailyRevenue[i] = 0;
                 dailyProfit[i] = 0;
                 dailyOrders[i] = 0;
@@ -66,46 +90,55 @@ class BakerEarningsScreen extends ConsumerWidget {
 
               for (var order in deliveredOrders) {
                 totalRevenue += order.totalAmount;
-                double orderProfit = 0;
+                double orderProfit = _estimateOrderProfit(order, products);
                 
                 for (var item in order.items) {
-                  final product = products.where((p) => p.id == item.productId).firstOrNull;
+                  final productMatches =
+                      products.where((p) => p.id == item.productId);
+                  final product =
+                      productMatches.isEmpty ? null : productMatches.first;
                   if (product != null) {
-                    final itemProfit = (item.price * (product.profitMargin / 100)) * item.quantity;
-                    orderProfit += itemProfit;
                     productEarnings[product.name] = (productEarnings[product.name] ?? 0) + (item.price * item.quantity);
                     productSalesCount[product.name] = (productSalesCount[product.name] ?? 0) + item.quantity;
+                    final itemProfit = _estimateItemProfit(item, product);
                     categoryProfit[product.category] = (categoryProfit[product.category] ?? 0) + itemProfit;
                   }
                 }
                 totalProfit += orderProfit;
 
                 final revenueDate = DateTime(order.deliveryDate.year, order.deliveryDate.month, order.deliveryDate.day);
-                final diff = today.difference(revenueDate).inDays;
-                
-                if (diff >= 0 && diff < 7) {
-                  dailyRevenue[6 - diff] = (dailyRevenue[6 - diff] ?? 0) + order.totalAmount;
-                  dailyProfit[6 - diff] = (dailyProfit[6 - diff] ?? 0) + orderProfit;
+                final bucket = _bucketIndex(revenueDate, periodStart, bucketCount);
+                if (bucket != null) {
+                  dailyRevenue[bucket] = (dailyRevenue[bucket] ?? 0) + order.totalAmount;
+                  dailyProfit[bucket] = (dailyProfit[bucket] ?? 0) + orderProfit;
                 }
+              }
 
-                // Weekly Trends (Sales)
-                if (revenueDate.isAfter(startOfLastWeek) && revenueDate.isBefore(startOfThisWeek)) {
-                  lastWeekRevenue += order.totalAmount;
-                } else if (revenueDate.isAfter(startOfThisWeek) || revenueDate.isAtSameMomentAs(startOfThisWeek)) {
-                  thisWeekRevenue += order.totalAmount;
+              for (final order in orders.where((o) => o.status == AppConstants.orderDelivered)) {
+                final date = DateTime(order.deliveryDate.year, order.deliveryDate.month, order.deliveryDate.day);
+                if (!date.isBefore(previousPeriodStart) && date.isBefore(previousPeriodEnd)) {
+                  previousRevenue += order.totalAmount;
+                  previousProfit += _estimateOrderProfit(order, products);
                 }
               }
 
               // Process ALL orders for "Order Activity"
               for (var order in orders) {
                 final orderDate = DateTime(order.createdAt.year, order.createdAt.month, order.createdAt.day);
-                final diff = today.difference(orderDate).inDays;
-                if (diff >= 0 && diff < 7) {
-                  dailyOrders[6 - diff] = (dailyOrders[6 - diff] ?? 0) + 1;
+                if (!orderDate.isBefore(periodStart)) {
+                  final bucket = _bucketIndex(orderDate, periodStart, bucketCount);
+                  if (bucket != null) {
+                    dailyOrders[bucket] = (dailyOrders[bucket] ?? 0) + 1;
+                  }
                 }
               }
 
-              final revenueTrend = lastWeekRevenue == 0 ? 100.0 : ((thisWeekRevenue - lastWeekRevenue) / lastWeekRevenue) * 100;
+              final revenueTrend = previousRevenue == 0
+                  ? (totalRevenue > 0 ? 100.0 : 0.0)
+                  : ((totalRevenue - previousRevenue) / previousRevenue) * 100;
+              final profitTrend = previousProfit == 0
+                  ? (totalProfit > 0 ? 100.0 : 0.0)
+                  : ((totalProfit - previousProfit) / previousProfit) * 100;
               final avgMargin = totalRevenue == 0 ? 0.0 : (totalProfit / totalRevenue) * 100;
               final bestSeller = productSalesCount.entries.isEmpty ? "N/A" : productSalesCount.entries.fold(productSalesCount.entries.first, (a, b) => a.value > b.value ? a : b).key;
 
@@ -131,9 +164,9 @@ class BakerEarningsScreen extends ConsumerWidget {
                         children: [
                           _QuickStatCard(title: 'Total Revenue', value: 'Rs. ${NumberFormat.compact().format(totalRevenue)}', trend: revenueTrend, icon: Icons.payments_outlined, color: BakerTheme.secondary),
                           const SizedBox(width: 12),
-                          _QuickStatCard(title: 'Net Profit', value: 'Rs. ${NumberFormat.compact().format(totalProfit)}', trend: 12.5, icon: Icons.auto_graph_outlined, color: const Color(0xFF10B981)),
+                          _QuickStatCard(title: 'Net Profit', value: 'Rs. ${NumberFormat.compact().format(totalProfit)}', trend: profitTrend, icon: Icons.auto_graph_outlined, color: const Color(0xFF10B981)),
                           const SizedBox(width: 12),
-                          _QuickStatCard(title: 'Avg. Margin', value: '${avgMargin.toStringAsFixed(1)}%', trend: 2.1, icon: Icons.percent_outlined, color: BakerTheme.primary),
+                          _QuickStatCard(title: 'Avg. Margin', value: '${avgMargin.toStringAsFixed(1)}%', trend: 0, icon: Icons.percent_outlined, color: BakerTheme.primary),
                         ],
                       ),
                     ),
@@ -143,7 +176,7 @@ class BakerEarningsScreen extends ConsumerWidget {
                     // REVENUE VS PROFIT LINE CHART
                     _AnalyticsCard(
                       title: 'Revenue vs Profit',
-                      subtitle: 'Weekly Performance',
+                      subtitle: _range == AnalyticsRange.week ? 'Weekly performance' : 'Monthly performance',
                       child: SizedBox(
                         height: 200,
                         child: LineChart(_buildRevenueProfitLineChart(dailyRevenue, dailyProfit, revenueMaxY)),
@@ -174,7 +207,7 @@ class BakerEarningsScreen extends ConsumerWidget {
                     // WEEKLY ORDERS TREND AREA GRAPH
                     _AnalyticsCard(
                       title: 'Order Activity',
-                      subtitle: 'Daily count',
+                      subtitle: _range == AnalyticsRange.week ? 'Daily count' : 'Weekly buckets',
                       child: SizedBox(
                         height: 180,
                         child: LineChart(_buildOrdersAreaChart(dailyOrders, ordersMaxY)),
@@ -211,7 +244,10 @@ class BakerEarningsScreen extends ConsumerWidget {
                     // TOP PERFORMING PRODUCTS LIST
                     const _SectionHeader(title: 'Leaderboard 🏆'),
                     const SizedBox(height: 12),
-                    ...productSalesCount.entries.take(3).map((e) {
+                    ...(productSalesCount.entries.toList()
+                          ..sort((a, b) => b.value.compareTo(a.value)))
+                        .take(3)
+                        .map((e) {
                       final revenue = productEarnings[e.key] ?? 0;
                       return _ProductPerformanceTile(name: e.key, sales: e.value, revenue: revenue);
                     }),
@@ -363,11 +399,23 @@ class BakerEarningsScreen extends ConsumerWidget {
   }
 
   PieChartData _buildProfitPieChart(Map<String, double> profit, double total) {
-    int i = 0;
     return PieChartData(
       sectionsSpace: 4,
       centerSpaceRadius: 40,
-      sections: profit.entries.map((e) {
+      sections: total <= 0
+          ? [
+              PieChartSectionData(
+                color: BakerTheme.divider,
+                value: 1,
+                title: '0%',
+                radius: 50,
+                titleStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white),
+              )
+            ]
+          : profit.entries.map((e) {
         final color = _getCategoryColor(e.key);
         return PieChartSectionData(
           color: color,
@@ -378,6 +426,31 @@ class BakerEarningsScreen extends ConsumerWidget {
         );
       }).toList(),
     );
+  }
+
+  int? _bucketIndex(DateTime date, DateTime periodStart, int bucketCount) {
+    final diff = date.difference(periodStart).inDays;
+    if (diff < 0) return null;
+    if (_range == AnalyticsRange.week) {
+      return diff < bucketCount ? diff : null;
+    }
+    final index = diff ~/ 7;
+    return index < bucketCount ? index : bucketCount - 1;
+  }
+
+  double _estimateOrderProfit(OrderModel order, List<ProductModel> products) {
+    double profit = 0;
+    for (final item in order.items) {
+      final matches = products.where((product) => product.id == item.productId);
+      if (matches.isEmpty) continue;
+      profit += _estimateItemProfit(item, matches.first);
+    }
+    return profit;
+  }
+
+  double _estimateItemProfit(OrderItem item, ProductModel product) {
+    final estimatedUnitCost = product.price * (1 - (product.profitMargin / 100));
+    return (item.price - estimatedUnitCost) * item.quantity;
   }
 
   Color _getCategoryColor(String category) {
@@ -395,8 +468,14 @@ class BakerEarningsScreen extends ConsumerWidget {
           showTitles: true,
           reservedSize: 22,
           getTitlesWidget: (value, meta) {
-            final days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-            return Text(days[value.toInt() % 7], style: const TextStyle(color: BakerTheme.textMuted, fontSize: 10));
+            final labels = _range == AnalyticsRange.week
+                ? ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+                : ['W1', 'W2', 'W3', 'W4', 'W5'];
+            final index = value.toInt();
+            if (index < 0 || index >= labels.length) {
+              return const SizedBox.shrink();
+            }
+            return Text(labels[index], style: const TextStyle(color: BakerTheme.textMuted, fontSize: 10));
           },
         ),
       ),
@@ -415,6 +494,71 @@ class BakerEarningsScreen extends ConsumerWidget {
 }
 
 // --- SUPPORTING UI COMPONENTS ---
+
+class _DateRangeSelector extends StatelessWidget {
+  final AnalyticsRange currentRange;
+  final ValueChanged<AnalyticsRange> onChanged;
+
+  const _DateRangeSelector({required this.currentRange, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: BakerTheme.divider, width: 1.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _RangeButton(
+            label: 'W',
+            isSelected: currentRange == AnalyticsRange.week,
+            onTap: () => onChanged(AnalyticsRange.week),
+          ),
+          _RangeButton(
+            label: 'M',
+            isSelected: currentRange == AnalyticsRange.month,
+            onTap: () => onChanged(AnalyticsRange.month),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RangeButton extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _RangeButton({required this.label, required this.isSelected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? BakerTheme.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : BakerTheme.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _QuickStatCard extends StatelessWidget {
   final String title;

@@ -76,24 +76,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     }
   }
 
-  Future<void> _googleRegister() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    final error = await ref
-        .read(authNotifierProvider.notifier)
-        .signInWithGoogle(role: _selectedRole);
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-      if (error != null) {
-        setState(() => _errorMessage = error);
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     const isDark = false;
@@ -330,42 +312,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                   ),
                 ),
 
-                const SizedBox(height: 16),
-
-                // Google
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: OutlinedButton(
-                    onPressed: _isLoading ? null : _googleRegister,
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: borderColor),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('G',
-                            style: TextStyle(
-                                color: const Color(0xFF4285F4),
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700)),
-                        const SizedBox(width: 10),
-                        Text(
-                          'Sign up with Google',
-                          style: TextStyle(
-                            color: textColor,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
                 const SizedBox(height: 24),
 
                 Center(
@@ -506,4 +452,3 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     );
   }
 }
-

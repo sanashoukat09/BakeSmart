@@ -60,13 +60,18 @@ class CustomerHomeScreen extends ConsumerWidget {
                             ),
                           ],
                         ),
-                        IconButton(
-                          icon: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                            child: const Icon(Icons.person, color: Color(0xFFD97706)),
+                        Transform.translate(
+                          offset: const Offset(12, 0),
+                          child: IconButton(
+                            icon: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: const BoxDecoration(
+                                  color: Colors.white, shape: BoxShape.circle),
+                              child: const Icon(Icons.person,
+                                  color: Color(0xFFD97706)),
+                            ),
+                            onPressed: () => context.push(AppRoutes.customerProfile),
                           ),
-                          onPressed: () => context.push(AppRoutes.customerProfile),
                         ),
                       ],
                     ),

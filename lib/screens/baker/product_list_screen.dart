@@ -7,6 +7,7 @@ import '../../core/router/app_router.dart';
 import '../../models/product_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/baker_theme.dart';
+import '../../widgets/baker/baker_bottom_nav.dart';
 
 
 class ProductListScreen extends ConsumerWidget {
@@ -18,6 +19,7 @@ class ProductListScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: BakerTheme.background,
+      bottomNavigationBar: const BakerBottomNav(currentIndex: 1),
 
       appBar: AppBar(
         backgroundColor: BakerTheme.background,

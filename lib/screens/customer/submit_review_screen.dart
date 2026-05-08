@@ -29,12 +29,23 @@ class _SubmitReviewScreenState extends ConsumerState<SubmitReviewScreen> {
     final orders = ref.read(customerOrdersProvider).valueOrNull ?? [];
     final order = orders.firstWhere((o) => o.id == widget.orderId);
 
+    if (order.isReviewed) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You have already reviewed this order.')),
+        );
+        context.pop();
+      }
+      return;
+    }
+
     final review = ReviewModel(
       id: const Uuid().v4(),
       orderId: widget.orderId,
       customerId: user.uid,
       customerName: user.displayName ?? 'Customer',
       bakerId: order.bakerId,
+      productIds: order.items.map((item) => item.productId).toSet().toList(),
       rating: _rating,
       comment: _commentController.text.trim(),
       createdAt: DateTime.now(),

@@ -18,6 +18,7 @@ class OrderModel {
   final String? capacityWarningMessage;
   final bool inventoryDeducted;
   final String paymentMethod;
+  final bool isReviewed;
 
   OrderModel({
     required this.id,
@@ -37,6 +38,7 @@ class OrderModel {
     this.capacityWarningMessage,
     this.inventoryDeducted = false,
     this.paymentMethod = 'COD',
+    this.isReviewed = false,
   });
 
   factory OrderModel.fromFirestore(DocumentSnapshot doc) {
@@ -61,6 +63,7 @@ class OrderModel {
       capacityWarningMessage: data['capacityWarningMessage'],
       inventoryDeducted: data['inventoryDeducted'] ?? false,
       paymentMethod: data['paymentMethod'] ?? 'COD',
+      isReviewed: data['isReviewed'] ?? false,
     );
   }
 
@@ -82,6 +85,7 @@ class OrderModel {
       'capacityWarningMessage': capacityWarningMessage,
       'inventoryDeducted': inventoryDeducted,
       'paymentMethod': paymentMethod,
+      'isReviewed': isReviewed,
     };
   }
 }

@@ -6,6 +6,7 @@ import '../../core/utils/share_util.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/baker_theme.dart';
+import '../../widgets/baker/baker_bottom_nav.dart';
 
 
 class BakerDashboard extends ConsumerStatefulWidget {
@@ -16,8 +17,6 @@ class BakerDashboard extends ConsumerStatefulWidget {
 }
 
 class _BakerDashboardState extends ConsumerState<BakerDashboard> {
-  int _currentIndex = 0;
-
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(currentUserProvider);
@@ -101,60 +100,7 @@ class _BakerDashboardState extends ConsumerState<BakerDashboard> {
             ],
           ),
           body: _DashboardHome(user: user),
-          bottomNavigationBar: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(
-                top: BorderSide(color: BakerTheme.divider, width: 1.5),
-
-              ),
-            ),
-            child: BottomNavigationBar(
-              currentIndex: _currentIndex,
-              onTap: (i) {
-                setState(() => _currentIndex = i);
-                if (i == 1) context.push(AppRoutes.bakerProducts);
-                if (i == 2) context.push(AppRoutes.bakerOrders);
-                if (i == 3) context.push(AppRoutes.bakerEarnings);
-                if (i == 4) context.push(AppRoutes.bakerProfile);
-              },
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              selectedItemColor: BakerTheme.primary,
-
-              unselectedItemColor: const Color(0xFFA8A29E),
-              showSelectedLabels: true,
-              showUnselectedLabels: true,
-              type: BottomNavigationBarType.fixed,
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.dashboard_outlined),
-                  activeIcon: Icon(Icons.dashboard),
-                  label: 'Dashboard',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.inventory_2_outlined),
-                  activeIcon: Icon(Icons.inventory_2),
-                  label: 'Products',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.receipt_long_outlined),
-                  activeIcon: Icon(Icons.receipt_long),
-                  label: 'Orders',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.bar_chart_outlined),
-                  activeIcon: Icon(Icons.bar_chart),
-                  label: 'Analytics',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.person_outline),
-                  activeIcon: Icon(Icons.person),
-                  label: 'Profile',
-                ),
-              ],
-            ),
-          ),
+          bottomNavigationBar: const BakerBottomNav(currentIndex: 0),
         );
       },
     );

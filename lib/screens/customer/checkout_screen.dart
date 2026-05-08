@@ -27,11 +27,32 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   bool _isAtCapacity = false;
   int _bakerCapacity = 10;
   int _currentOrderCount = 0;
+  bool _didPrefill = false;
 
   @override
   void initState() {
     super.initState();
     _checkCapacity();
+  }
+
+  void _prefillDeliveryDetails() {
+    if (_didPrefill) return;
+    final user = ref.read(currentUserProvider).valueOrNull;
+    if (user == null || user.savedAddresses.isEmpty) return;
+
+    final address = user.savedAddresses.firstWhere(
+      (addr) => addr['isDefault'] == true,
+      orElse: () => user.savedAddresses.first,
+    );
+    
+    // Use post-frame callback to avoid state issues during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_didPrefill) {
+        _addressController.text = (address['details'] ?? '').toString();
+        _phoneController.text = (address['phone'] ?? '').toString();
+        setState(() => _didPrefill = true);
+      }
+    });
   }
 
   @override
@@ -128,15 +149,57 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       paymentMethod: _paymentMethod,
     );
 
-    await ref.read(firestoreServiceProvider).saveOrder(order);
+    try {
+      await ref.read(firestoreServiceProvider).saveOrder(order);
+      await _saveDeliveryDetails(user.uid);
 
-    ref.read(cartProvider.notifier).clearCart();
-    if (mounted) context.go(AppRoutes.customerOrderSuccess);
+      ref.read(cartProvider.notifier).clearCart();
+      if (mounted) context.go(AppRoutes.customerOrderSuccess);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
+  Future<void> _saveDeliveryDetails(String uid) async {
+    final user = ref.read(currentUserProvider).valueOrNull;
+    if (user == null) return;
+
+    final address = _addressController.text.trim();
+    final phone = _phoneController.text.trim();
+    final addresses = List<Map<String, dynamic>>.from(user.savedAddresses);
+    final existingIndex = addresses.indexWhere((item) => item['details'] == address);
+
+    final savedAddress = {
+      'id': existingIndex == -1
+          ? DateTime.now().millisecondsSinceEpoch.toString()
+          : addresses[existingIndex]['id'],
+      'name': existingIndex == -1 ? 'Last delivery' : addresses[existingIndex]['name'],
+      'details': address,
+      'phone': phone,
+      'isDefault': true,
+    };
+
+    for (final item in addresses) {
+      item['isDefault'] = false;
+    }
+    if (existingIndex == -1) {
+      addresses.insert(0, savedAddress);
+    } else {
+      addresses[existingIndex] = savedAddress;
+    }
+
+    await ref.read(firestoreServiceProvider).updateUser(uid, {
+      'savedAddresses': addresses,
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final cartTotal = ref.watch(cartProvider.notifier).totalAmount;
+    _prefillDeliveryDetails();
 
     return Scaffold(
       backgroundColor: const Color(0xFFFDFCF9),

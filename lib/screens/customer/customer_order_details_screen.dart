@@ -87,13 +87,28 @@ class _OrderDetailsBody extends StatelessWidget {
               ),
             ),
           
-          if (order.status == AppConstants.orderDelivered)
+          if (order.status == AppConstants.orderDelivered && !order.isReviewed)
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () => context.push('${AppRoutes.customerSubmitReview}/${order.id}'),
                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD97706), foregroundColor: Colors.white),
                 child: const Text('Rate & Review'),
+              ),
+            ),
+          
+          if (order.isReviewed)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.only(top: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.check_circle_outline, color: Colors.green, size: 20),
+                    SizedBox(width: 8),
+                    Text('Order Reviewed', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                  ],
+                ),
               ),
             ),
         ],

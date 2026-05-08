@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/router/app_router.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/common/custom_button.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -57,24 +56,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           email: _emailController.text,
           password: _passwordController.text,
         );
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-      if (error != null) {
-        setState(() => _errorMessage = error);
-      }
-    }
-  }
-
-  Future<void> _signInWithGoogle() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    final error = await ref
-        .read(authNotifierProvider.notifier)
-        .signInWithGoogle(role: 'baker');
 
     if (mounted) {
       setState(() => _isLoading = false);
@@ -301,56 +282,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   ),
                 ),
 
-                const SizedBox(height: 20),
-
-                // Divider
-                Row(
-                  children: [
-                    Expanded(
-                        child: Divider(color: borderColor, thickness: 1)),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text('or',
-                          style: TextStyle(color: subtextColor, fontSize: 13)),
-                    ),
-                    Expanded(
-                        child: Divider(color: borderColor, thickness: 1)),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-
-                // Google sign in
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: OutlinedButton(
-                    onPressed: _isLoading ? null : _signInWithGoogle,
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFFE7E5E4), width: 1.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      backgroundColor: Colors.white,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _GoogleIcon(),
-                        const SizedBox(width: 10),
-                        Text(
-                          'Continue with Google',
-                          style: TextStyle(
-                            color: textColor,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
                 const SizedBox(height: 32),
 
                 // Sign up link
@@ -439,36 +370,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2),
         ),
-      ),
-    );
-  }
-}
-
-
-class _GoogleIcon extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 20,
-      height: 20,
-      child: Stack(
-        children: [
-          Container(
-            width: 20,
-            height: 20,
-            decoration: const BoxDecoration(shape: BoxShape.circle),
-            child: const Text(
-              'G',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Color(0xFF4285F4),
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                height: 1.3,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

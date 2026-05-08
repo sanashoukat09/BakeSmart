@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/router/app_router.dart';
-import '../../core/utils/share_util.dart';
 
 class CustomerProfileScreen extends ConsumerStatefulWidget {
   const CustomerProfileScreen({super.key});
@@ -683,13 +682,6 @@ class _CustomerProfileScreenState
                   label: 'My Orders',
                   onTap: () => context.push(AppRoutes.customerOrders),
                 ),
-                const SizedBox(height: 12),
-                _menuTile(
-                  icon: Icons.person_add_outlined,
-                  label: 'Invite a Friend',
-                  onTap: () => ShareUtil.inviteFriend(),
-                ),
-
                 const SizedBox(height: 24),
 
                 // Sign out

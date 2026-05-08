@@ -6,6 +6,7 @@ class ReviewModel {
   final String customerId;
   final String customerName;
   final String bakerId;
+  final List<String> productIds;
   final double rating;
   final String comment;
   final DateTime createdAt;
@@ -16,6 +17,7 @@ class ReviewModel {
     required this.customerId,
     required this.customerName,
     required this.bakerId,
+    this.productIds = const [],
     required this.rating,
     required this.comment,
     required this.createdAt,
@@ -29,6 +31,7 @@ class ReviewModel {
       customerId: data['customerId'] ?? '',
       customerName: data['customerName'] ?? 'Anonymous',
       bakerId: data['bakerId'] ?? '',
+      productIds: List<String>.from(data['productIds'] ?? []),
       rating: (data['rating'] ?? 0.0).toDouble(),
       comment: data['comment'] ?? '',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -41,6 +44,7 @@ class ReviewModel {
       'customerId': customerId,
       'customerName': customerName,
       'bakerId': bakerId,
+      'productIds': productIds,
       'rating': rating,
       'comment': comment,
       'createdAt': Timestamp.fromDate(createdAt),

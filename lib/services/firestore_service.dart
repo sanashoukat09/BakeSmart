@@ -285,10 +285,36 @@ class FirestoreService {
 
   // Create new order
   Future<void> saveOrder(OrderModel order) async {
-    await _db
-        .collection(AppConstants.ordersCollection)
-        .doc(order.id)
-        .set(order.toFirestore());
+    final batch = _db.batch();
+
+    for (final item in order.items) {
+      final surplusSnapshot = await _db
+          .collection(AppConstants.surplusItemsCollection)
+          .where('productId', isEqualTo: item.productId)
+          .where('active', isEqualTo: true)
+          .limit(1)
+          .get();
+      if (surplusSnapshot.docs.isEmpty) continue;
+
+      final surplusDoc = surplusSnapshot.docs.first;
+      final available = surplusDoc.data()['quantity'] ?? 0;
+      if (item.quantity > available) {
+        throw Exception(
+          'Only $available ${item.productName} flash deal item(s) left.',
+        );
+      }
+
+      batch.update(surplusDoc.reference, {
+        'quantity': available - item.quantity,
+        'active': available - item.quantity > 0,
+      });
+    }
+
+    batch.set(
+      _db.collection(AppConstants.ordersCollection).doc(order.id),
+      order.toFirestore(),
+    );
+    await batch.commit();
   }
 
   // Get single order
@@ -320,11 +346,17 @@ class FirestoreService {
 
   // Save review and update baker's rating (simple version)
   Future<void> saveReview(ReviewModel review) async {
+    final batch = _db.batch();
+    
     // Save review
-    await _db
-        .collection(AppConstants.reviewsCollection)
-        .doc(review.id)
-        .set(review.toFirestore());
+    final reviewRef = _db.collection(AppConstants.reviewsCollection).doc(review.id);
+    batch.set(reviewRef, review.toFirestore());
+
+    // Mark order as reviewed
+    final orderRef = _db.collection(AppConstants.ordersCollection).doc(review.orderId);
+    batch.update(orderRef, {'isReviewed': true});
+
+    await batch.commit();
 
     // Update baker rating (aggregate)
     final reviews = await _db
@@ -355,6 +387,20 @@ class FirestoreService {
           .map((doc) => ReviewModel.fromFirestore(doc))
           .toList();
       // Sort in memory
+      reviews.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return reviews;
+    });
+  }
+
+  Stream<List<ReviewModel>> streamProductReviews(String productId) {
+    return _db
+        .collection(AppConstants.reviewsCollection)
+        .where('productIds', arrayContains: productId)
+        .snapshots()
+        .map((snapshot) {
+      final reviews = snapshot.docs
+          .map((doc) => ReviewModel.fromFirestore(doc))
+          .toList();
       reviews.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return reviews;
     });
