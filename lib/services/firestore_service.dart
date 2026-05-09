@@ -333,44 +333,145 @@ class FirestoreService {
         .update({'inventoryDeducted': true});
   }
 
-  // Create new order
-  Future<void> saveOrder(OrderModel order) async {
-    final batch = _db.batch();
+  // Atomic: ingredient deduction on production/delivery + surplus restock on cancellation.
+  // This prevents double-deduction (inventoryDeducted guard enforced inside the transaction).
+  Future<void> updateOrderStatusWithAtomicInventory({
+    required String orderId,
+    required String newStatus,
+  }) async {
+    await _db.runTransaction((tx) async {
+      final orderRef = _db.collection(AppConstants.ordersCollection).doc(orderId);
+      final orderSnap = await tx.get(orderRef);
 
-    for (final item in order.items) {
-      if (item.surplusId != null && item.surplusId!.isNotEmpty) {
-        final surplusDoc = await _db
-            .collection(AppConstants.surplusItemsCollection)
-            .doc(item.surplusId)
-            .get();
-
-        if (!surplusDoc.exists || !(surplusDoc.data()?['active'] ?? false)) {
-          throw Exception(
-            'The flash deal for ${item.productName} is no longer available.',
-          );
-        }
-
-        final available = surplusDoc.data()?['quantity'] ?? 0;
-        if (item.quantity > available) {
-          throw Exception(
-            'Only $available ${item.productName} flash deal item(s) left.',
-          );
-        }
-
-        batch.update(surplusDoc.reference, {
-          'quantity': available - item.quantity,
-          'active': (available - item.quantity) > 0,
-        });
+      if (!orderSnap.exists) {
+        throw Exception('Order not found: $orderId');
       }
+
+      final order = OrderModel.fromFirestore(orderSnap);
+
+      final isProductionStage =
+          newStatus == AppConstants.orderPreparing ||
+          newStatus == AppConstants.orderReady ||
+          newStatus == AppConstants.orderDelivered;
+
+      final isCancellation = newStatus == AppConstants.orderCancelled;
+
+      if (isProductionStage && !order.inventoryDeducted) {
+        // Deduct ingredients exactly once.
+        for (final item in order.items) {
+          final productRef = _db.collection(AppConstants.productsCollection).doc(item.productId);
+          final productSnap = await tx.get(productRef);
+
+          if (!productSnap.exists) continue;
+
+          final product = ProductModel.fromFirestore(productSnap);
+          for (final entry in product.ingredients.entries) {
+            final ingredientId = entry.key;
+            final qtyPerUnit = entry.value;
+            final totalToReduce = qtyPerUnit * item.quantity;
+
+            final ingredientRef = _db.collection(AppConstants.ingredientsCollection).doc(ingredientId);
+            tx.update(ingredientRef, {
+              'quantity': FieldValue.increment(-totalToReduce),
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+          }
+        }
+
+        tx.update(orderRef, {'inventoryDeducted': true});
+      }
+
+      if (isCancellation) {
+        // Restock any surplus items for this order.
+        for (final item in order.items) {
+          final surplusId = item.surplusId;
+          if (surplusId == null || surplusId.isEmpty) continue;
+
+          final surplusRef = _db.collection(AppConstants.surplusItemsCollection).doc(surplusId);
+          tx.update(surplusRef, {
+            'quantity': FieldValue.increment(item.quantity),
+            'active': true,
+          });
+        }
+      }
+
+      // Finally update order status.
+      tx.update(orderRef, {'status': newStatus});
+    });
+
+    // Notify Customer (outside transaction)
+    final order = await getOrder(orderId);
+    if (order == null) return;
+
+    String title = 'Order Update';
+    String body = 'Your order #${orderId.substring(0, 8)} is now $newStatus.';
+
+    if (newStatus == AppConstants.orderAccepted) {
+      body = 'Your order has been accepted by the baker!';
+    } else if (newStatus == AppConstants.orderReady) {
+      body = 'Your order is ready for pickup/delivery!';
+    } else if (newStatus == AppConstants.orderDelivered) {
+      body = 'Enjoy your treats! Your order has been delivered.';
+    } else if (newStatus == AppConstants.orderCancelled) {
+      body = 'Your order has been cancelled.';
     }
 
-    batch.set(
-      _db.collection(AppConstants.ordersCollection).doc(order.id),
-      order.toFirestore(),
+    await addNotification(
+      order.customerId,
+      NotificationModel(
+        id: const Uuid().v4(),
+        title: title,
+        body: body,
+        createdAt: DateTime.now(),
+        type: 'order',
+        relatedId: orderId,
+      ),
     );
-    await batch.commit();
+  }
 
-    // Notify Baker of new order
+  // Create new order (atomic surplus decrement via transaction)
+  Future<void> saveOrder(OrderModel order) async {
+    await _db.runTransaction((tx) async {
+      // First validate + decrement each surplus item atomically.
+      // Note: If the same surplusId appears multiple times, we still apply each item quantity
+      // sequentially inside the same transaction reads/writes.
+      for (final item in order.items) {
+        final surplusId = item.surplusId;
+        if (surplusId == null || surplusId.isEmpty) continue;
+
+        final surplusRef = _db.collection(AppConstants.surplusItemsCollection).doc(surplusId);
+        final surplusSnap = await tx.get(surplusRef);
+
+        if (!surplusSnap.exists) {
+          throw Exception('The flash deal for ${item.productName} is no longer available.');
+        }
+
+        final data = surplusSnap.data() as Map<String, dynamic>? ?? {};
+        final isActive = (data['active'] ?? false) == true;
+        if (!isActive) {
+          throw Exception('The flash deal for ${item.productName} is no longer available.');
+        }
+
+        final available = (data['quantity'] ?? 0);
+        final requested = item.quantity;
+
+        if (requested > available) {
+          throw Exception('Only $available ${item.productName} flash deal item(s) left.');
+        }
+
+        final newQuantity = available - requested;
+        tx.update(surplusRef, {
+          'quantity': newQuantity,
+          'active': newQuantity > 0,
+        });
+      }
+
+      // Then create the order.
+      final orderRef = _db.collection(AppConstants.ordersCollection).doc(order.id);
+      tx.set(orderRef, order.toFirestore());
+    });
+
+    // Notify Baker of new order (outside the transaction)
     await addNotification(
       order.bakerId,
       NotificationModel(

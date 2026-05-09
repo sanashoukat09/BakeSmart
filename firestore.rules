@@ -1,76 +1,99 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-  
+
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     function isVerified() {
       return isAuthenticated() && request.auth.token.email_verified == true;
     }
 
-    // Users: can read own doc, baker storefronts are public
-    // Allow unverified read for basic profile setup, but write requires auth
-    match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && request.auth.uid == userId;
+    // Convenience: public read allowed, writes require authenticated + verified
+    function canWrite() {
+      return isVerified();
     }
 
-    // Products: bakers can write own, all auth users can read
+    // Users: private by default
+    match /users/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if isVerified() && request.auth.uid == userId;
+    }
+
+    // Products: bakers can write own, all users can read (storefront needs public URLs)
     match /products/{productId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isVerified()
-        && request.auth.uid == resource.data.bakerId;
-      allow create: if isVerified()
-        && request.auth.uid == request.resource.data.bakerId;
+      allow read: if true;
+      allow create: if canWrite() && request.auth.uid == request.resource.data.bakerId;
+      allow update, delete: if canWrite() && request.auth.uid == resource.data.bakerId;
     }
 
     // Ingredients: only owning baker can read/write
     match /ingredients/{ingredientId} {
-      allow read, write: if isVerified()
-        && request.auth.uid == resource.data.bakerId;
-      allow create: if isVerified()
-        && request.auth.uid == request.resource.data.bakerId;
+      allow read, write: if canWrite() && request.auth.uid == resource.data.bakerId;
+      allow create: if canWrite() && request.auth.uid == request.resource.data.bakerId;
     }
 
-    // Orders: baker or customer involved can read/write
+    // Orders: authenticity enforced on create + participants can read/update
     match /orders/{orderId} {
       allow read: if isVerified()
         && (request.auth.uid == resource.data.bakerId
-         || request.auth.uid == resource.data.customerId);
-      allow create: if isVerified();
-      allow update: if isVerified()
+            || request.auth.uid == resource.data.customerId);
+
+      // Customer/baker can create only for themselves
+      allow create: if canWrite()
+        && (request.auth.uid == request.resource.data.customerId
+            || request.auth.uid == request.resource.data.bakerId);
+
+      // Participant updates (status transitions should be validated at app/backend; kept permissive here)
+      allow update: if canWrite()
         && (request.auth.uid == resource.data.bakerId
-         || request.auth.uid == resource.data.customerId);
+            || request.auth.uid == resource.data.customerId);
+
+      // Optional: disallow deletes
+      allow delete: if false;
     }
 
-    // Reviews: public read, only authenticated writers after delivery
+    // Reviews:
+    // - Public read (storefront shared URLs)
+    // - Write requires verified auth AND "delivered order only"
     match /reviews/{reviewId} {
-      allow read: if isAuthenticated();
-      allow create: if isVerified()
-        && request.auth.uid == request.resource.data.customerId;
+      allow read: if true;
+
+      allow create: if canWrite()
+        && request.auth.uid == request.resource.data.customerId
+        && (get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.status
+            == 'delivered')
+        // Prevent overwriting an existing review
+        && !exists(/databases/$(database)/documents/reviews/$(reviewId));
+
+      allow update, delete: if false;
     }
 
-    // Surplus: public read, only baker can write
+    // Surplus items:
+    // - Public read for discovery/URLs
+    // - Write only for verified baker owner
     match /surplusItems/{itemId} {
-      allow read: if isAuthenticated();
-      allow write: if isVerified()
-        && request.auth.uid == resource.data.bakerId;
-      allow create: if isVerified()
+      allow read: if true;
+
+      allow create: if canWrite()
         && request.auth.uid == request.resource.data.bakerId;
+
+      allow update, delete: if canWrite()
+        && request.auth.uid == resource.data.bakerId;
     }
 
-    // Wishlists: only owning customer
+    // Wishlists: private per customer (not publicly exposed)
     match /wishlists/{wishlistId} {
-      allow read, write: if isVerified()
-        && request.auth.uid == resource.data.customerId;
+      allow read: if canWrite() && request.auth.uid == resource.data.customerId;
+      allow create: if canWrite() && request.auth.uid == request.resource.data.customerId;
+      allow update, delete: if canWrite() && request.auth.uid == resource.data.customerId;
     }
 
     // Delivery schedules: baker can manage own
     match /deliverySchedules/{scheduleId} {
-      allow read, write: if isVerified()
-        && request.auth.uid == resource.data.bakerId;
+      allow read, write: if canWrite() && request.auth.uid == resource.data.bakerId;
+      allow create: if canWrite() && request.auth.uid == request.resource.data.bakerId;
     }
   }
 }
