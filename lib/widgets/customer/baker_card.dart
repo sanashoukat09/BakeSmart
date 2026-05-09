@@ -75,6 +75,13 @@ class BakerCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
+                  Text(
+                    baker.bio ?? 'Passionate baker creating delicious treats.',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 11, height: 1.3),
+                  ),
+                  const SizedBox(height: 10),
                   Row(
                     children: [
                       Container(
@@ -95,9 +102,13 @@ class BakerCard extends StatelessWidget {
                         ),
                       ),
                       const Spacer(),
-                      const Text(
-                        'OPEN', // Simplified availability
-                        style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold),
+                      Text(
+                        'View Shop →',
+                        style: TextStyle(
+                          color: Color(0xFFD97706),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),

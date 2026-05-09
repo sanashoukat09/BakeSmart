@@ -3,6 +3,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/product_model.dart';
 import '../../providers/surplus_provider.dart';
+import '../../providers/store_provider.dart';
+import '../../providers/cart_provider.dart';
+import '../../models/cart_item_model.dart';
 
 class ProductCard extends ConsumerWidget {
   final ProductModel product;
@@ -14,6 +17,8 @@ class ProductCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final surplus = ref.watch(activeSurplusByProductProvider)[product.id];
     final hasDeal = surplus != null;
+    final bakers = ref.watch(allBakersProvider).valueOrNull ?? [];
+    final baker = bakers.cast<dynamic>().firstWhere((b) => b.uid == product.bakerId, orElse: () => null);
 
     return GestureDetector(
       onTap: onTap,
@@ -136,15 +141,63 @@ class ProductCard extends ConsumerWidget {
                         ),
                       ),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 12),
-                        const SizedBox(width: 4),
-                        Text(
-                          '4.8', // Placeholder for actual rating
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 11,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                baker?.bakeryName ?? 'Home Bakery',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 11,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  const Icon(Icons.star, color: Colors.amber, size: 12),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    baker?.rating.toStringAsFixed(1) ?? '4.8',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add_shopping_cart, color: Color(0xFFD97706), size: 20),
+                          onPressed: () {
+                            ref.read(cartProvider.notifier).addItemFromModel(
+                              CartItemModel(
+                                productId: product.id,
+                                bakerId: product.bakerId,
+                                productName: product.name,
+                                price: hasDeal ? surplus!.discountPrice : product.price,
+                                imageUrl: product.images.isNotEmpty ? product.images.first : '',
+                                surplusId: surplus?.id,
+                              ),
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('${product.name} added to cart'),
+                                duration: const Duration(seconds: 1),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            );
+                          },
+                          constraints: const BoxConstraints(),
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
                         ),
                       ],
                     ),

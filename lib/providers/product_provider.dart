@@ -15,6 +15,20 @@ final bakerProductsProvider = StreamProvider<List<ProductModel>>((ref) {
   return ref.watch(firestoreServiceProvider).streamBakerProducts(user.uid);
 });
 
+// Category filter for baker's product list
+final bakerCategoryFilterProvider = StateProvider<String?>((ref) => null);
+
+// Filtered stream of products for the current baker
+final filteredBakerProductsProvider = Provider<AsyncValue<List<ProductModel>>>((ref) {
+  final productsAsync = ref.watch(bakerProductsProvider);
+  final selectedCategory = ref.watch(bakerCategoryFilterProvider);
+
+  return productsAsync.whenData((products) {
+    if (selectedCategory == null) return products;
+    return products.where((p) => p.category == selectedCategory).toList();
+  });
+});
+
 // Product Notifier for CRUD actions
 class ProductNotifier extends StateNotifier<AsyncValue<void>> {
   final Ref _ref;

@@ -62,9 +62,13 @@ class CustomerHomeScreen extends ConsumerWidget {
                           ],
                         ),
                         Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             _NotificationBell(),
+                            const SizedBox(width: 4),
                             IconButton(
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
                               icon: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: const BoxDecoration(
@@ -104,10 +108,7 @@ class CustomerHomeScreen extends ConsumerWidget {
             ),
           ),
 
-          // Flash Deals Section
-          _FlashDealsSection(),
-
-          // Categories
+          // 1. Top Section: Categories (Search is in SliverAppBar above)
           SliverToBoxAdapter(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -155,17 +156,52 @@ class CustomerHomeScreen extends ConsumerWidget {
             ),
           ),
 
-          // Featured Bakers
+          // 2. Products Section (MAIN CONTENT)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(20, 24, 20, 12),
+              child: Text('Products', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF451A03))),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            sliver: products.isEmpty 
+              ? const SliverToBoxAdapter(
+                  child: Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: Text('No products found in this category'),
+                    ),
+                  ),
+                )
+              : SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.72,
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, i) => ProductCard(
+                      product: products[i],
+                      onTap: () => context.push('${AppRoutes.customerProduct}/${products[i].id}'),
+                    ),
+                    childCount: products.length,
+                  ),
+                ),
+          ),
+
+          // 3. Featured Bakers Section (VERY BOTTOM)
           SliverToBoxAdapter(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Padding(
-                  padding: EdgeInsets.fromLTRB(20, 24, 20, 12),
+                  padding: EdgeInsets.fromLTRB(20, 32, 20, 12),
                   child: Text('Featured Bakers', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF451A03))),
                 ),
                 SizedBox(
-                  height: 190,
+                  height: 230,
                   child: featuredBakersAsync.when(
                     data: (bakers) => ListView.builder(
                       scrollDirection: Axis.horizontal,
@@ -181,32 +217,6 @@ class CustomerHomeScreen extends ConsumerWidget {
                   ),
                 ),
               ],
-            ),
-          ),
-
-          // Product Grid
-          const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(20, 24, 20, 12),
-              child: Text('Fresh from the Oven', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF451A03))),
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.72,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (context, i) => ProductCard(
-                  product: products[i],
-                  onTap: () => context.push('${AppRoutes.customerProduct}/${products[i].id}'),
-                ),
-                childCount: products.length,
-              ),
             ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
@@ -284,6 +294,8 @@ class _NotificationBell extends ConsumerWidget {
     return Stack(
       children: [
         IconButton(
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),

@@ -8,6 +8,7 @@ import '../../models/product_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/baker_theme.dart';
 import '../../widgets/baker/baker_bottom_nav.dart';
+import '../../core/constants/app_constants.dart';
 
 
 class ProductListScreen extends ConsumerWidget {
@@ -35,8 +36,12 @@ class ProductListScreen extends ConsumerWidget {
             onPressed: () => context.push(AppRoutes.bakerAddProduct),
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: _CategoryFilterBar(),
+        ),
       ),
-      body: productsAsync.when(
+      body: ref.watch(filteredBakerProductsProvider).when(
         data: (products) {
           if (products.isEmpty) {
             return Center(
@@ -229,6 +234,53 @@ class _ProductCard extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CategoryFilterBar extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedCategory = ref.watch(bakerCategoryFilterProvider);
+
+    return Container(
+      height: 60,
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.only(left: 16),
+        itemCount: AppConstants.productCategories.length + 1,
+        itemBuilder: (context, i) {
+          final isAll = i == 0;
+          final cat = isAll ? null : AppConstants.productCategories[i - 1];
+          final isSelected = selectedCategory == cat;
+
+          return GestureDetector(
+            onTap: () => ref.read(bakerCategoryFilterProvider.notifier).state = cat,
+            child: Container(
+              margin: const EdgeInsets.only(right: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: isSelected ? const Color(0xFFF59E0B) : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected ? Colors.transparent : BakerTheme.divider,
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  isAll ? 'All' : cat!,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : BakerTheme.textPrimary,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
