@@ -163,32 +163,59 @@ class CustomerHomeScreen extends ConsumerWidget {
               child: Text('Products', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF451A03))),
             ),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            sliver: products.isEmpty 
-              ? const SliverToBoxAdapter(
-                  child: Center(
-                    child: Padding(
+          Consumer(
+            builder: (context, ref, _) {
+              final allProductsAsync = ref.watch(allProductsProvider);
+              final filtered = ref.watch(filteredProductsProvider);
+
+              return SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                sliver: allProductsAsync.when(
+                  data: (_) {
+                    if (filtered.isEmpty) {
+                      return const SliverToBoxAdapter(
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 40),
+                            child: Text('No products found in this category'),
+                          ),
+                        ),
+                      );
+                    }
+
+                    return SliverGrid(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.72,
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, i) => ProductCard(
+                          product: filtered[i],
+                          onTap: () => context.push('${AppRoutes.customerProduct}/${filtered[i].id}'),
+                        ),
+                        childCount: filtered.length,
+                      ),
+                    );
+                  },
+                  loading: () => const SliverToBoxAdapter(
+                    child: Center(child: Padding(
                       padding: EdgeInsets.symmetric(vertical: 40),
-                      child: Text('No products found in this category'),
-                    ),
+                      child: CircularProgressIndicator(),
+                    )),
                   ),
-                )
-              : SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.72,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, i) => ProductCard(
-                      product: products[i],
-                      onTap: () => context.push('${AppRoutes.customerProduct}/${products[i].id}'),
+                  error: (e, _) => SliverToBoxAdapter(
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 16),
+                        child: Text('Failed to load products: $e', textAlign: TextAlign.center),
+                      ),
                     ),
-                    childCount: products.length,
                   ),
                 ),
+              );
+            },
           ),
 
           // 3. Featured Bakers Section (VERY BOTTOM)
@@ -322,4 +349,3 @@ class _NotificationBell extends ConsumerWidget {
     );
   }
 }
-

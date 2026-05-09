@@ -4,8 +4,10 @@ import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../providers/order_provider.dart';
 import '../../providers/product_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../models/order_model.dart';
 import '../../models/product_model.dart';
+import '../../models/review_model.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/baker_theme.dart';
 import '../../widgets/baker/baker_bottom_nav.dart';
@@ -77,6 +79,11 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
 
               Map<int, double> dailyRevenue = {};
               Map<int, double> dailyProfit = {};
+              // FE-1: received/completed/rejected counts per bucket
+              final Map<int, int> dailyOrdersReceived = {};
+              final Map<int, int> dailyOrdersCompleted = {};
+              final Map<int, int> dailyOrdersRejected = {};
+              // legacy total activity
               Map<int, int> dailyOrders = {};
               Map<String, double> productEarnings = {};
               Map<String, int> productSalesCount = {};
@@ -86,6 +93,10 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
                 dailyRevenue[i] = 0;
                 dailyProfit[i] = 0;
                 dailyOrders[i] = 0;
+
+                dailyOrdersReceived[i] = 0;
+                dailyOrdersCompleted[i] = 0;
+                dailyOrdersRejected[i] = 0;
               }
 
               for (var order in deliveredOrders) {
@@ -129,6 +140,18 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
                   final bucket = _bucketIndex(orderDate, periodStart, bucketCount);
                   if (bucket != null) {
                     dailyOrders[bucket] = (dailyOrders[bucket] ?? 0) + 1;
+
+                    final isRejected = order.status == AppConstants.orderRejected;
+                    final isCompleted = order.status == AppConstants.orderDelivered;
+                    final isReceived = !isRejected && !isCompleted;
+
+                    if (isRejected) {
+                      dailyOrdersRejected[bucket] = (dailyOrdersRejected[bucket] ?? 0) + 1;
+                    } else if (isCompleted) {
+                      dailyOrdersCompleted[bucket] = (dailyOrdersCompleted[bucket] ?? 0) + 1;
+                    } else if (isReceived) {
+                      dailyOrdersReceived[bucket] = (dailyOrdersReceived[bucket] ?? 0) + 1;
+                    }
                   }
                 }
               }
@@ -141,6 +164,52 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
                   : ((totalProfit - previousProfit) / previousProfit) * 100;
               final avgMargin = totalRevenue == 0 ? 0.0 : (totalProfit / totalRevenue) * 100;
               final bestSeller = productSalesCount.entries.isEmpty ? "N/A" : productSalesCount.entries.fold(productSalesCount.entries.first, (a, b) => a.value > b.value ? a : b).key;
+
+              // FE-3: Peak day + peak time (from order.createdAt within selected range)
+              final Map<int, int> peakHourCounts = <int, int>{};
+              final Map<int, int> peakWeekdayCounts = <int, int>{}; // 1..7 (Mon..Sun) using Dart weekday (Mon=1)
+              for (int i = 0; i < 24; i++) {
+                peakHourCounts[i] = 0;
+              }
+              // Dart weekday: 1 Mon .. 7 Sun
+              for (int wd = 1; wd <= 7; wd++) {
+                peakWeekdayCounts[wd] = 0;
+              }
+
+              for (final order in orders) {
+                final created = order.createdAt;
+                if (created.isBefore(periodStart)) continue;
+                final bucket = _bucketIndex(DateTime(created.year, created.month, created.day), periodStart, bucketCount);
+                if (bucket == null) continue;
+
+                peakHourCounts[created.hour] = (peakHourCounts[created.hour] ?? 0) + 1;
+                peakWeekdayCounts[created.weekday] = (peakWeekdayCounts[created.weekday] ?? 0) + 1;
+              }
+
+              final peakHour = peakHourCounts.entries.isEmpty
+                  ? null
+                  : peakHourCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+
+              final peakWeekdayNumber = peakWeekdayCounts.entries.isEmpty
+                  ? null
+                  : peakWeekdayCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+
+              final peakWeekdayLabel = peakWeekdayNumber == null
+                  ? 'N/A'
+                  : const <int, String>{
+                      1: 'Mon',
+                      2: 'Tue',
+                      3: 'Wed',
+                      4: 'Thu',
+                      5: 'Fri',
+                      6: 'Sat',
+                      7: 'Sun',
+                    }[peakWeekdayNumber] ??
+                      'N/A';
+
+              final peakTimeLabel = peakHour == null
+                  ? 'N/A'
+                  : '${peakHour.toString().padLeft(2, '0')}:00';
 
               // Axis limits
               final maxRev = dailyRevenue.values.fold(0.0, (p, e) => e > p ? e : p);
@@ -196,6 +265,10 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
                       insights: [
                         _InsightItem(text: '$bestSeller is your most profitable item this week.', type: InsightType.positive),
                         _InsightItem(text: 'Overall profit margin is stable at ${avgMargin.toStringAsFixed(1)}%.', type: InsightType.neutral),
+                        _InsightItem(
+                          text: 'Peak order time: $peakWeekdayLabel at $peakTimeLabel.',
+                          type: InsightType.positive,
+                        ),
                         if (revenueTrend < 0)
                           _InsightItem(text: 'Revenue is down ${revenueTrend.abs().toStringAsFixed(1)}% vs last week.', type: InsightType.negative),
                         _InsightItem(text: 'Suggestion: Adjust pricing for seasonal cakes to increase profit by 12%.', type: InsightType.ai),
@@ -207,10 +280,22 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
                     // WEEKLY ORDERS TREND AREA GRAPH
                     _AnalyticsCard(
                       title: 'Order Activity',
-                      subtitle: _range == AnalyticsRange.week ? 'Daily count' : 'Weekly buckets',
+                      subtitle: _range == AnalyticsRange.week ? 'Received / Completed / Rejected (by day)' : 'Received / Completed / Rejected (by bucket)',
+                      legend: [
+                        _LegendItem(label: 'Received', color: BakerTheme.secondary),
+                        _LegendItem(label: 'Completed', color: const Color(0xFF10B981)),
+                        _LegendItem(label: 'Rejected', color: const Color(0xFFEF4444)),
+                      ],
                       child: SizedBox(
                         height: 180,
-                        child: LineChart(_buildOrdersAreaChart(dailyOrders, ordersMaxY)),
+                        child: LineChart(
+                          _buildOrdersAreaChart(
+                            dailyOrdersReceived,
+                            dailyOrdersCompleted,
+                            dailyOrdersRejected,
+                            ordersMaxY,
+                          ),
+                        ),
                       ),
                     ),
 
@@ -237,6 +322,13 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
                         child: PieChart(_buildProfitPieChart(categoryProfit, totalProfit)),
                       ),
                       legend: categoryProfit.entries.map((e) => _LegendItem(label: e.key, color: _getCategoryColor(e.key))).toList(),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // FE-4: Reviews leaderboard (all-time)
+                    _ReviewsLeaderboardSection(
+                      products: products,
                     ),
 
                     const SizedBox(height: 32),
@@ -327,7 +419,12 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
     );
   }
 
-  LineChartData _buildOrdersAreaChart(Map<int, int> orders, double maxY) {
+  LineChartData _buildOrdersAreaChart(
+    Map<int, int> received,
+    Map<int, int> completed,
+    Map<int, int> rejected,
+    double maxY,
+  ) {
     return LineChartData(
       maxY: maxY,
       minY: 0,
@@ -337,17 +434,57 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
       borderData: FlBorderData(show: false),
       lineBarsData: [
         LineChartBarData(
-          spots: orders.entries.map((e) => FlSpot(e.key.toDouble(), e.value.toDouble())).toList(),
+          spots: received.entries
+              .map((e) => FlSpot(e.key.toDouble(), e.value.toDouble()))
+              .toList(),
           isCurved: true,
           curveSmoothness: 0.4,
-          color: BakerTheme.primary,
+          color: BakerTheme.secondary,
           barWidth: 3,
           isStrokeCapRound: true,
           dotData: const FlDotData(show: false),
           belowBarData: BarAreaData(
             show: true,
             gradient: LinearGradient(
-              colors: [BakerTheme.primary.withOpacity(0.2), BakerTheme.primary.withOpacity(0.0)],
+              colors: [BakerTheme.secondary.withOpacity(0.18), BakerTheme.secondary.withOpacity(0.0)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+        ),
+        LineChartBarData(
+          spots: completed.entries
+              .map((e) => FlSpot(e.key.toDouble(), e.value.toDouble()))
+              .toList(),
+          isCurved: true,
+          curveSmoothness: 0.4,
+          color: const Color(0xFF10B981),
+          barWidth: 3,
+          isStrokeCapRound: true,
+          dotData: const FlDotData(show: false),
+          belowBarData: BarAreaData(
+            show: true,
+            gradient: LinearGradient(
+              colors: [const Color(0xFF10B981).withOpacity(0.18), const Color(0xFF10B981).withOpacity(0.0)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+        ),
+        LineChartBarData(
+          spots: rejected.entries
+              .map((e) => FlSpot(e.key.toDouble(), e.value.toDouble()))
+              .toList(),
+          isCurved: true,
+          curveSmoothness: 0.4,
+          color: const Color(0xFFEF4444),
+          barWidth: 3,
+          isStrokeCapRound: true,
+          dotData: const FlDotData(show: false),
+          belowBarData: BarAreaData(
+            show: true,
+            gradient: LinearGradient(
+              colors: [const Color(0xFFEF4444).withOpacity(0.18), const Color(0xFFEF4444).withOpacity(0.0)],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -771,3 +908,204 @@ class _LegendItem extends StatelessWidget {
 }
 
 enum InsightType { positive, negative, neutral, ai }
+
+class _ReviewsLeaderboardSection extends StatelessWidget {
+  final List<ProductModel> products;
+  const _ReviewsLeaderboardSection({required this.products});
+
+  @override
+  Widget build(BuildContext context) {
+    // This file is a ConsumerStatefulWidget, but this section is a plain StatelessWidget.
+    // We use Consumer widgets below for access to providers/streams.
+    return _ReviewsLeaderboardBody(products: products);
+  }
+}
+
+class _ReviewsLeaderboardBody extends ConsumerWidget {
+  final List<ProductModel> products;
+  const _ReviewsLeaderboardBody({required this.products});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(currentUserProvider).valueOrNull;
+    final bakerId = currentUser?.uid;
+
+    if (bakerId == null) return const SizedBox.shrink();
+
+    return StreamBuilder<List<ReviewModel>>(
+      stream: ref.read(firestoreServiceProvider).streamBakerReviews(bakerId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: BakerTheme.secondary));
+        }
+        final reviews = snapshot.data ?? [];
+        if (reviews.isEmpty) {
+          return const _EmptyReviewsSection();
+        }
+
+        // Aggregate: productId -> {count, ratingSum}
+        final Map<String, int> reviewCountByProduct = {};
+        final Map<String, double> ratingSumByProduct = {};
+        final Map<String, double> avgRatingByProduct = {};
+
+        for (final review in reviews) {
+          // Use productIds from ReviewModel
+          final pids = review.productIds;
+          if (pids.isEmpty) continue;
+
+          for (final pid in pids) {
+            final key = pid;
+            reviewCountByProduct[key] = (reviewCountByProduct[key] ?? 0) + 1;
+            ratingSumByProduct[key] = (ratingSumByProduct[key] ?? 0) + review.rating;
+          }
+        }
+
+        for (final entry in reviewCountByProduct.entries) {
+          final pid = entry.key;
+          final count = entry.value;
+          final sum = ratingSumByProduct[pid] ?? 0.0;
+          avgRatingByProduct[pid] = count == 0 ? 0.0 : (sum / count);
+        }
+
+        // Most reviewed: top 3 by count
+        final mostReviewed = reviewCountByProduct.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+
+        // Highest rated: top 3 by avg rating, tie-break by count
+        final highestRated = avgRatingByProduct.entries.toList()
+          ..sort((a, b) {
+            final av = a.value;
+            final bv = b.value;
+            final cmp = bv.compareTo(av);
+            if (cmp != 0) return cmp;
+            final ac = reviewCountByProduct[a.key] ?? 0;
+            final bc = reviewCountByProduct[b.key] ?? 0;
+            return bc.compareTo(ac);
+          });
+
+        String _productName(String productId) {
+          return products.firstWhere((p) => p.id == productId, orElse: () => ProductModel(id: productId, bakerId: '', name: productId, description: '', price: 0, category: '', images: const [], dietaryLabels: const [], ingredients: const {}, addOns: const {}, isAvailable: true, profitMargin: 0, createdAt: DateTime.fromMillisecondsSinceEpoch(0))).name;
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SectionHeader(title: 'Reviews & Ratings ⭐'),
+            const SizedBox(height: 12),
+
+            _ReviewsAnalyticsCard(
+              title: 'Most Reviewed',
+              subtitle: 'Top products by review volume',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: mostReviewed.take(3).map((e) {
+                  final pid = e.key;
+                  final count = e.value;
+                  final avg = avgRatingByProduct[pid] ?? 0.0;
+                  final name = products.firstWhere((p) => p.id == pid, orElse: () => ProductModel(id: pid, bakerId: '', name: pid, description: '', price: 0, category: '', images: const [], dietaryLabels: const [], ingredients: const {}, addOns: const {}, isAvailable: true, profitMargin: 0, createdAt: DateTime.fromMillisecondsSinceEpoch(0))).name;
+
+                  return _ProductReviewRow(
+                    title: name,
+                    subtitle: '$count reviews • ${avg.toStringAsFixed(1)}★',
+                  );
+                }).toList(),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            _ReviewsAnalyticsCard(
+              title: 'Highest Rated',
+              subtitle: 'Top products by average rating',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: highestRated.take(3).map((e) {
+                  final pid = e.key;
+                  final avg = e.value;
+                  final count = reviewCountByProduct[pid] ?? 0;
+                  final name = products.firstWhere((p) => p.id == pid, orElse: () => ProductModel(id: pid, bakerId: '', name: pid, description: '', price: 0, category: '', images: const [], dietaryLabels: const [], ingredients: const {}, addOns: const {}, isAvailable: true, profitMargin: 0, createdAt: DateTime.fromMillisecondsSinceEpoch(0))).name;
+
+                  return _ProductReviewRow(
+                    title: name,
+                    subtitle: '$count reviews • ${avg.toStringAsFixed(1)}★',
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _EmptyReviewsSection extends StatelessWidget {
+  const _EmptyReviewsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _ReviewsAnalyticsCard(
+      title: 'Reviews & Ratings ⭐',
+      subtitle: 'No reviews yet',
+      child: SizedBox.shrink(),
+    );
+  }
+}
+
+class _ReviewsAnalyticsCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final Widget child;
+  const _ReviewsAnalyticsCard({
+    required this.title,
+    required this.subtitle,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: BakerTheme.divider, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(color: BakerTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(subtitle, style: const TextStyle(color: BakerTheme.textMuted, fontSize: 11)),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _ProductReviewRow extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _ProductReviewRow({
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(color: BakerTheme.textPrimary, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(subtitle, style: const TextStyle(color: BakerTheme.textSecondary, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+}

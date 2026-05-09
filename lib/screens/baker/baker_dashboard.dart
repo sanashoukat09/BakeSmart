@@ -501,7 +501,7 @@ class _StatCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         decoration: BoxDecoration(
           color: BakerTheme.divider.withOpacity(0.4),
           borderRadius: BorderRadius.circular(16),
@@ -510,16 +510,16 @@ class _StatCard extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 44,
-              height: 44,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: BakerTheme.divider),
               ),
-              child: Icon(icon, color: BakerTheme.primary, size: 22),
+              child: Icon(icon, color: BakerTheme.primary, size: 18),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -528,7 +528,7 @@ class _StatCard extends StatelessWidget {
                     value,
                     style: const TextStyle(
                       color: BakerTheme.textPrimary,
-                      fontSize: 24,
+                      fontSize: 18,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -536,7 +536,7 @@ class _StatCard extends StatelessWidget {
                     label,
                     style: const TextStyle(
                       color: BakerTheme.textSecondary,
-                      fontSize: 13,
+                      fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),
                     overflow: TextOverflow.ellipsis,

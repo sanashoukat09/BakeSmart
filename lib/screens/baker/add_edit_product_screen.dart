@@ -56,7 +56,57 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
       _isAvailable = product.isAvailable;
       _profitMargin = product.profitMargin;
       setState(() {});
+      _checkConflicts();
     });
+  }
+
+  List<String> _getConflicts() {
+    final conflicts = <String>[];
+    final ingredientsAsync = ref.read(bakerIngredientsProvider);
+    final allIngredients = ingredientsAsync.valueOrNull ?? [];
+
+    for (final entry in _selectedIngredients.entries) {
+      if (entry.value <= 0) continue;
+      final ingredient = allIngredients.firstWhere((i) => i.id == entry.key, 
+        orElse: () => IngredientModel(id: '', bakerId: '', name: '', unit: '', quantity: 0, unitPrice: 0, updatedAt: DateTime.now()));
+      
+      final name = ingredient.name.toLowerCase();
+      
+      if (name.contains('egg') && _selectedDietary.contains('Eggless')) {
+        conflicts.add('Eggless (contains ${ingredient.name})');
+      }
+      if (name.contains('sugar') && _selectedDietary.contains('Sugar-Free')) {
+        conflicts.add('Sugar-Free (contains ${ingredient.name})');
+      }
+      if ((name.contains('flour') || name.contains('wheat')) && _selectedDietary.contains('Gluten-Free')) {
+        conflicts.add('Gluten-Free (contains ${ingredient.name})');
+      }
+      if (name.contains('nut') && _selectedDietary.contains('Nut-Free')) {
+        conflicts.add('Nut-Free (contains ${ingredient.name})');
+      }
+    }
+    return conflicts;
+  }
+
+  void _checkConflicts() {
+    final conflicts = _getConflicts();
+    if (conflicts.isNotEmpty) {
+      setState(() {
+        // Option 1: Auto-remove (safer for data integrity)
+        for (final conflict in conflicts) {
+          final label = conflict.split(' ').first;
+          _selectedDietary.remove(label);
+        }
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Removed conflicting dietary labels: ${conflicts.join(", ")}'),
+          backgroundColor: const Color(0xFF991B1B),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   double _calculateTotalCost(AsyncValue<List<IngredientModel>> ingredientsAsync) {
@@ -369,6 +419,7 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                         onChanged: (val) {
                           if (val != null) {
                             setState(() => _selectedIngredients[val] = 1.0);
+                            _checkConflicts();
                           }
                         },
                       ),
@@ -396,8 +447,38 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                     selected: isSelected,
                     onSelected: (val) {
                       setState(() {
-                        if (val) _selectedDietary.add(l);
-                        else _selectedDietary.remove(l);
+                        if (val) {
+                          // Check for conflict before adding
+                          final ingredientsAsync = ref.read(bakerIngredientsProvider);
+                          final allIngredients = ingredientsAsync.valueOrNull ?? [];
+                          String? conflictSource;
+                          
+                          for (final entry in _selectedIngredients.entries) {
+                            final ing = allIngredients.firstWhere((i) => i.id == entry.key);
+                            final name = ing.name.toLowerCase();
+                            if ((l == 'Eggless' && name.contains('egg')) ||
+                                (l == 'Sugar-Free' && name.contains('sugar')) ||
+                                (l == 'Gluten-Free' && (name.contains('flour') || name.contains('wheat'))) ||
+                                (l == 'Nut-Free' && name.contains('nut'))) {
+                              conflictSource = ing.name;
+                              break;
+                            }
+                          }
+
+                          if (conflictSource != null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Cannot select $l because the product contains $conflictSource'),
+                                backgroundColor: const Color(0xFF991B1B),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          } else {
+                            _selectedDietary.add(l);
+                          }
+                        } else {
+                          _selectedDietary.remove(l);
+                        }
                       });
                     },
                     selectedColor: const Color(0xFFFEF3C7),

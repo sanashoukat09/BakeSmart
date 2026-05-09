@@ -157,3 +157,206 @@ exports.checkCapacityOnAccept = functions.firestore
       });
     }
   });
+
+// ─────────────────────────────────────────────────────────────
+// Module 10 — Denormalized Baker Analytics (orders + reviews)
+// Time basis: received=createdAt, revenue/completed=relevant deliveryDate
+// Range basis: rolling last 7 days (week) + rolling last 30 days (month)
+// Aggregates written to: bakerAnalytics/{bakerId}/ranges/{rangeKey}
+// ─────────────────────────────────────────────────────────────
+
+// Helpers
+function toDateKey(date) {
+  // date is a Firestore Timestamp or JS Date
+  const d = date.toDate ? date.toDate() : date;
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function isDelivered(status) {
+  return status === 'delivered';
+}
+function isRejected(status) {
+  return status === 'rejected';
+}
+
+function getRangeKeys(now = new Date()) {
+  const nowD = now;
+  const weekStart = new Date(nowD);
+  weekStart.setUTCDate(weekStart.getUTCDate() - 6); // last 7 days inclusive
+  const monthStart = new Date(nowD);
+  monthStart.setUTCDate(monthStart.getUTCDate() - 29); // last 30 days inclusive
+
+  return { weekStart, monthStart, now: nowD };
+}
+
+async function bumpRangeDoc(tx, bakerId, dateKey, status, totals, kind) {
+  // totals: { receivedByDay: {}, completedByDay: {}, rejectedByDay:{}, revenueByDay:{}, profitByDay:{} ...}
+  const analyticsRef = db.collection('bakerAnalytics').doc(bakerId).collection('ranges').doc('rolling');
+  const doc = await tx.get(analyticsRef);
+
+  const base = doc.exists ? doc.data() : {};
+  const data = { ...base };
+
+  // Ensure nested objects exist
+  data.receivedByDay = data.receivedByDay || {};
+  data.completedByDay = data.completedByDay || {};
+  data.rejectedByDay = data.rejectedByDay || {};
+  data.revenueByDay = data.revenueByDay || {};
+  data.profitByDay = data.profitByDay || {};
+
+  const dayTotals = dateKey;
+
+  if (kind === 'received') {
+    data.receivedByDay[dayTotals] = (data.receivedByDay[dayTotals] || 0) + 1;
+    tx.set(analyticsRef, data, { merge: true });
+    return;
+  }
+
+  if (kind === 'completed' && isDelivered(status)) {
+    data.completedByDay[dayTotals] = (data.completedByDay[dayTotals] || 0) + 1;
+    tx.set(analyticsRef, data, { merge: true });
+    return;
+  }
+
+  if (kind === 'rejected' && isRejected(status)) {
+    data.rejectedByDay[dayTotals] = (data.rejectedByDay[dayTotals] || 0) + 1;
+    tx.set(analyticsRef, data, { merge: true });
+    return;
+  }
+
+  tx.set(analyticsRef, data, { merge: true });
+}
+
+async function bumpRevenueProfitForDelivered(tx, bakerId, deliveryDate, order, rangeStartKey, rangeEndKey) {
+  // NOTE: profit estimation in client uses product.profitMargin.
+  // For denormalization without joining products here, we store revenue only.
+  // Profit can be derived later in FE using product margins; or you can add product lookup here later.
+  const analyticsRef = db.collection('bakerAnalytics').doc(bakerId).collection('ranges').doc('rolling');
+  const doc = await tx.get(analyticsRef);
+  const data = doc.exists ? doc.data() : {};
+  data.revenueByDay = data.revenueByDay || {};
+  data.profitByDay = data.profitByDay || {}; // kept for compatibility (0 until computed)
+
+  const dayKey = toDateKey(deliveryDate);
+
+  data.revenueByDay[dayKey] = (data.revenueByDay[dayKey] || 0) + (order.totalAmount || 0);
+  data.profitByDay[dayKey] = (data.profitByDay[dayKey] || 0) + 0;
+
+  tx.set(analyticsRef, data, { merge: true });
+}
+
+exports.onOrderCreatedUpdateBakerAnalytics = functions.firestore
+  .document('orders/{orderId}')
+  .onCreate(async (snap, context) => {
+    const order = snap.data();
+    if (!order || !order.bakerId || !order.createdAt) return;
+
+    const bakerId = order.bakerId;
+    const createdAtKey = toDateKey(order.createdAt);
+
+    const now = new Date();
+    const { weekStart, monthStart } = getRangeKeys(now);
+
+    const createdDate = order.createdAt.toDate ? order.createdAt.toDate() : order.createdAt;
+    if (createdDate < weekStart || createdDate > now) {
+      // Still write to rolling doc because UI reads last N days by day keys.
+      // But to keep doc small, skip days far outside 30-day window:
+      if (createdDate < monthStart) return;
+    }
+
+    await db.runTransaction(async (tx) => {
+      await bumpRangeDoc(tx, bakerId, createdAtKey, order.status, null, 'received');
+    });
+  });
+
+exports.onOrderStatusChangedUpdateBakerAnalytics = functions.firestore
+  .document('orders/{orderId}')
+  .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+    if (!before || !after) return;
+    if (before.status === after.status) return;
+    if (!after.bakerId) return;
+
+    const bakerId = after.bakerId;
+
+    await db.runTransaction(async (tx) => {
+      const txOrderRef = change.after.ref;
+
+      // received/completed/rejected counts are bucketted by createdAt for received,
+      // and deliveryDate for completed/rejected (if present).
+      if (!before.createdAt) return;
+      const createdAtKey = toDateKey(after.createdAt);
+
+      // For FE-1 received counts: count when order is created (handled by onCreate).
+      // For transitions:
+      if (after.status === 'delivered' && after.deliveryDate) {
+        const deliveredKey = toDateKey(after.deliveryDate);
+        // completedByDay
+        const data = (await tx.get(db.collection('bakerAnalytics').doc(bakerId).collection('ranges').doc('rolling'))).data() || {};
+        data.completedByDay = data.completedByDay || {};
+        data.completedByDay[deliveredKey] = (data.completedByDay[deliveredKey] || 0) + 1;
+
+        // revenueByDay
+        data.revenueByDay = data.revenueByDay || {};
+        data.revenueByDay[deliveredKey] = (data.revenueByDay[deliveredKey] || 0) + (after.totalAmount || 0);
+
+        data.profitByDay = data.profitByDay || {};
+        data.profitByDay[deliveredKey] = (data.profitByDay[deliveredKey] || 0) + 0;
+
+        tx.set(db.collection('bakerAnalytics').doc(bakerId).collection('ranges').doc('rolling'), data, { merge: true });
+      }
+
+      if (after.status === 'rejected' && after.deliveryDate) {
+        const rejectedKey = toDateKey(after.deliveryDate);
+        const data = (await tx.get(db.collection('bakerAnalytics').doc(bakerId).collection('ranges').doc('rolling'))).data() || {};
+        data.rejectedByDay = data.rejectedByDay || {};
+        data.rejectedByDay[rejectedKey] = (data.rejectedByDay[rejectedKey] || 0) + 1;
+
+        tx.set(db.collection('bakerAnalytics').doc(bakerId).collection('ranges').doc('rolling'), data, { merge: true });
+      }
+    });
+  });
+
+// Reviews aggregation for FE-4 (count + avg rating per product)
+// If your review schema includes productIds, we can distribute rating across products.
+// If not, we can only aggregate by bakerId.
+exports.onReviewCreatedUpdateBakerAnalytics = functions.firestore
+  .document('reviews/{reviewId}')
+  .onCreate(async (snap, context) => {
+    const review = snap.data();
+    if (!review || !review.bakerId || !review.rating) return;
+
+    const bakerId = review.bakerId;
+    const productIds = Array.isArray(review.productIds) ? review.productIds : [];
+
+    // If productIds missing, just skip; you can extend later.
+    if (!productIds.length) return;
+
+    await db.runTransaction(async (tx) => {
+      const analyticsRef = db.collection('bakerAnalytics').doc(bakerId).collection('ranges').doc('rolling');
+      const doc = await tx.get(analyticsRef);
+      const data = doc.exists ? doc.data() : {};
+
+      data.reviewCountByProduct = data.reviewCountByProduct || {};
+      data.reviewAvgByProduct = data.reviewAvgByProduct || {};
+      data.reviewSumByProduct = data.reviewSumByProduct || {};
+
+      for (const pid of productIds) {
+        const key = String(pid);
+        const prevCount = data.reviewCountByProduct[key] || 0;
+        const prevSum = data.reviewSumByProduct[key] || 0;
+
+        const newCount = prevCount + 1;
+        const newSum = prevSum + review.rating;
+        data.reviewCountByProduct[key] = newCount;
+        data.reviewSumByProduct[key] = newSum;
+        data.reviewAvgByProduct[key] = newSum / newCount;
+      }
+
+      tx.set(analyticsRef, data, { merge: true });
+    });
+  });
