@@ -318,12 +318,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 groupValue: _paymentMethod,
                 onChanged: (v) => setState(() => _paymentMethod = v!),
               ),
-              _PaymentOption(
-                label: 'JazzCash / Easypaisa',
-                value: 'DIGITAL',
-                groupValue: _paymentMethod,
-                onChanged: (v) => setState(() => _paymentMethod = v!),
-              ),
               const SizedBox(height: 24),
 
               Container(

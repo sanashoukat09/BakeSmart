@@ -5,7 +5,9 @@ import '../models/ingredient_model.dart';
 import '../models/surplus_item_model.dart';
 import '../models/order_model.dart';
 import '../models/review_model.dart';
+import '../models/notification_model.dart';
 import '../core/constants/app_constants.dart';
+import 'package:uuid/uuid.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -290,10 +292,37 @@ class FirestoreService {
 
   // Update order status
   Future<void> updateOrderStatus(String orderId, String newStatus) async {
+    final order = await getOrder(orderId);
+    if (order == null) return;
+
     await _db
         .collection(AppConstants.ordersCollection)
         .doc(orderId)
         .update({'status': newStatus});
+
+    // Notify Customer
+    String title = 'Order Update';
+    String body = 'Your order #${orderId.substring(0, 8)} is now $newStatus.';
+    
+    if (newStatus == AppConstants.orderAccepted) {
+      body = 'Your order has been accepted by the baker!';
+    } else if (newStatus == AppConstants.orderReady) {
+      body = 'Your order is ready for pickup/delivery!';
+    } else if (newStatus == AppConstants.orderDelivered) {
+      body = 'Enjoy your treats! Your order has been delivered.';
+    }
+
+    await addNotification(
+      order.customerId,
+      NotificationModel(
+        id: const Uuid().v4(),
+        title: title,
+        body: body,
+        createdAt: DateTime.now(),
+        type: 'order',
+        relatedId: orderId,
+      ),
+    );
   }
 
   // Mark inventory as deducted
@@ -340,6 +369,19 @@ class FirestoreService {
       order.toFirestore(),
     );
     await batch.commit();
+
+    // Notify Baker of new order
+    await addNotification(
+      order.bakerId,
+      NotificationModel(
+        id: const Uuid().v4(),
+        title: 'New Order Received! 🎂',
+        body: 'You have a new order from ${order.customerName}.',
+        createdAt: DateTime.now(),
+        type: 'order',
+        relatedId: order.id,
+      ),
+    );
   }
 
   // Get single order
@@ -461,5 +503,51 @@ class FirestoreService {
       }
       return total;
     });
+  }
+  // ─── NOTIFICATION OPERATIONS ──────────────────────────────────
+  
+  Future<void> addNotification(String userId, NotificationModel notification) async {
+    await _db
+        .collection(AppConstants.usersCollection)
+        .doc(userId)
+        .collection('notifications')
+        .doc(notification.id)
+        .set(notification.toMap());
+  }
+
+  Stream<List<NotificationModel>> streamNotifications(String userId) {
+    return _db
+        .collection(AppConstants.usersCollection)
+        .doc(userId)
+        .collection('notifications')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => NotificationModel.fromFirestore(doc))
+            .toList());
+  }
+
+  Future<void> markNotificationAsRead(String userId, String notificationId) async {
+    await _db
+        .collection(AppConstants.usersCollection)
+        .doc(userId)
+        .collection('notifications')
+        .doc(notificationId)
+        .update({'isRead': true});
+  }
+
+  Future<void> markAllNotificationsAsRead(String userId) async {
+    final batch = _db.batch();
+    final unread = await _db
+        .collection(AppConstants.usersCollection)
+        .doc(userId)
+        .collection('notifications')
+        .where('isRead', isEqualTo: false)
+        .get();
+
+    for (var doc in unread.docs) {
+      batch.update(doc.reference, {'isRead': true});
+    }
+    await batch.commit();
   }
 }
