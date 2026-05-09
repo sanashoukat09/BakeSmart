@@ -90,13 +90,8 @@ class BakerStorefrontScreen extends ConsumerWidget {
                                 ],
                               ),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.notifications_active_outlined, color: Colors.white, size: 28),
-                              onPressed: () {
-                                ref.read(notificationServiceProvider).subscribeToBaker(baker.uid);
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('You will be notified of new surplus deals!')));
-                              },
-                            ),
+                            // Notification button removed as per user request
+
                           ],
                         ),
                       ),

@@ -9,6 +9,7 @@ import '../../core/router/app_router.dart';
 import '../../widgets/customer/product_card.dart';
 import '../../widgets/customer/baker_card.dart';
 import '../../widgets/customer/surplus_card.dart';
+import '../../providers/notification_provider.dart';
 
 class CustomerHomeScreen extends ConsumerWidget {
   const CustomerHomeScreen({super.key});
@@ -60,18 +61,21 @@ class CustomerHomeScreen extends ConsumerWidget {
                             ),
                           ],
                         ),
-                        Transform.translate(
-                          offset: const Offset(12, 0),
-                          child: IconButton(
-                            icon: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: const BoxDecoration(
-                                  color: Colors.white, shape: BoxShape.circle),
-                              child: const Icon(Icons.person,
-                                  color: Color(0xFFD97706)),
+                        Row(
+                          children: [
+                            _NotificationBell(),
+                            IconButton(
+                              icon: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: const BoxDecoration(
+                                    color: Colors.white, shape: BoxShape.circle),
+                                child: const Icon(Icons.person,
+                                    color: Color(0xFFD97706)),
+                              ),
+                              onPressed: () =>
+                                  context.push(AppRoutes.customerProfile),
                             ),
-                            onPressed: () => context.push(AppRoutes.customerProfile),
-                          ),
+                          ],
                         ),
                       ],
                     ),
@@ -271,3 +275,39 @@ class _FlashDealsSection extends ConsumerWidget {
     );
   }
 }
+
+class _NotificationBell extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unreadCount = ref.watch(unreadNotificationCountProvider);
+
+    return Stack(
+      children: [
+        IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+            child: const Icon(Icons.notifications_outlined, color: Color(0xFFD97706)),
+          ),
+          onPressed: () => context.push(AppRoutes.customerNotifications),
+        ),
+        if (unreadCount > 0)
+          Positioned(
+            right: 8,
+            top: 8,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(color: Color(0xFFDC2626), shape: BoxShape.circle),
+              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+              child: Text(
+                unreadCount > 9 ? '9+' : unreadCount.toString(),
+                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+

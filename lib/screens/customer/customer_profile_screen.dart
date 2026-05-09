@@ -663,12 +663,6 @@ class _CustomerProfileScreenState
                           user.surplusNotif,
                           (v) => _updateNotifPref(user.uid, 'surplusNotif', v),
                         ),
-                        _notifSwitch(
-                          'Order Updates',
-                          'Real-time status of your orders',
-                          user.newOrderNotif, // Reusing field for simplicity
-                          (v) => _updateNotifPref(user.uid, 'newOrderNotif', v),
-                        ),
                       ],
                     ),
                   ),

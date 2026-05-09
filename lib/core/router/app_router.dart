@@ -30,6 +30,7 @@ import '../../screens/customer/customer_orders_screen.dart';
 import '../../screens/customer/customer_order_details_screen.dart';
 import '../../screens/customer/submit_review_screen.dart';
 import '../../screens/customer/surplus_deals_screen.dart';
+import '../../screens/customer/customer_notifications_screen.dart';
 
 // Route names
 class AppRoutes {
@@ -67,6 +68,7 @@ class AppRoutes {
   static const customerOrderDetails = '/customer/orders/details';
   static const customerSubmitReview = '/customer/submit-review';
   static const customerSurplus = '/customer/surplus-deals';
+  static const customerNotifications = '/customer/notifications';
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -214,6 +216,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.customerSurplus,
         builder: (context, state) => const SurplusDealsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.customerNotifications,
+        builder: (context, state) => const CustomerNotificationsScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
