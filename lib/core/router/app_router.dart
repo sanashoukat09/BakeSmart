@@ -247,8 +247,10 @@ class RouterNotifier extends ChangeNotifier {
     final authState = _ref.read(firebaseAuthStateProvider);
     final currentUser = _ref.read(currentUserProvider);
 
-    final isLoading = authState.isLoading || currentUser.isLoading;
-    if (isLoading) return null;
+    final isAuthLoading = authState.isLoading;
+    final isUserLoading = authState.valueOrNull != null && currentUser.isLoading;
+
+    if (isAuthLoading || isUserLoading) return null;
 
     final firebaseUser = authState.valueOrNull;
     final isLoggedIn = firebaseUser != null;

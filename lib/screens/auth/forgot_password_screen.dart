@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/utils/validation_util.dart';
 import '../../providers/auth_provider.dart';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
@@ -16,10 +17,23 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final _emailController = TextEditingController();
   bool _isLoading = false;
   bool _emailSent = false;
+  bool _isFormValid = false;
   String? _errorMessage;
+
+  void initState() {
+    super.initState();
+    _emailController.addListener(_validateForm);
+  }
+
+  void _validateForm() {
+    setState(() {
+      _isFormValid = ValidationUtil.validateEmail(_emailController.text) == null;
+    });
+  }
 
   @override
   void dispose() {
+    _emailController.removeListener(_validateForm);
     _emailController.dispose();
     super.dispose();
   }
@@ -148,15 +162,12 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
         Form(
           key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           child: TextFormField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
             style: TextStyle(color: textColor, fontSize: 15),
-            validator: (v) {
-              if (v == null || v.isEmpty) return 'Email required';
-              if (!v.contains('@')) return 'Enter a valid email';
-              return null;
-            },
+            validator: ValidationUtil.validateEmail,
             decoration: InputDecoration(
               labelText: 'Email address',
               hintText: 'you@example.com',
@@ -196,7 +207,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: _isLoading ? null : _sendReset,
+            onPressed: (_isLoading || !_isFormValid) ? null : _sendReset,
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryColor,
               foregroundColor: Colors.white,

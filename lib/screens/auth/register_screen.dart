@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/router/app_router.dart';
+import '../../core/utils/validation_util.dart';
 import '../../providers/auth_provider.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -21,6 +22,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
   bool _isLoading = false;
+  bool _isFormValid = false;
+  PasswordStrength _passwordStrength = PasswordStrength.weak;
   String? _errorMessage;
   String _selectedRole = 'baker'; // Default role
 
@@ -42,10 +45,37 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
       curve: Curves.easeOut,
     ));
     _slideController.forward();
+
+    _nameController.addListener(_validateForm);
+    _emailController.addListener(_validateForm);
+    _passwordController.addListener(_validatePasswordAndForm);
+    _confirmPasswordController.addListener(_validateForm);
+  }
+
+  void _validatePasswordAndForm() {
+    setState(() {
+      _passwordStrength = ValidationUtil.getPasswordStrength(_passwordController.text);
+    });
+    _validateForm();
+  }
+
+  void _validateForm() {
+    final isNameValid = _nameController.text.trim().isNotEmpty;
+    final isEmailValid = ValidationUtil.validateEmail(_emailController.text) == null;
+    final isPasswordValid = ValidationUtil.validatePassword(_passwordController.text) == null;
+    final isConfirmValid = _confirmPasswordController.text == _passwordController.text;
+
+    setState(() {
+      _isFormValid = isNameValid && isEmailValid && isPasswordValid && isConfirmValid;
+    });
   }
 
   @override
   void dispose() {
+    _nameController.removeListener(_validateForm);
+    _emailController.removeListener(_validateForm);
+    _passwordController.removeListener(_validatePasswordAndForm);
+    _confirmPasswordController.removeListener(_validateForm);
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -62,7 +92,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     });
 
     final error = await ref.read(authNotifierProvider.notifier).signUp(
-          email: _emailController.text,
+          email: _emailController.text.trim().toLowerCase(),
           password: _passwordController.text,
           role: _selectedRole,
           displayName: _nameController.text.trim(),
@@ -183,6 +213,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                 // Form
                 Form(
                   key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                   child: Column(
                     children: [
                       _buildField(
@@ -210,17 +241,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                         textColor: textColor,
                         subtextColor: subtextColor,
                         keyboardType: TextInputType.emailAddress,
-                        validator: (v) {
-                          if (v == null || v.isEmpty) return 'Email required';
-                          if (!v.contains('@')) return 'Enter a valid email';
-                          return null;
-                        },
+                        validator: ValidationUtil.validateEmail,
                       ),
                       const SizedBox(height: 14),
                       _buildField(
                         controller: _passwordController,
                         label: 'Password',
-                        hint: 'At least 6 characters',
+                        hint: 'At least 8 characters',
                         icon: Icons.lock_outline,
                         isDark: isDark,
                         primaryColor: primaryColor,
@@ -239,12 +266,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                           onPressed: () => setState(
                               () => _obscurePassword = !_obscurePassword),
                         ),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) return 'Password required';
-                          if (v.length < 6) return 'Min 6 characters';
-                          return null;
-                        },
+                        validator: ValidationUtil.validatePassword,
                       ),
+                      const SizedBox(height: 8),
+                      _buildPasswordStrengthIndicator(),
                       const SizedBox(height: 14),
                       _buildField(
                         controller: _confirmPasswordController,
@@ -285,7 +310,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                   width: double.infinity,
                   height: 52,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _register,
+                    onPressed: (_isLoading || !_isFormValid) ? null : _register,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
                       foregroundColor:
@@ -449,6 +474,65 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
           borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2),
         ),
       ),
+    );
+  }
+
+  Widget _buildPasswordStrengthIndicator() {
+    Color color;
+    String text;
+    double progress;
+
+    if (_passwordController.text.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    switch (_passwordStrength) {
+      case PasswordStrength.weak:
+        color = Colors.red;
+        text = 'Weak';
+        progress = 0.33;
+        break;
+      case PasswordStrength.medium:
+        color = Colors.orange;
+        text = 'Medium';
+        progress = 0.66;
+        break;
+      case PasswordStrength.strong:
+        color = Colors.green;
+        text = 'Strong';
+        progress = 1.0;
+        break;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Password Strength',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+            ),
+            Text(
+              text,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        LinearProgressIndicator(
+          value: progress,
+          backgroundColor: Colors.grey.shade300,
+          valueColor: AlwaysStoppedAnimation<Color>(color),
+          borderRadius: BorderRadius.circular(4),
+          minHeight: 6,
+        ),
+      ],
     );
   }
 }

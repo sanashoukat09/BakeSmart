@@ -17,10 +17,12 @@ class AuthService {
     required String password,
   }) async {
     try {
-      return await _auth.createUserWithEmailAndPassword(
+      final credential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
+      await credential.user?.sendEmailVerification();
+      return credential;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     }
@@ -32,10 +34,18 @@ class AuthService {
     required String password,
   }) async {
     try {
-      return await _auth.signInWithEmailAndPassword(
+      final credential = await _auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
+      // Temporarily disabled for testing
+      /*
+      if (credential.user != null && !credential.user!.emailVerified) {
+        await _auth.signOut();
+        throw 'Please verify your email before signing in.';
+      }
+      */
+      return credential;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     }
@@ -80,13 +90,13 @@ class AuthService {
   String _handleAuthException(FirebaseAuthException e) {
     switch (e.code) {
       case 'weak-password':
-        return 'Password must be at least 6 characters.';
+        return 'Password must be at least 8 characters.';
       case 'email-already-in-use':
         return 'An account already exists with this email.';
       case 'user-not-found':
-        return 'No account found with this email.';
       case 'wrong-password':
-        return 'Incorrect password. Please try again.';
+      case 'invalid-credential':
+        return 'the credential either email or password is incorrect';
       case 'invalid-email':
         return 'Please enter a valid email address.';
       case 'user-disabled':
@@ -95,8 +105,6 @@ class AuthService {
         return 'Too many attempts. Please try again later.';
       case 'network-request-failed':
         return 'Network error. Please check your connection.';
-      case 'invalid-credential':
-        return 'Invalid credentials. Please check your email and password.';
       default:
         return e.message ?? 'An unexpected error occurred.';
     }

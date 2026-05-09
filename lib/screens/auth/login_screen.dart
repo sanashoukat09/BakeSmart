@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/router/app_router.dart';
+import '../../core/utils/validation_util.dart';
 import '../../providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -18,6 +19,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _isFormValid = false;
   String? _errorMessage;
 
   late AnimationController _fadeController;
@@ -35,10 +37,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       curve: Curves.easeIn,
     );
     _fadeController.forward();
+
+    _emailController.addListener(_validateForm);
+    _passwordController.addListener(_validateForm);
+  }
+
+  void _validateForm() {
+    final isEmailNotEmpty = _emailController.text.isNotEmpty;
+    final isPasswordNotEmpty = _passwordController.text.isNotEmpty;
+    setState(() {
+      // Button is enabled if at least one character is typed in either field
+      _isFormValid = isEmailNotEmpty || isPasswordNotEmpty;
+    });
   }
 
   @override
   void dispose() {
+    _emailController.removeListener(_validateForm);
+    _passwordController.removeListener(_validateForm);
     _emailController.dispose();
     _passwordController.dispose();
     _fadeController.dispose();
@@ -53,7 +69,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     });
 
     final error = await ref.read(authNotifierProvider.notifier).signIn(
-          email: _emailController.text,
+          email: _emailController.text.trim().toLowerCase(),
           password: _passwordController.text,
         );
 
@@ -178,6 +194,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 // Form
                 Form(
                   key: _formKey,
+                  autovalidateMode: AutovalidateMode.disabled,
                   child: Column(
                     children: [
                       // Email
@@ -194,8 +211,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         cardColor: cardColor,
                         keyboardType: TextInputType.emailAddress,
                         validator: (v) {
-                          if (v == null || v.isEmpty) return 'Email required';
-                          if (!v.contains('@')) return 'Enter a valid email';
+                          if (v == null || v.trim().isEmpty) {
+                            return 'Email required';
+                          }
                           return null;
                         },
                       ),
@@ -225,12 +243,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           onPressed: () => setState(
                               () => _obscurePassword = !_obscurePassword),
                         ),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) return 'Password required';
-                          if (v.length < 6)
-                            return 'Password must be at least 6 characters';
-                          return null;
-                        },
+                        validator: (v) =>
+                            v == null || v.isEmpty ? 'Password required' : null,
                       ),
                     ],
                   ),
@@ -253,7 +267,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   width: double.infinity,
                   height: 52,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _signIn,
+                    onPressed: (_isLoading || !_isFormValid) ? null : _signIn,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
                       foregroundColor: Colors.white,
