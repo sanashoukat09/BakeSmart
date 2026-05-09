@@ -49,6 +49,8 @@ class OrderNotifier extends StateNotifier<AsyncValue<void>> {
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+      // Let the UI show an alert/snackbar with the real error message.
+      throw e;
     }
   }
 }

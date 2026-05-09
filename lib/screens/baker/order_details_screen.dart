@@ -181,14 +181,14 @@ class _StatusActions extends ConsumerWidget {
         _ActionButton(
           label: 'Accept Order',
           color: const Color(0xFF10B981),
-          onTap: () => _update(ref, AppConstants.orderAccepted),
+          onTap: () => _update(context, ref, AppConstants.orderAccepted),
           isUpdating: isUpdating,
         ),
         const SizedBox(width: 12),
         _ActionButton(
           label: 'Reject',
           color: const Color(0xFFEF4444),
-          onTap: () => _update(ref, AppConstants.orderRejected),
+          onTap: () => _update(context, ref, AppConstants.orderRejected),
           isUpdating: isUpdating,
           outlined: true,
         ),
@@ -198,7 +198,7 @@ class _StatusActions extends ConsumerWidget {
         _ActionButton(
           label: 'Start Preparing',
           color: const Color(0xFF8B5CF6),
-          onTap: () => _update(ref, AppConstants.orderPreparing),
+          onTap: () => _update(context, ref, AppConstants.orderPreparing),
           isUpdating: isUpdating,
         ),
       ];
@@ -207,7 +207,7 @@ class _StatusActions extends ConsumerWidget {
         _ActionButton(
           label: 'Mark as Ready',
           color: const Color(0xFF10B981),
-          onTap: () => _update(ref, AppConstants.orderReady),
+          onTap: () => _update(context, ref, AppConstants.orderReady),
           isUpdating: isUpdating,
         ),
       ];
@@ -216,7 +216,7 @@ class _StatusActions extends ConsumerWidget {
         _ActionButton(
           label: 'Confirm Delivery',
           color: const Color(0xFF3B82F6),
-          onTap: () => _update(ref, AppConstants.orderDelivered),
+          onTap: () => _update(context, ref, AppConstants.orderDelivered),
           isUpdating: isUpdating,
         ),
       ];
@@ -225,8 +225,19 @@ class _StatusActions extends ConsumerWidget {
     return Row(children: actions);
   }
 
-  void _update(WidgetRef ref, String status) {
-    ref.read(orderNotifierProvider.notifier).updateStatus(order.id, status);
+  Future<void> _update(BuildContext context, WidgetRef ref, String status) async {
+    try {
+      await ref.read(orderNotifierProvider.notifier).updateStatus(order.id, status);
+    } catch (e) {
+      final message = e is Exception ? e.toString() : e.toString();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message.replaceFirst('Exception: ', '')),
+          backgroundColor: const Color(0xFFEF4444),
+        ),
+      );
+    }
   }
 }
 

@@ -370,7 +370,21 @@ class FirestoreService {
             final qtyPerUnit = entry.value;
             final totalToReduce = qtyPerUnit * item.quantity;
 
-            final ingredientRef = _db.collection(AppConstants.ingredientsCollection).doc(ingredientId);
+            final ingredientRef =
+                _db.collection(AppConstants.ingredientsCollection).doc(ingredientId);
+            final ingredientSnap = await tx.get(ingredientRef);
+
+            if (!ingredientSnap.exists) {
+              throw Exception('Insufficient stock: missing ingredient.');
+            }
+
+            final currentQty = (ingredientSnap.data()?['quantity'] ?? 0).toDouble();
+            if (currentQty < totalToReduce) {
+              throw Exception(
+                'Insufficient stock: ${product.name} needs ${totalToReduce} ${entry.value == 0 ? '' : ingredientSnap.data()?['unit'] ?? ''} but only $currentQty available.',
+              );
+            }
+
             tx.update(ingredientRef, {
               'quantity': FieldValue.increment(-totalToReduce),
               'updatedAt': FieldValue.serverTimestamp(),
