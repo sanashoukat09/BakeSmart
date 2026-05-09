@@ -595,13 +595,27 @@ class FirestoreService {
         .where('customerId', isEqualTo: customerId)
         .snapshots()
         .map((snapshot) {
-      final orders = snapshot.docs
-          .map((doc) => OrderModel.fromFirestore(doc))
-          .toList();
-      // Sort in memory
-      orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      return orders;
-    });
+          try {
+            final orders = snapshot.docs
+                .map((doc) {
+                  try {
+                    return OrderModel.fromFirestore(doc);
+                  } catch (e) {
+                    print('Error parsing order ${doc.id}: $e');
+                    return null;
+                  }
+                })
+                .where((o) => o != null)
+                .cast<OrderModel>()
+                .toList();
+            // Sort in memory
+            orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            return orders;
+          } catch (e) {
+            print('Error in orders stream: $e');
+            return <OrderModel>[];
+          }
+        });
   }
 
   // Get earnings summary (simple calculation from delivered orders)
@@ -635,11 +649,27 @@ class FirestoreService {
         .collection(AppConstants.usersCollection)
         .doc(userId)
         .collection('notifications')
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => NotificationModel.fromFirestore(doc))
-            .toList());
+        .map((snapshot) {
+          try {
+            return snapshot.docs
+                .map((doc) {
+                  try {
+                    return NotificationModel.fromFirestore(doc);
+                  } catch (e) {
+                    print('Error parsing notification ${doc.id}: $e');
+                    return null;
+                  }
+                })
+                .where((n) => n != null)
+                .cast<NotificationModel>()
+                .toList()
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          } catch (e) {
+            print('Error in notifications stream: $e');
+            return <NotificationModel>[];
+          }
+        });
   }
 
   Future<void> markNotificationAsRead(String userId, String notificationId) async {

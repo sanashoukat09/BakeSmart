@@ -125,13 +125,26 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     Color color;
     switch (status) {
-      case AppConstants.orderPlaced: color = const Color(0xFFF59E0B); break;
-      case AppConstants.orderAccepted: color = const Color(0xFF3B82F6); break;
-      case AppConstants.orderPreparing: color = const Color(0xFF8B5CF6); break;
-      case AppConstants.orderReady: color = const Color(0xFF10B981); break;
-      case AppConstants.orderDelivered: color = Colors.grey; break;
-      case AppConstants.orderRejected: color = Colors.red; break;
-      default: color = Colors.grey;
+      case AppConstants.orderPlaced:
+        color = const Color(0xFFF59E0B);
+        break;
+      case AppConstants.orderAccepted:
+        color = const Color(0xFF3B82F6);
+        break;
+      case AppConstants.orderPreparing:
+        color = const Color(0xFF8B5CF6);
+        break;
+      case AppConstants.orderReady:
+        color = const Color(0xFF10B981);
+        break;
+      case AppConstants.orderDelivered:
+        color = Colors.grey;
+        break;
+      case AppConstants.orderRejected:
+        color = Colors.red;
+        break;
+      default:
+        color = Colors.grey;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

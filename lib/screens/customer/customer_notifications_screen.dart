@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/auth_provider.dart';
 
@@ -24,7 +25,7 @@ class CustomerNotificationsScreen extends ConsumerWidget {
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF451A03)),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => GoRouter.of(context).pop(),
         ),
         actions: [
           if (notificationsAsync.valueOrNull?.isNotEmpty ?? false)

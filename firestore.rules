@@ -6,19 +6,25 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isVerified() {
+    function isAuthenticated() {
       return isAuthenticated() && request.auth.token.email_verified == true;
     }
 
-    // Convenience: public read allowed, writes require authenticated + verified
+    // Convenience: public read allowed, writes require authenticated
     function canWrite() {
-      return isVerified();
+      return isAuthenticated();
     }
 
     // Users: private by default
     match /users/{userId} {
       allow read: if isAuthenticated() && request.auth.uid == userId;
-      allow write: if isVerified() && request.auth.uid == userId;
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+
+      // Notifications: only owning user can read/update
+      match /notifications/{notificationId} {
+        allow read: if isAuthenticated() && request.auth.uid == userId;
+        allow update: if isAuthenticated() && request.auth.uid == userId;
+      }
     }
 
     // Products: bakers can write own, all users can read (storefront needs public URLs)
@@ -36,7 +42,7 @@ service cloud.firestore {
 
     // Orders: authenticity enforced on create + participants can read/update
     match /orders/{orderId} {
-      allow read: if isVerified()
+      allow read: if isAuthenticated()
         && (request.auth.uid == resource.data.bakerId
             || request.auth.uid == resource.data.customerId);
 

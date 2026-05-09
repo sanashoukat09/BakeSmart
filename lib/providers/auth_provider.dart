@@ -11,7 +11,7 @@ final firestoreServiceProvider =
 
 // ─── Firebase Auth State ──────────────────────────────────────
 final firebaseAuthStateProvider = StreamProvider<User?>((ref) {
-  return ref.watch(authServiceProvider).authStateChanges;
+  return ref.watch(authServiceProvider).authStateChanges.distinct((a, b) => a?.uid == b?.uid);
 });
 
 // ─── Current UserModel from Firestore ─────────────────────────

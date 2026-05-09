@@ -4,6 +4,7 @@ import '../models/user_model.dart';
 import 'auth_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/constants/app_constants.dart';
+import 'dart:async';
 
 // Stream of all available products
 final allProductsProvider = StreamProvider<List<ProductModel>>((ref) {
@@ -103,6 +104,7 @@ final filteredProductsProvider = Provider<List<ProductModel>>((ref) {
       print('[DEBUG][store_provider] customerAllergens=$debugAllergens | product=${product.id} labels=${product.dietaryLabels}');
     }
 
+    /*
     if (customerAllergens.isNotEmpty) {
       for (final allergenRaw in customerAllergens) {
         final allergen = allergenRaw.toLowerCase().trim();
@@ -159,6 +161,7 @@ final filteredProductsProvider = Provider<List<ProductModel>>((ref) {
         }
       }
     }
+    */
 
     return matchesQuery && matchesCategory && matchesPreferences && matchesAllergens;
   }).toList();

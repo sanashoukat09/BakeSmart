@@ -238,7 +238,10 @@ class RouterNotifier extends ChangeNotifier {
   final Ref _ref;
 
   RouterNotifier(this._ref) {
-    _ref.listen(firebaseAuthStateProvider, (_, __) => notifyListeners());
+    _ref.listen(
+      firebaseAuthStateProvider.select((user) => user.value?.uid),
+      (_, __) => notifyListeners(),
+    );
     _ref.listen(
       currentUserProvider.select((userAsync) {
         final user = userAsync.valueOrNull;

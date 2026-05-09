@@ -41,7 +41,7 @@ class OrderSuccessScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               TextButton(
-                onPressed: () {}, // Module 7 (My Orders)
+                onPressed: () => context.go(AppRoutes.customerOrders),
                 child: const Text('View My Orders', style: TextStyle(color: Color(0xFFD97706), fontWeight: FontWeight.bold)),
               ),
             ],

@@ -2,20 +2,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/notification_model.dart';
 import 'auth_provider.dart';
+import 'dart:async';
 
 final notificationProvider = StreamProvider<List<NotificationModel>>((ref) {
-  final user = ref.watch(currentUserProvider).valueOrNull;
-  if (user == null) return Stream.value([]);
+  final uid = ref.watch(firebaseAuthStateProvider.select((user) => user.value?.uid));
 
-  return FirebaseFirestore.instance
-      .collection('users')
-      .doc(user.uid)
-      .collection('notifications')
-      .orderBy('createdAt', descending: true)
-      .snapshots()
-      .map((snapshot) => snapshot.docs
-          .map((doc) => NotificationModel.fromFirestore(doc))
-          .toList());
+  if (uid == null) {
+    return Stream.value([]);
+  }
+
+  return ref.watch(firestoreServiceProvider).streamNotifications(uid);
 });
 
 final unreadNotificationCountProvider = Provider<int>((ref) {

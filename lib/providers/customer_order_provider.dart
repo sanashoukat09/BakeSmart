@@ -2,13 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/order_model.dart';
 import '../models/review_model.dart';
 import 'auth_provider.dart';
+import 'dart:async';
 
 // Stream of orders for the current customer
 final customerOrdersProvider = StreamProvider<List<OrderModel>>((ref) {
-  final user = ref.watch(currentUserProvider).valueOrNull;
-  if (user == null || user.isBaker) return Stream.value([]);
+  final uid = ref.watch(firebaseAuthStateProvider.select((user) => user.value?.uid));
+  if (uid == null) return Stream.value([]);
 
-  return ref.watch(firestoreServiceProvider).streamCustomerOrders(user.uid);
+  return ref.watch(firestoreServiceProvider).streamCustomerOrders(uid);
 });
 
 // Review State Notifier
