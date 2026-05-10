@@ -302,7 +302,7 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Ingredients Used', style: TextStyle(color: Color(0xFF78350F), fontWeight: FontWeight.w600)),
+                  const Expanded(child: Text('Ingredients Used', style: TextStyle(color: Color(0xFF78350F), fontWeight: FontWeight.w600))),
                   Text('Total Cost: Rs. ${_calculateTotalCost(ingredientsAsync).toStringAsFixed(2)}', 
                     style: const TextStyle(color: Color(0xFF92400E), fontSize: 12, fontWeight: FontWeight.bold)),
                 ],
@@ -643,7 +643,7 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Ingredient Cost', style: TextStyle(color: Color(0xFF92400E))),
+                  const Expanded(child: Text('Ingredient Cost', style: TextStyle(color: Color(0xFF92400E)))),
                   Text('Rs. ${cost.toStringAsFixed(2)}', style: const TextStyle(color: Color(0xFF451A03), fontWeight: FontWeight.bold)),
                 ],
               ),
@@ -670,13 +670,14 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Suggested Price', style: TextStyle(color: Color(0xFF92400E))),
+                  const Expanded(child: Text('Suggested Price', style: TextStyle(color: Color(0xFF92400E)))),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text('Rs. ${suggestedPrice.toStringAsFixed(0)}', 
                         style: const TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.bold, fontSize: 18)),
                       if (suggestedPrice > 0) ...[
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 4),
                         TextButton(
                           onPressed: () {
                             _priceController.text = suggestedPrice.toStringAsFixed(0);
