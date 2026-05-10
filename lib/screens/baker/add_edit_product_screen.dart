@@ -25,6 +25,8 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
   final _priceController = TextEditingController();
   String? _selectedCategory;
   final List<String> _selectedDietary = [];
+  bool _includesAllDietaryLabels = false;
+  bool _includesNoDietaryLabels = false;
   final List<String> _existingImages = [];
   final List<File> _newImages = [];
   final Map<String, double> _selectedIngredients = {}; // ingredientId: quantity
@@ -49,6 +51,11 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
       _descriptionController.text = product.description;
       _priceController.text = product.price.toString();
       _selectedCategory = product.category;
+
+      _includesAllDietaryLabels = product.includesAllDietaryLabels;
+      _includesNoDietaryLabels = product.includesNoDietaryLabels;
+
+      _selectedDietary.clear();
       _selectedDietary.addAll(product.dietaryLabels);
       _existingImages.addAll(product.images);
       _selectedIngredients.addAll(product.ingredients);
@@ -153,6 +160,14 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_selectedDietary.isEmpty && !_includesAllDietaryLabels && !_includesNoDietaryLabels) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select at least one Dietary Label (or All/None)')),
+      );
+      return;
+    }
+
     if (_existingImages.isEmpty && _newImages.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please add at least one image')),
@@ -174,6 +189,8 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
       addOns: _selectedAddOns,
       isAvailable: _isAvailable,
       profitMargin: _profitMargin,
+      includesAllDietaryLabels: _includesAllDietaryLabels,
+      includesNoDietaryLabels: _includesNoDietaryLabels,
       createdAt: DateTime.now(),
     );
 
@@ -442,51 +459,127 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
-                children: AppConstants.dietaryLabels.map((l) {
-                  final isSelected = _selectedDietary.contains(l);
-                  return FilterChip(
-                    label: Text(l),
-                    selected: isSelected,
+                runSpacing: 8,
+                children: [
+                  // Individual Labels (First)
+                  ...AppConstants.dietaryLabels.map((l) {
+                    final isSelected = _selectedDietary.contains(l);
+                    final disabled = _includesNoDietaryLabels;
+
+                    // Icon mapping
+                    Widget? icon;
+                    if (l == 'Eggless') icon = const Text('🥚 ', style: TextStyle(fontSize: 14));
+                    if (l == 'Sugar-Free') icon = const Text('🚫🍭 ', style: TextStyle(fontSize: 14));
+                    if (l == 'Gluten-Free') icon = const Text('🌾 ', style: TextStyle(fontSize: 14));
+                    if (l == 'Nut-Free') icon = const Text('🥜 ', style: TextStyle(fontSize: 14));
+
+                    return FilterChip(
+                      label: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (icon != null) icon,
+                          Text(l),
+                        ],
+                      ),
+                      selected: isSelected,
+                      onSelected: disabled
+                          ? null
+                          : (val) {
+                              setState(() {
+                                if (val) {
+                                  // Selecting individual labels cancels "None"
+                                  _includesNoDietaryLabels = false;
+
+                                  // Check for conflict before adding
+                                  final ingredientsAsync = ref.read(bakerIngredientsProvider);
+                                  final allIngredients = ingredientsAsync.valueOrNull ?? [];
+                                  String? conflictSource;
+
+                                  for (final entry in _selectedIngredients.entries) {
+                                    final ing = allIngredients.firstWhere((i) => i.id == entry.key);
+                                    final name = ing.name.toLowerCase();
+                                    if ((l == 'Eggless' && name.contains('egg')) ||
+                                        (l == 'Sugar-Free' && name.contains('sugar')) ||
+                                        (l == 'Gluten-Free' && (name.contains('flour') || name.contains('wheat'))) ||
+                                        (l == 'Nut-Free' && name.contains('nut'))) {
+                                      conflictSource = ing.name;
+                                      break;
+                                    }
+                                  }
+
+                                  if (conflictSource != null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Cannot select $l because the product contains $conflictSource'),
+                                        backgroundColor: const Color(0xFF991B1B),
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                  } else {
+                                    _selectedDietary.add(l);
+                                    // If all individual labels are selected, turn on "All" flag
+                                    if (_selectedDietary.length == AppConstants.dietaryLabels.length) {
+                                      _includesAllDietaryLabels = true;
+                                    }
+                                  }
+                                } else {
+                                  _selectedDietary.remove(l);
+                                  _includesAllDietaryLabels = false;
+                                }
+                              });
+                            },
+                      selectedColor: const Color(0xFFFEF3C7),
+                      labelStyle: TextStyle(
+                        color: isSelected
+                            ? const Color(0xFF78350F)
+                            : const Color(0xFF451A03),
+                      ),
+                    );
+                  }).toList(),
+
+                  // "All" and "None" (At the End)
+                  FilterChip(
+                    label: const Text('All Labels'),
+                    selected: _includesAllDietaryLabels,
                     onSelected: (val) {
                       setState(() {
+                        _includesAllDietaryLabels = val;
                         if (val) {
-                          // Check for conflict before adding
-                          final ingredientsAsync = ref.read(bakerIngredientsProvider);
-                          final allIngredients = ingredientsAsync.valueOrNull ?? [];
-                          String? conflictSource;
-                          
-                          for (final entry in _selectedIngredients.entries) {
-                            final ing = allIngredients.firstWhere((i) => i.id == entry.key);
-                            final name = ing.name.toLowerCase();
-                            if ((l == 'Eggless' && name.contains('egg')) ||
-                                (l == 'Sugar-Free' && name.contains('sugar')) ||
-                                (l == 'Gluten-Free' && (name.contains('flour') || name.contains('wheat'))) ||
-                                (l == 'Nut-Free' && name.contains('nut'))) {
-                              conflictSource = ing.name;
-                              break;
-                            }
-                          }
-
-                          if (conflictSource != null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Cannot select $l because the product contains $conflictSource'),
-                                backgroundColor: const Color(0xFF991B1B),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                          } else {
-                            _selectedDietary.add(l);
-                          }
+                          _includesNoDietaryLabels = false;
+                          _selectedDietary.clear();
+                          _selectedDietary.addAll(AppConstants.dietaryLabels);
                         } else {
-                          _selectedDietary.remove(l);
+                          _selectedDietary.clear();
                         }
                       });
                     },
                     selectedColor: const Color(0xFFFEF3C7),
-                    labelStyle: TextStyle(color: isSelected ? const Color(0xFF78350F) : const Color(0xFF451A03)),
-                  );
-                }).toList(),
+                    labelStyle: TextStyle(
+                      color: _includesAllDietaryLabels
+                          ? const Color(0xFF78350F)
+                          : const Color(0xFF451A03),
+                    ),
+                  ),
+                  FilterChip(
+                    label: const Text('None'),
+                    selected: _includesNoDietaryLabels,
+                    onSelected: (val) {
+                      setState(() {
+                        _includesNoDietaryLabels = val;
+                        if (val) {
+                          _includesAllDietaryLabels = false;
+                          _selectedDietary.clear();
+                        }
+                      });
+                    },
+                    selectedColor: const Color(0xFFFEF3C7),
+                    labelStyle: TextStyle(
+                      color: _includesNoDietaryLabels
+                          ? const Color(0xFF78350F)
+                          : const Color(0xFF451A03),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 40),
             ],

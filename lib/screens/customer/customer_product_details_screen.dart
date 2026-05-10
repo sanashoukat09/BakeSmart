@@ -279,12 +279,22 @@ class _CustomerProductDetailsScreenState extends ConsumerState<CustomerProductDe
 
     final List<String> conflicts = [];
     for (var allergen in user.allergens) {
+      // Market-friendly flags take precedence.
+      if (product.includesAllDietaryLabels == true) {
+        continue;
+      }
+
+      if (product.includesNoDietaryLabels == true) {
+        conflicts.add(allergen);
+        continue;
+      }
+
       bool isSafe = false;
       if (allergen == 'Nuts' && product.dietaryLabels.contains('Nut-Free')) isSafe = true;
       if (allergen == 'Gluten' && product.dietaryLabels.contains('Gluten-Free')) isSafe = true;
       if (allergen == 'Eggs' && product.dietaryLabels.contains('Eggless')) isSafe = true;
       if (allergen == 'Sugar' && product.dietaryLabels.contains('Sugar-Free')) isSafe = true;
-      
+
       // If we don't have a "Free" label for this allergen, assume it might be present
       if (!isSafe) conflicts.add(allergen);
     }
