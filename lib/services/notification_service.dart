@@ -1,8 +1,11 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firestore_service.dart';
 import '../providers/auth_provider.dart';
+import '../models/notification_model.dart';
+import 'dart:async';
 
 final notificationServiceProvider = Provider((ref) => NotificationService(ref));
 
@@ -11,8 +14,11 @@ class NotificationService {
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
+  StreamSubscription? _notificationSubscription;
+  DateTime? _initTime;
 
   NotificationService(this._ref) {
+    _initTime = DateTime.now();
     _listenToAuth();
   }
 
@@ -23,6 +29,40 @@ class NotificationService {
         String? token = await _fcm.getToken();
         if (token != null) {
           _updateToken(token);
+        }
+        _listenToFirestoreNotifications(user.uid);
+      } else {
+        _notificationSubscription?.cancel();
+        _notificationSubscription = null;
+      }
+    });
+  }
+
+  void _listenToFirestoreNotifications(String uid) {
+    _notificationSubscription?.cancel();
+    
+    // Listen for new notifications in Firestore
+    _notificationSubscription = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('notifications')
+        .where('createdAt', isGreaterThan: _initTime)
+        .snapshots()
+        .listen((snapshot) {
+      for (var change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          try {
+            final notification = NotificationModel.fromFirestore(change.doc);
+            // Only show if it's not already read and it's new
+            if (!notification.isRead) {
+              showLocalNotification(
+                title: notification.title,
+                body: notification.body,
+              );
+            }
+          } catch (e) {
+            print('Error parsing live notification: $e');
+          }
         }
       }
     });
