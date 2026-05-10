@@ -3,9 +3,11 @@ import '../models/surplus_item_model.dart';
 import 'auth_provider.dart';
 
 final bakerSurplusProvider = StreamProvider<List<SurplusItemModel>>((ref) {
-  final user = ref.watch(currentUserProvider).valueOrNull;
-  if (user == null || !user.isBaker) return Stream.value([]);
-  return ref.watch(firestoreServiceProvider).streamBakerSurplus(user.uid);
+  final uid = ref.watch(currentUserProvider.select((user) => user.valueOrNull?.uid));
+  final isBaker = ref.watch(currentUserProvider.select((user) => user.valueOrNull?.isBaker ?? false));
+
+  if (uid == null || !isBaker) return Stream.value([]);
+  return ref.watch(firestoreServiceProvider).streamBakerSurplus(uid);
 });
 
 final allSurplusProvider = StreamProvider<List<SurplusItemModel>>((ref) {

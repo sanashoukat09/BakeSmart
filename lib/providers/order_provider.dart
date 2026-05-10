@@ -5,18 +5,22 @@ import '../core/constants/app_constants.dart';
 
 // Stream of orders for the current baker
 final bakerOrdersProvider = StreamProvider<List<OrderModel>>((ref) {
-  final user = ref.watch(currentUserProvider).valueOrNull;
-  if (user == null || !user.isBaker) return Stream.value([]);
+  final uid = ref.watch(currentUserProvider.select((user) => user.valueOrNull?.uid));
+  final isBaker = ref.watch(currentUserProvider.select((user) => user.valueOrNull?.isBaker ?? false));
 
-  return ref.watch(firestoreServiceProvider).streamBakerOrders(user.uid);
+  if (uid == null || !isBaker) return Stream.value([]);
+
+  return ref.watch(firestoreServiceProvider).streamBakerOrders(uid);
 });
 
 // Stream of total earnings
 final totalEarningsProvider = StreamProvider<double>((ref) {
-  final user = ref.watch(currentUserProvider).valueOrNull;
-  if (user == null || !user.isBaker) return Stream.value(0.0);
+  final uid = ref.watch(currentUserProvider.select((user) => user.valueOrNull?.uid));
+  final isBaker = ref.watch(currentUserProvider.select((user) => user.valueOrNull?.isBaker ?? false));
 
-  return ref.watch(firestoreServiceProvider).streamTotalEarnings(user.uid);
+  if (uid == null || !isBaker) return Stream.value(0.0);
+
+  return ref.watch(firestoreServiceProvider).streamTotalEarnings(uid);
 });
 
 // Order Notifier for status updates

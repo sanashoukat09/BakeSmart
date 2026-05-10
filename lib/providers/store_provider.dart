@@ -61,7 +61,7 @@ final filteredProductsProvider = Provider<List<ProductModel>>((ref) {
   final productsAsync = ref.watch(allProductsProvider);
   final products = productsAsync.valueOrNull ?? [];
   final filter = ref.watch(storeFilterProvider);
-  final user = ref.watch(currentUserProvider).valueOrNull;
+  final user = ref.watch(currentUserProvider.select((u) => u.valueOrNull));
 
   final filtered = products.where((product) {
     // 0. Availability Match
