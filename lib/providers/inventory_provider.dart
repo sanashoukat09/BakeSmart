@@ -4,10 +4,12 @@ import 'auth_provider.dart';
 
 // Stream of ingredients for the current baker
 final bakerIngredientsProvider = StreamProvider<List<IngredientModel>>((ref) {
-  final user = ref.watch(currentUserProvider).valueOrNull;
-  if (user == null || !user.isBaker) return Stream.value([]);
+  final uid = ref.watch(currentUserProvider.select((user) => user.valueOrNull?.uid));
+  final isBaker = ref.watch(currentUserProvider.select((user) => user.valueOrNull?.isBaker ?? false));
+  
+  if (uid == null || !isBaker) return Stream.value([]);
 
-  return ref.watch(firestoreServiceProvider).streamBakerIngredients(user.uid);
+  return ref.watch(firestoreServiceProvider).streamBakerIngredients(uid);
 });
 
 // Low stock ingredients

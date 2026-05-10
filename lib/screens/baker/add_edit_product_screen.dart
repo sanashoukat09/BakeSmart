@@ -409,6 +409,8 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                       // Dropdown to add new ingredient
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
+                        key: UniqueKey(),
+                        value: null,
                         hint: const Text('Add an ingredient...', style: TextStyle(fontSize: 14)),
                         dropdownColor: Colors.white,
                         decoration: _inputDecoration('Select to add'),

@@ -9,10 +9,12 @@ final cloudinaryServiceProvider =
 
 // Stream of products for the current baker
 final bakerProductsProvider = StreamProvider<List<ProductModel>>((ref) {
-  final user = ref.watch(currentUserProvider).valueOrNull;
-  if (user == null || !user.isBaker) return Stream.value([]);
+  final uid = ref.watch(currentUserProvider.select((user) => user.valueOrNull?.uid));
+  final isBaker = ref.watch(currentUserProvider.select((user) => user.valueOrNull?.isBaker ?? false));
 
-  return ref.watch(firestoreServiceProvider).streamBakerProducts(user.uid);
+  if (uid == null || !isBaker) return Stream.value([]);
+
+  return ref.watch(firestoreServiceProvider).streamBakerProducts(uid);
 });
 
 // Category filter for baker's product list
