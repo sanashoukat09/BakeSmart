@@ -153,6 +153,58 @@ class CustomerHomeScreen extends ConsumerWidget {
                     },
                   ),
                 ),
+                
+                // Dietary Preference Chips
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
+                  child: Text('Dietary Preferences', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF451A03))),
+                ),
+                SizedBox(
+                  height: 40,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.only(left: 20),
+                    itemCount: AppConstants.dietaryLabels.length,
+                    itemBuilder: (context, i) {
+                      final label = AppConstants.dietaryLabels[i];
+                      final isSelected = filter.dietaryLabels.contains(label);
+
+                      // Icon mapping
+                      String icon = '';
+                      if (label == 'Eggless') icon = '🥚';
+                      if (label == 'Sugar-Free') icon = '🚫🍭';
+                      if (label == 'Gluten-Free') icon = '🌾';
+                      if (label == 'Nut-Free') icon = '🥜';
+
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: FilterChip(
+                          label: Text('$icon $label', style: TextStyle(
+                            color: isSelected ? Colors.white : const Color(0xFF92400E),
+                            fontSize: 13,
+                          )),
+                          selected: isSelected,
+                          onSelected: (val) {
+                            final newList = List<String>.from(filter.dietaryLabels);
+                            if (val) {
+                              newList.add(label);
+                            } else {
+                              newList.remove(label);
+                            }
+                            ref.read(storeFilterProvider.notifier).state = filter.copyWith(dietaryLabels: newList);
+                          },
+                          selectedColor: const Color(0xFFD97706),
+                          checkmarkColor: Colors.white,
+                          backgroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: BorderSide(color: isSelected ? Colors.transparent : const Color(0xFFFEF3C7)),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ],
             ),
           ),

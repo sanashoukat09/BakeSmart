@@ -64,104 +64,89 @@ final filteredProductsProvider = Provider<List<ProductModel>>((ref) {
   final user = ref.watch(currentUserProvider).valueOrNull;
 
   final filtered = products.where((product) {
+    // 0. Availability Match
+    if (!product.isAvailable) return false;
+
     // 1. Search Query Match
     final matchesQuery = product.name.toLowerCase().contains(filter.query.toLowerCase()) ||
         product.description.toLowerCase().contains(filter.query.toLowerCase());
     
-    // 2. Category Match
-    final matchesCategory = filter.category == null || product.category == filter.category;
+    // 2. Category Match (Flexible: handles singular/plural and casing)
+    bool matchesCategory = filter.category == null;
+    if (filter.category != null) {
+      final pCat = product.category.trim().toLowerCase();
+      final fCat = filter.category!.trim().toLowerCase();
+      matchesCategory = pCat == fCat || 
+          pCat == '${fCat}s' || 
+          fCat == '${pCat}s' ||
+          pCat.replaceAll('s', '') == fCat.replaceAll('s', '');
+    }
     
-    // 3. Dietary Preferences (Profile + Manual)
-    final profileDietary = user?.dietaryPreferences ?? [];
-    final manualDietary = filter.dietaryLabels;
-    final activeDietary = {...profileDietary, ...manualDietary};
-    
-    final productLabelsLower = product.dietaryLabels.map((e) => e.toLowerCase().trim()).toSet();
-    
-    // For Preferences: If user prefers "Vegan", product should ideally be labeled "Vegan".
-    // However, we allow products with NO labels to show UNLESS there's an allergy conflict.
+    // Helper to check if a product matches a specific dietary requirement (e.g. Eggless, Sugar-Free)
+    bool checkRequirement(String req) {
+      if (product.includesAllDietaryLabels) return true;
+      if (product.includesNoDietaryLabels) return false;
+      
+      final label = req.toLowerCase().trim();
+      final pLabels = product.dietaryLabels.map((e) => e.toLowerCase().trim()).toList();
+
+      // Egg
+      if (label.contains('egg')) {
+        return pLabels.contains('eggless') ||
+               pLabels.contains('egg-free') ||
+               pLabels.contains('egg free') ||
+               pLabels.contains('vegan');
+      }
+      // Nuts
+      if (label.contains('nut')) {
+        return pLabels.contains('nut-free') ||
+               pLabels.contains('nut free') ||
+               pLabels.contains('tree nuts-free');
+      }
+      // Gluten
+      if (label.contains('gluten')) {
+        return pLabels.contains('gluten-free') ||
+               pLabels.contains('gluten free');
+      }
+      // Sugar
+      if (label.contains('sugar')) {
+        return pLabels.contains('sugar-free') ||
+               pLabels.contains('sugar free');
+      }
+      // Dairy / Milk
+      if (label.contains('dairy') || label.contains('milk')) {
+        return pLabels.contains('dairy-free') ||
+               pLabels.contains('dairy free') ||
+               pLabels.contains('vegan');
+      }
+      
+      // Default direct match
+      return pLabels.contains(label);
+    }
+
+    // 3. Dietary Preferences (Active UI filters)
     bool matchesPreferences = true;
-    if (activeDietary.isNotEmpty) {
-      // If user has specific preferences, the product should match AT LEAST ONE of them 
-      // if it has any labels at all.
-      if (productLabelsLower.isNotEmpty) {
-        matchesPreferences = activeDietary.any((pref) => 
-          productLabelsLower.contains(pref.toLowerCase().trim())
-        );
+    if (filter.dietaryLabels.isNotEmpty) {
+      for (final pref in filter.dietaryLabels) {
+        if (!checkRequirement(pref)) {
+          matchesPreferences = false;
+          break;
+        }
       }
     }
 
-    // 4. Strict Allergen Filtering (Safety)
+    // 4. Allergen Filtering (Automatic based on user profile)
     final customerAllergens = user?.allergens ?? [];
     bool matchesAllergens = true;
 
-    // TEMP DEBUG: helps diagnose egg-allergy mismatch from stored values.
-    // Only logs in debug mode.
-    // ignore: avoid_print
     if (customerAllergens.isNotEmpty) {
-      final debugAllergens = customerAllergens.toList();
-      // ignore: avoid_print
-      print('[DEBUG][store_provider] customerAllergens=$debugAllergens | product=${product.id} labels=${product.dietaryLabels}');
-    }
-
-    /*
-    if (customerAllergens.isNotEmpty) {
-      for (final allergenRaw in customerAllergens) {
-        final allergen = allergenRaw.toLowerCase().trim();
-
-        bool safeForThisAllergen = true;
-
-        // Egg
-        if (allergen.contains('egg')) {
-          safeForThisAllergen =
-              productLabelsLower.contains('eggless') ||
-              productLabelsLower.contains('egg-free') ||
-              productLabelsLower.contains('egg free') ||
-              productLabelsLower.contains('eggs-free') ||
-              productLabelsLower.contains('egg-free-all') ||
-              productLabelsLower.contains('egg-free product');
-        }
-        // Nuts
-        else if (allergen.contains('nut')) {
-          safeForThisAllergen =
-              productLabelsLower.contains('nut-free') ||
-              productLabelsLower.contains('nut free') ||
-              productLabelsLower.contains('tree nuts-free') ||
-              productLabelsLower.contains('tree-nuts-free');
-        }
-        // Gluten
-        else if (allergen.contains('gluten')) {
-          safeForThisAllergen =
-              productLabelsLower.contains('gluten-free') ||
-              productLabelsLower.contains('gluten free');
-        }
-        // Sugar
-        else if (allergen.contains('sugar')) {
-          safeForThisAllergen =
-              productLabelsLower.contains('sugar-free') ||
-              productLabelsLower.contains('sugar free');
-        }
-        // Dairy / Milk
-        else if (allergen.contains('dairy') || allergen.contains('milk')) {
-          safeForThisAllergen =
-              productLabelsLower.contains('dairy-free') ||
-              productLabelsLower.contains('dairy free') ||
-              productLabelsLower.contains('vegan');
-        }
-
-        // SAFETY RULE: If the product has NO dietary labels at all, 
-        // we assume it is UNSAFE for anyone with an active allergy.
-        if (productLabelsLower.isEmpty) {
-          safeForThisAllergen = false;
-        }
-
-        if (!safeForThisAllergen) {
+      for (final allergen in customerAllergens) {
+        if (!checkRequirement(allergen)) {
           matchesAllergens = false;
           break;
         }
       }
     }
-    */
 
     return matchesQuery && matchesCategory && matchesPreferences && matchesAllergens;
   }).toList();
