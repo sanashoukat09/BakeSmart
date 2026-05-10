@@ -7,10 +7,10 @@ import '../../core/utils/share_util.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../providers/product_provider.dart';
+import '../../providers/notification_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/baker_theme.dart';
 import '../../widgets/baker/baker_bottom_nav.dart';
-
 
 class BakerDashboard extends ConsumerStatefulWidget {
   const BakerDashboard({super.key});
@@ -93,11 +93,43 @@ class _BakerDashboardState extends ConsumerState<BakerDashboard> {
               ],
             ),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined,
-                    color: BakerTheme.textSecondary),
-
-                onPressed: () {},
+              Consumer(
+                builder: (context, ref, _) {
+                  final unreadCount = ref.watch(unreadNotificationCountProvider);
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.notifications_outlined,
+                            color: BakerTheme.textSecondary),
+                        onPressed: () => context.push(AppRoutes.bakerNotifications),
+                      ),
+                      if (unreadCount > 0)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            width: 16,
+                            height: 16,
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                unreadCount > 9 ? '9+' : '$unreadCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(width: 8),
             ],

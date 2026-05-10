@@ -54,6 +54,7 @@ class AppRoutes {
   static const bakerOrders = '/baker/orders';
   static const bakerOrderDetails = '/baker/orders/details';
   static const bakerEarnings = '/baker/earnings';
+  static const bakerNotifications = '/baker/notifications';
 
   // Customer routes
   static const customerOnboarding = '/customer/onboarding';
@@ -159,6 +160,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.bakerEarnings,
         builder: (context, state) => const BakerEarningsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.bakerNotifications,
+        builder: (context, state) => const CustomerNotificationsScreen(),
       ),
       // Customer routes
       GoRoute(
