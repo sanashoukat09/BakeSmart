@@ -16,6 +16,8 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   StreamSubscription? _notificationSubscription;
   DateTime? _initTime;
+  String? _lastUid;
+  final Set<String> _shownNotificationIds = {};
 
   NotificationService(this._ref) {
     _initTime = DateTime.now();
@@ -26,14 +28,19 @@ class NotificationService {
     _ref.listen(currentUserProvider, (prev, next) async {
       final user = next.valueOrNull;
       if (user != null) {
-        String? token = await _fcm.getToken();
-        if (token != null) {
-          _updateToken(token);
+        if (_lastUid != user.uid) {
+          _lastUid = user.uid;
+          String? token = await _fcm.getToken();
+          if (token != null) {
+            _updateToken(token);
+          }
+          _listenToFirestoreNotifications(user.uid);
         }
-        _listenToFirestoreNotifications(user.uid);
       } else {
+        _lastUid = null;
         _notificationSubscription?.cancel();
         _notificationSubscription = null;
+        _shownNotificationIds.clear();
       }
     });
   }
@@ -51,10 +58,14 @@ class NotificationService {
         .listen((snapshot) {
       for (var change in snapshot.docChanges) {
         if (change.type == DocumentChangeType.added) {
+          final docId = change.doc.id;
+          if (_shownNotificationIds.contains(docId)) continue;
+          
           try {
             final notification = NotificationModel.fromFirestore(change.doc);
-            // Only show if it's not already read and it's new
+            // Only show if it's new and we haven't shown it yet
             if (!notification.isRead) {
+              _shownNotificationIds.add(docId);
               showLocalNotification(
                 title: notification.title,
                 body: notification.body,
