@@ -206,7 +206,7 @@ class _DashboardHome extends ConsumerWidget {
                   value: todaysOrders.length.toString(),
                   icon: Icons.receipt_long_outlined,
                   color: BakerTheme.secondary,
-                  onTap: () => context.push(AppRoutes.bakerEarnings),
+                  onTap: () => context.push(AppRoutes.bakerOrders),
                 ),
               ),
               const SizedBox(width: 12),
@@ -440,14 +440,16 @@ class _DashboardHome extends ConsumerWidget {
 
               return Column(
                 children: top3.map((order) {
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: BakerTheme.divider, width: 1.5),
-                    ),
+                  return GestureDetector(
+                    onTap: () => context.push('${AppRoutes.bakerOrderDetails}/${order.id}'),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: BakerTheme.divider, width: 1.5),
+                      ),
                     child: Row(
                       children: [
                         Container(
@@ -499,7 +501,8 @@ class _DashboardHome extends ConsumerWidget {
                         ),
                       ],
                     ),
-                  );
+                  ),
+                );
                 }).toList(),
               );
             },
