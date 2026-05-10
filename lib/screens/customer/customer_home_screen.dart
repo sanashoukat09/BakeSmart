@@ -33,6 +33,24 @@ class CustomerHomeScreen extends ConsumerWidget {
             pinned: true,
             backgroundColor: const Color(0xFFFDFCF9),
             elevation: 0,
+            actions: [
+              _NotificationBell(),
+              const SizedBox(width: 8),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                      color: Colors.white, shape: BoxShape.circle),
+                  child: const Icon(Icons.person,
+                      color: Color(0xFFD97706)),
+                ),
+                onPressed: () =>
+                    context.push(AppRoutes.customerProfile),
+              ),
+              const SizedBox(width: 20),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
@@ -59,26 +77,6 @@ class CustomerHomeScreen extends ConsumerWidget {
                             Text(
                               'Bakery Delights',
                               style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF451A03)),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _NotificationBell(),
-                            const SizedBox(width: 4),
-                            IconButton(
-                              visualDensity: VisualDensity.compact,
-                              padding: EdgeInsets.zero,
-                              icon: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: const BoxDecoration(
-                                    color: Colors.white, shape: BoxShape.circle),
-                                child: const Icon(Icons.person,
-                                    color: Color(0xFFD97706)),
-                              ),
-                              onPressed: () =>
-                                  context.push(AppRoutes.customerProfile),
                             ),
                           ],
                         ),
@@ -375,34 +373,33 @@ class _NotificationBell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final unreadCount = ref.watch(unreadNotificationCountProvider);
 
-    return Stack(
-      children: [
-        IconButton(
-          visualDensity: VisualDensity.compact,
-          padding: EdgeInsets.zero,
-          icon: Container(
+    return GestureDetector(
+      onTap: () => context.push(AppRoutes.customerNotifications),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
             padding: const EdgeInsets.all(8),
             decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
             child: const Icon(Icons.notifications_outlined, color: Color(0xFFD97706)),
           ),
-          onPressed: () => context.push(AppRoutes.customerNotifications),
-        ),
-        if (unreadCount > 0)
-          Positioned(
-            right: 8,
-            top: 8,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(color: Color(0xFFDC2626), shape: BoxShape.circle),
-              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-              child: Text(
-                unreadCount > 9 ? '9+' : unreadCount.toString(),
-                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
+          if (unreadCount > 0)
+            Positioned(
+              right: 0,
+              top: 0,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(color: Color(0xFFDC2626), shape: BoxShape.circle),
+                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                child: Text(
+                  unreadCount > 9 ? '9+' : unreadCount.toString(),
+                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
