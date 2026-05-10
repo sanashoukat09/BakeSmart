@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../models/product_model.dart';
 import '../../models/surplus_item_model.dart';
 import '../../providers/product_provider.dart';
+import '../../providers/surplus_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/theme/baker_theme.dart';
 
@@ -90,11 +91,6 @@ class SurplusManagementScreen extends ConsumerWidget {
   }
 }
 
-final bakerSurplusProvider = StreamProvider<List<SurplusItemModel>>((ref) {
-  final user = ref.watch(currentUserProvider).valueOrNull;
-  if (user == null) return Stream.value([]);
-  return ref.watch(firestoreServiceProvider).streamBakerSurplus(user.uid);
-});
 
 class _ActiveSurplusCard extends ConsumerWidget {
   final SurplusItemModel item;
