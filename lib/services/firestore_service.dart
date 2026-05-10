@@ -392,18 +392,16 @@ class FirestoreService {
             final ingredientSnap = await tx.get(ingredientRef);
 
             if (!ingredientSnap.exists) {
-              throw Exception('Insufficient stock: missing ingredient.');
+              // Gracefully skip missing ingredients to avoid blocking the baker
+              continue;
             }
 
             final currentQty = (ingredientSnap.data()?['quantity'] ?? 0).toDouble();
-            if (currentQty < totalToReduce) {
-              throw Exception(
-                'Insufficient stock: ${product.name} needs ${totalToReduce} ${entry.value == 0 ? '' : ingredientSnap.data()?['unit'] ?? ''} but only $currentQty available.',
-              );
-            }
-
+            
+            // We allow negative stock so the baker can see what needs restocking 
+            // without being blocked from starting the order.
             tx.update(ingredientRef, {
-              'quantity': FieldValue.increment(-totalToReduce),
+              'quantity': currentQty - totalToReduce,
               'updatedAt': FieldValue.serverTimestamp(),
             });
           }
