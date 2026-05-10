@@ -298,42 +298,6 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                 validator: (v) => v!.isEmpty ? 'Required' : null,
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _Field(
-                      controller: _priceController,
-                      label: 'Price (Rs.) *',
-                      hint: '0.00',
-                      keyboardType: TextInputType.number,
-                      validator: (v) => v!.isEmpty ? 'Required' : null,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Category *', style: TextStyle(color: Color(0xFF78350F), fontSize: 12)),
-                        const SizedBox(height: 4),
-                        DropdownButtonFormField<String>(
-                          value: _selectedCategory,
-                          dropdownColor: const Color(0xFFFEF3C7),
-                          style: const TextStyle(color: Color(0xFF451A03)),
-                          decoration: _inputDecoration('Select'),
-                          items: AppConstants.productCategories
-                              .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                              .toList(),
-                          onChanged: (v) => setState(() => _selectedCategory = v),
-                          validator: (v) => v == null ? 'Required' : null,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
               // Ingredients Linking
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -452,6 +416,42 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
 
               // Pricing Calculator
               _buildPricingCalculator(ingredientsAsync),
+              const SizedBox(height: 24),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: _Field(
+                      controller: _priceController,
+                      label: 'Price (Rs.) *',
+                      hint: '0.00',
+                      keyboardType: TextInputType.number,
+                      validator: (v) => v!.isEmpty ? 'Required' : null,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Category *', style: TextStyle(color: Color(0xFF78350F), fontSize: 12)),
+                        const SizedBox(height: 4),
+                        DropdownButtonFormField<String>(
+                          value: _selectedCategory,
+                          dropdownColor: const Color(0xFFFEF3C7),
+                          style: const TextStyle(color: Color(0xFF451A03)),
+                          decoration: _inputDecoration('Select'),
+                          items: AppConstants.productCategories
+                              .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                              .toList(),
+                          onChanged: (v) => setState(() => _selectedCategory = v),
+                          validator: (v) => v == null ? 'Required' : null,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 24),
 
               // Dietary Labels
@@ -650,8 +650,25 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Suggested Price', style: TextStyle(color: Color(0xFF92400E))),
-                  Text('Rs. ${suggestedPrice.toStringAsFixed(0)}', 
-                    style: const TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.bold, fontSize: 18)),
+                  Row(
+                    children: [
+                      Text('Rs. ${suggestedPrice.toStringAsFixed(0)}', 
+                        style: const TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.bold, fontSize: 18)),
+                      const SizedBox(width: 8),
+                      TextButton(
+                        onPressed: () {
+                          _priceController.text = suggestedPrice.toStringAsFixed(0);
+                          setState(() {});
+                        },
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text('Apply', style: TextStyle(color: Color(0xFF78350F), fontWeight: FontWeight.bold, fontSize: 12)),
+                      ),
+                    ],
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
