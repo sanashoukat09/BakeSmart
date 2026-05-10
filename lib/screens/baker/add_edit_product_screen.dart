@@ -590,11 +590,32 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
   }
 
   Widget _buildPricingCalculator(AsyncValue<List<IngredientModel>> ingredientsAsync) {
+    if (_selectedIngredients.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.info_outline, color: Color(0xFF64748B), size: 18),
+            SizedBox(width: 8),
+            Text('Add ingredients above to calculate suggested price.', 
+              style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+          ],
+        ),
+      );
+    }
+
     return ingredientsAsync.when(
       data: (ingredients) {
         double cost = 0;
         _selectedIngredients.forEach((id, qty) {
-          final ingredient = ingredients.firstWhere((i) => i.id == id);
+          final ingredient = ingredients.firstWhere((i) => i.id == id, 
+            orElse: () => IngredientModel(id: '', bakerId: '', name: '', unit: '', quantity: 0, unitPrice: 0, updatedAt: DateTime.now()));
           cost += ingredient.unitPrice * qty;
         });
 
@@ -654,19 +675,21 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                     children: [
                       Text('Rs. ${suggestedPrice.toStringAsFixed(0)}', 
                         style: const TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.bold, fontSize: 18)),
-                      const SizedBox(width: 8),
-                      TextButton(
-                        onPressed: () {
-                          _priceController.text = suggestedPrice.toStringAsFixed(0);
-                          setState(() {});
-                        },
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      if (suggestedPrice > 0) ...[
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: () {
+                            _priceController.text = suggestedPrice.toStringAsFixed(0);
+                            setState(() {});
+                          },
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text('Apply', style: TextStyle(color: Color(0xFF78350F), fontWeight: FontWeight.bold, fontSize: 12)),
                         ),
-                        child: const Text('Apply', style: TextStyle(color: Color(0xFF78350F), fontWeight: FontWeight.bold, fontSize: 12)),
-                      ),
+                      ],
                     ],
                   ),
                 ],
