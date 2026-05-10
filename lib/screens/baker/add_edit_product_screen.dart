@@ -426,7 +426,12 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                       label: 'Price (Rs.) *',
                       hint: '0.00',
                       keyboardType: TextInputType.number,
-                      validator: (v) => v!.isEmpty ? 'Required' : null,
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Required';
+                        final price = double.tryParse(v);
+                        if (price == null || price <= 0) return 'Enter a valid price';
+                        return null;
+                      },
                     ),
                   ),
                   const SizedBox(width: 16),
