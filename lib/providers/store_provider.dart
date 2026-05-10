@@ -64,36 +64,32 @@ final filteredProductsProvider = Provider<List<ProductModel>>((ref) {
   final user = ref.watch(currentUserProvider).valueOrNull;
 
   final filtered = products.where((product) {
+    // 0. Availability Match (TEMPORARILY BYPASSED)
+    // if (!product.isAvailable) return false;
+
     // 1. Search Query Match
     final matchesQuery = product.name.toLowerCase().contains(filter.query.toLowerCase()) ||
         product.description.toLowerCase().contains(filter.query.toLowerCase());
     
-    // 2. Category Match
-    final matchesCategory = filter.category == null || product.category == filter.category;
-    
-    // 3. Dietary Preferences (Profile + Manual)
-    final profileDietary = user?.dietaryPreferences ?? [];
-    final manualDietary = filter.dietaryLabels;
-    final activeDietary = {...profileDietary, ...manualDietary};
-    
-    final productLabelsLower = product.dietaryLabels.map((e) => e.toLowerCase().trim()).toSet();
-    
-    // For Preferences: If user prefers "Vegan", product should ideally be labeled "Vegan".
-    // However, we allow products with NO labels to show UNLESS there's an allergy conflict.
-    bool matchesPreferences = true;
-    if (activeDietary.isNotEmpty) {
-      // If user has specific preferences, the product should match AT LEAST ONE of them 
-      // if it has any labels at all.
-      if (productLabelsLower.isNotEmpty) {
-        matchesPreferences = activeDietary.any((pref) => 
-          productLabelsLower.contains(pref.toLowerCase().trim())
-        );
-      }
+    // 2. Category Match (strict)
+    // Must match exactly with no partial/substring logic, so
+    // Cakes cannot show Cupcakes / Custom Cakes, and any new baker-added
+    // category will still match only when the category string is identical.
+    bool matchesCategory = filter.category == null;
+    if (filter.category != null) {
+      final pCat = product.category.trim().toLowerCase();
+      final fCat = filter.category!.trim().toLowerCase();
+      matchesCategory = pCat == fCat;
     }
+    
+    
+    // 3. Dietary Preferences (TEMPORARILY BYPASSED FOR DEBUGGING)
+    bool matchesPreferences = true;
 
-    // 4. Strict Allergen Filtering (Safety)
+    // 4. Allergen Filtering (enabled)
     final customerAllergens = user?.allergens ?? [];
     bool matchesAllergens = true;
+
 
     // TEMP DEBUG: helps diagnose egg-allergy mismatch from stored values.
     // Only logs in debug mode.
@@ -104,12 +100,15 @@ final filteredProductsProvider = Provider<List<ProductModel>>((ref) {
       print('[DEBUG][store_provider] customerAllergens=$debugAllergens | product=${product.id} labels=${product.dietaryLabels}');
     }
 
-    /*
+    // Evaluate allergens by checking whether the product has the corresponding
+    // “*-Free” dietary label(s).
+    final productLabelsLower = product.dietaryLabels.map((e) => e.toLowerCase().trim()).toList();
+
     if (customerAllergens.isNotEmpty) {
       for (final allergenRaw in customerAllergens) {
         final allergen = allergenRaw.toLowerCase().trim();
 
-        bool safeForThisAllergen = true;
+        bool safeForThisAllergen = false;
 
         // Egg
         if (allergen.contains('egg')) {
@@ -149,9 +148,9 @@ final filteredProductsProvider = Provider<List<ProductModel>>((ref) {
               productLabelsLower.contains('vegan');
         }
 
-        // SAFETY RULE: If the product has NO dietary labels at all, 
-        // we assume it is UNSAFE for anyone with an active allergy.
-        if (productLabelsLower.isEmpty) {
+        // If we don't have a recognized “safe” label for this allergen,
+        // and the product has no dietary labels at all, treat it as unsafe.
+        if (!safeForThisAllergen && productLabelsLower.isEmpty) {
           safeForThisAllergen = false;
         }
 
@@ -161,7 +160,7 @@ final filteredProductsProvider = Provider<List<ProductModel>>((ref) {
         }
       }
     }
-    */
+
 
     return matchesQuery && matchesCategory && matchesPreferences && matchesAllergens;
   }).toList();
