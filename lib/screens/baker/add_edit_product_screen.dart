@@ -603,8 +603,10 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
           children: [
             Icon(Icons.info_outline, color: Color(0xFF64748B), size: 18),
             SizedBox(width: 8),
-            Text('Add ingredients above to calculate suggested price.', 
-              style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+            Expanded(
+              child: Text('Add ingredients above to calculate suggested price.', 
+                style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+            ),
           ],
         ),
       );
