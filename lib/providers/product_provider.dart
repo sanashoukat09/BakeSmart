@@ -29,6 +29,11 @@ final filteredBakerProductsProvider = Provider<AsyncValue<List<ProductModel>>>((
   });
 });
 
+// Stream of featured products (latest available across all bakers)
+final featuredProductsProvider = StreamProvider<List<ProductModel>>((ref) {
+  return ref.watch(firestoreServiceProvider).streamFeaturedProducts();
+});
+
 // Product Notifier for CRUD actions
 class ProductNotifier extends StateNotifier<AsyncValue<void>> {
   final Ref _ref;

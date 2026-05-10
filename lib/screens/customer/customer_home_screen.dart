@@ -10,6 +10,7 @@ import '../../widgets/customer/product_card.dart';
 import '../../widgets/customer/baker_card.dart';
 import '../../widgets/customer/surplus_card.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/product_provider.dart';
 
 class CustomerHomeScreen extends ConsumerWidget {
   const CustomerHomeScreen({super.key});
@@ -17,7 +18,7 @@ class CustomerHomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final products = ref.watch(filteredProductsProvider);
-    final featuredBakersAsync = ref.watch(allBakersProvider); // Use all for now
+    final featuredProductsAsync = ref.watch(featuredProductsProvider);
     final filter = ref.watch(storeFilterProvider);
     final cartItems = ref.watch(cartProvider);
 
@@ -218,25 +219,29 @@ class CustomerHomeScreen extends ConsumerWidget {
             },
           ),
 
-          // 3. Featured Bakers Section (VERY BOTTOM)
+          // 3. Featured Products Section (VERY BOTTOM)
           SliverToBoxAdapter(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Padding(
                   padding: EdgeInsets.fromLTRB(20, 32, 20, 12),
-                  child: Text('Featured Bakers', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF451A03))),
+                  child: Text('Featured Products', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF451A03))),
                 ),
                 SizedBox(
                   height: 230,
-                  child: featuredBakersAsync.when(
-                    data: (bakers) => ListView.builder(
+                  child: featuredProductsAsync.when(
+                    data: (featuredProducts) => ListView.builder(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.only(left: 20),
-                      itemCount: bakers.length,
-                      itemBuilder: (context, i) => BakerCard(
-                        baker: bakers[i],
-                        onTap: () => context.push('${AppRoutes.customerStore}/${bakers[i].uid}'),
+                      itemCount: featuredProducts.length,
+                      itemBuilder: (context, i) => Container(
+                        width: 160,
+                        margin: const EdgeInsets.only(right: 16),
+                        child: ProductCard(
+                          product: featuredProducts[i],
+                          onTap: () => context.push('${AppRoutes.customerProduct}/${featuredProducts[i].id}'),
+                        ),
                       ),
                     ),
                     loading: () => const Center(child: CircularProgressIndicator()),

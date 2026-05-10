@@ -149,6 +149,23 @@ class FirestoreService {
     });
   }
 
+  // Stream featured products (latest available across all bakers)
+  Stream<List<ProductModel>> streamFeaturedProducts() {
+    return _db
+        .collection(AppConstants.productsCollection)
+        .where('isAvailable', isEqualTo: true)
+        .snapshots()
+        .map((snapshot) {
+      final products = snapshot.docs
+          .map((doc) => ProductModel.fromFirestore(doc))
+          .toList();
+      // Sort in memory
+      products.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      // Limit to 10
+      return products.take(10).toList();
+    });
+  }
+
   // Get single product
   Future<ProductModel?> getProduct(String productId) async {
     final doc = await _db.collection(AppConstants.productsCollection).doc(productId).get();
