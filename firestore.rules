@@ -6,10 +6,6 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isAuthenticated() {
-      return isAuthenticated() && request.auth.token.email_verified == true;
-    }
-
     // Convenience: public read allowed, writes require authenticated
     function canWrite() {
       return isAuthenticated();
@@ -100,6 +96,19 @@ service cloud.firestore {
     match /deliverySchedules/{scheduleId} {
       allow read, write: if canWrite() && request.auth.uid == resource.data.bakerId;
       allow create: if canWrite() && request.auth.uid == request.resource.data.bakerId;
+    }
+
+    // Photo Analyses: private per baker
+    match /photo_analyses/{analysisId} {
+      allow read: if isAuthenticated() && request.auth.uid == resource.data.bakerId;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.bakerId;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.bakerId;
+    }
+
+    // Usage Counters: private per user
+    match /usage_counters/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if isAuthenticated() && request.auth.uid == userId;
     }
   }
 }

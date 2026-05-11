@@ -6,6 +6,7 @@ import 'core/router/app_router.dart';
 import 'core/theme/baker_theme.dart';
 import 'services/notification_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options.dart';
 
 @pragma('vm:entry-point')
@@ -16,6 +17,8 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await dotenv.load(fileName: ".env");
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,

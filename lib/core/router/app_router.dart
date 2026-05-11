@@ -8,6 +8,7 @@ import '../../screens/auth/forgot_password_screen.dart';
 import '../../screens/baker/baker_onboarding_screen.dart';
 import '../../screens/baker/baker_dashboard.dart';
 import '../../screens/baker/baker_profile_screen.dart';
+import '../../screens/baker/ai_assistant_screen.dart';
 import '../../screens/baker/product_list_screen.dart';
 import '../../screens/baker/add_edit_product_screen.dart';
 import '../../screens/baker/inventory_screen.dart';
@@ -55,6 +56,7 @@ class AppRoutes {
   static const bakerOrderDetails = '/baker/orders/details';
   static const bakerEarnings = '/baker/earnings';
   static const bakerNotifications = '/baker/notifications';
+  static const bakerAiAssistant = '/baker/ai-assistant';
 
   // Customer routes
   static const customerOnboarding = '/customer/onboarding';
@@ -164,6 +166,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.bakerNotifications,
         builder: (context, state) => const CustomerNotificationsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.bakerAiAssistant,
+        builder: (context, state) => const AiAssistantScreen(),
       ),
       // Customer routes
       GoRoute(

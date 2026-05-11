@@ -247,6 +247,68 @@ class _DashboardHome extends ConsumerWidget {
 
           const SizedBox(height: 24),
 
+          // AI Assistant Highlight
+          GestureDetector(
+            onTap: () => context.push(AppRoutes.bakerAiAssistant),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFF3D1A0E),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF3D1A0E).withOpacity(0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(Icons.auto_awesome,
+                        color: Color(0xFFF5EFE6), size: 32),
+                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'AI Photo Assistant',
+                          style: TextStyle(
+                            color: Color(0xFFF5EFE6),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Analyze photos for instructions & recipes',
+                          style: TextStyle(
+                            color: Color(0xFFC49A7A),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios,
+                      color: Color(0xFFC49A7A), size: 16),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
           // Quick actions
           const Text(
             'Quick Actions',
