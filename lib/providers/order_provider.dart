@@ -38,7 +38,8 @@ class OrderNotifier extends StateNotifier<AsyncValue<void>> {
           newStatus == AppConstants.orderReady ||
           newStatus == AppConstants.orderDelivered;
 
-      final isCancellation = newStatus == AppConstants.orderCancelled;
+      final isCancellation = newStatus == AppConstants.orderCancelled ||
+          newStatus == AppConstants.orderRejected;
 
       // Atomic inventory handling is now delegated to FirestoreService.
       if (isProductionStage || isCancellation) {

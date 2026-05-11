@@ -14,7 +14,6 @@ class FirestoreService {
 
   // ─── USER OPERATIONS ──────────────────────────────────────────
 
-  // Create user document
   Future<void> createUser(UserModel user) async {
     await _db
         .collection(AppConstants.usersCollection)
@@ -22,7 +21,6 @@ class FirestoreService {
         .set(user.toFirestore());
   }
 
-  // Get user by UID (one-time)
   Future<UserModel?> getUser(String uid) async {
     final doc = await _db
         .collection(AppConstants.usersCollection)
@@ -32,7 +30,6 @@ class FirestoreService {
     return UserModel.fromFirestore(doc);
   }
 
-  // Stream user document (real-time)
   Stream<UserModel?> streamUser(String uid) {
     return _db
         .collection(AppConstants.usersCollection)
@@ -44,7 +41,6 @@ class FirestoreService {
     });
   }
 
-  // Update user fields
   Future<void> updateUser(String uid, Map<String, dynamic> data) async {
     await _db
         .collection(AppConstants.usersCollection)
@@ -52,16 +48,13 @@ class FirestoreService {
         .update(data);
   }
 
-  // Complete onboarding
-  Future<void> completeOnboarding(
-      String uid, Map<String, dynamic> data) async {
+  Future<void> completeOnboarding(String uid, Map<String, dynamic> data) async {
     await _db.collection(AppConstants.usersCollection).doc(uid).update({
       ...data,
       'onboardingComplete': true,
     });
   }
 
-  // Check if user exists
   Future<bool> userExists(String uid) async {
     final doc = await _db
         .collection(AppConstants.usersCollection)
@@ -70,7 +63,6 @@ class FirestoreService {
     return doc.exists;
   }
 
-  // Check if email is already registered
   Future<bool> isEmailRegistered(String email) async {
     final snapshot = await _db
         .collection(AppConstants.usersCollection)
@@ -80,17 +72,14 @@ class FirestoreService {
     return snapshot.docs.isNotEmpty;
   }
 
-  // Get baker public profile by ID
   Future<UserModel?> getBakerProfile(String bakerId) async {
     return getUser(bakerId);
   }
 
-  // Stream baker profile
   Stream<UserModel?> streamBakerProfile(String bakerId) {
     return streamUser(bakerId);
   }
 
-  // Update notification preferences
   Future<void> updateNotificationPrefs(String uid,
       {required bool enabled,
       required bool newOrder,
@@ -104,14 +93,12 @@ class FirestoreService {
     });
   }
 
-  // Add portfolio image URL
   Future<void> addPortfolioImage(String uid, String imageUrl) async {
     await _db.collection(AppConstants.usersCollection).doc(uid).update({
       'portfolioImages': FieldValue.arrayUnion([imageUrl]),
     });
   }
 
-  // Remove portfolio image URL
   Future<void> removePortfolioImage(String uid, String imageUrl) async {
     await _db.collection(AppConstants.usersCollection).doc(uid).update({
       'portfolioImages': FieldValue.arrayRemove([imageUrl]),
@@ -120,7 +107,6 @@ class FirestoreService {
 
   // ─── PRODUCT OPERATIONS ────────────────────────────────────────
 
-  // Create or update product
   Future<void> saveProduct(ProductModel product) async {
     await _db
         .collection(AppConstants.productsCollection)
@@ -128,12 +114,13 @@ class FirestoreService {
         .set(product.toFirestore(), SetOptions(merge: true));
   }
 
-  // Delete product
   Future<void> deleteProduct(String productId) async {
-    await _db.collection(AppConstants.productsCollection).doc(productId).delete();
+    await _db
+        .collection(AppConstants.productsCollection)
+        .doc(productId)
+        .delete();
   }
 
-  // Stream products for a specific baker
   Stream<List<ProductModel>> streamBakerProducts(String bakerId) {
     return _db
         .collection(AppConstants.productsCollection)
@@ -143,13 +130,11 @@ class FirestoreService {
       final products = snapshot.docs
           .map((doc) => ProductModel.fromFirestore(doc))
           .toList();
-      // Sort in memory
       products.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return products;
     });
   }
 
-  // Stream featured products (latest available across all bakers)
   Stream<List<ProductModel>> streamFeaturedProducts() {
     return _db
         .collection(AppConstants.productsCollection)
@@ -159,22 +144,22 @@ class FirestoreService {
       final products = snapshot.docs
           .map((doc) => ProductModel.fromFirestore(doc))
           .toList();
-      // Sort in memory
       products.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      // Limit to 10
       return products.take(10).toList();
     });
   }
 
-  // Get single product
   Future<ProductModel?> getProduct(String productId) async {
-    final doc = await _db.collection(AppConstants.productsCollection).doc(productId).get();
+    final doc = await _db
+        .collection(AppConstants.productsCollection)
+        .doc(productId)
+        .get();
     if (!doc.exists) return null;
     return ProductModel.fromFirestore(doc);
   }
 
-  // Toggle product availability
-  Future<void> toggleProductAvailability(String productId, bool isAvailable) async {
+  Future<void> toggleProductAvailability(
+      String productId, bool isAvailable) async {
     await _db
         .collection(AppConstants.productsCollection)
         .doc(productId)
@@ -183,7 +168,6 @@ class FirestoreService {
 
   // ─── INGREDIENT OPERATIONS ────────────────────────────────────
 
-  // Create or update ingredient
   Future<void> saveIngredient(IngredientModel ingredient) async {
     await _db
         .collection(AppConstants.ingredientsCollection)
@@ -191,7 +175,6 @@ class FirestoreService {
         .set(ingredient.toFirestore(), SetOptions(merge: true));
   }
 
-  // Delete ingredient
   Future<void> deleteIngredient(String ingredientId) async {
     await _db
         .collection(AppConstants.ingredientsCollection)
@@ -199,7 +182,6 @@ class FirestoreService {
         .delete();
   }
 
-  // Stream ingredients for a specific baker
   Stream<List<IngredientModel>> streamBakerIngredients(String bakerId) {
     return _db
         .collection(AppConstants.ingredientsCollection)
@@ -209,14 +191,13 @@ class FirestoreService {
       final ingredients = snapshot.docs
           .map((doc) => IngredientModel.fromFirestore(doc))
           .toList();
-      // Sort in memory
       ingredients.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
       return ingredients;
     });
   }
 
-  // Update ingredient quantity
-  Future<void> updateIngredientQuantity(String ingredientId, double newQuantity) async {
+  Future<void> updateIngredientQuantity(
+      String ingredientId, double newQuantity) async {
     await _db
         .collection(AppConstants.ingredientsCollection)
         .doc(ingredientId)
@@ -226,8 +207,8 @@ class FirestoreService {
     });
   }
 
-  // Decrement ingredient stock
-  Future<void> decrementIngredientStock(String ingredientId, double amount) async {
+  Future<void> decrementIngredientStock(
+      String ingredientId, double amount) async {
     await _db
         .collection(AppConstants.ingredientsCollection)
         .doc(ingredientId)
@@ -239,7 +220,6 @@ class FirestoreService {
 
   // ─── SURPLUS OPERATIONS ────────────────────────────────────────
 
-  // Create surplus item
   Future<void> saveSurplusItem(SurplusItemModel item) async {
     await _db
         .collection(AppConstants.surplusItemsCollection)
@@ -247,7 +227,6 @@ class FirestoreService {
         .set(item.toFirestore());
   }
 
-  // Stream active surplus items for a specific baker
   Stream<List<SurplusItemModel>> streamBakerSurplus(String bakerId) {
     return _db
         .collection(AppConstants.surplusItemsCollection)
@@ -259,7 +238,6 @@ class FirestoreService {
             .toList());
   }
 
-  // Deactivate surplus item
   Future<void> deactivateSurplus(String surplusId) async {
     await _db
         .collection(AppConstants.surplusItemsCollection)
@@ -267,7 +245,6 @@ class FirestoreService {
         .update({'active': false});
   }
 
-  // Increment surplus quantity (e.g. on cancellation)
   Future<void> incrementSurplusQuantity(String surplusId, int amount) async {
     await _db
         .collection(AppConstants.surplusItemsCollection)
@@ -278,7 +255,6 @@ class FirestoreService {
     });
   }
 
-  // Stream all active surplus items for discovery
   Stream<List<SurplusItemModel>> streamAllSurplus() {
     return _db
         .collection(AppConstants.surplusItemsCollection)
@@ -291,7 +267,6 @@ class FirestoreService {
 
   // ─── ORDER OPERATIONS ──────────────────────────────────────────
 
-  // Stream orders for a specific baker
   Stream<List<OrderModel>> streamBakerOrders(String bakerId) {
     return _db
         .collection(AppConstants.ordersCollection)
@@ -301,13 +276,11 @@ class FirestoreService {
       final orders = snapshot.docs
           .map((doc) => OrderModel.fromFirestore(doc))
           .toList();
-      // Sort in memory
       orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return orders;
     });
   }
 
-  // Update order status
   Future<void> updateOrderStatus(String orderId, String newStatus) async {
     final order = await getOrder(orderId);
     if (order == null) return;
@@ -317,10 +290,9 @@ class FirestoreService {
         .doc(orderId)
         .update({'status': newStatus});
 
-    // Notify Customer
     String title = 'Order Update';
     String body = 'Your order #${orderId.substring(0, 8)} is now $newStatus.';
-    
+
     if (newStatus == AppConstants.orderAccepted) {
       body = 'Your order has been accepted by the baker!';
     } else if (newStatus == AppConstants.orderReady) {
@@ -342,7 +314,6 @@ class FirestoreService {
     );
   }
 
-  // Mark inventory as deducted
   Future<void> setOrderInventoryDeducted(String orderId) async {
     await _db
         .collection(AppConstants.ordersCollection)
@@ -350,14 +321,49 @@ class FirestoreService {
         .update({'inventoryDeducted': true});
   }
 
-  // Atomic: ingredient deduction on production/delivery + surplus restock on cancellation.
-  // This prevents double-deduction (inventoryDeducted guard enforced inside the transaction).
+  /// Atomically transitions order status and handles inventory side-effects.
+  ///
+  /// ── INGREDIENT DEDUCTION ───────────────────────────────────────────────────
+  /// Triggers ONLY when newStatus == 'preparing' AND inventoryDeducted == false.
+  ///
+  ///   Why only 'preparing':
+  ///     'ready' and 'delivered' are downstream of 'preparing'. Ingredients were
+  ///     already deducted when the baker clicked Start Preparing. Triggering again
+  ///     on those statuses would double-deduct. The inventoryDeducted flag is a
+  ///     safety net but 'preparing'-only is the primary control.
+  ///
+  ///   Why surplus items are skipped:
+  ///     Items with a surplusId are pre-made flash deal products. The baker already
+  ///     used ingredients to make them before listing as surplus. There is nothing
+  ///     to deduct at order preparation time.
+  ///
+  /// ── SURPLUS RESTOCK ON CANCELLATION ───────────────────────────────────────
+  /// Triggers ONLY when newStatus == 'cancelled' AND inventoryDeducted == false.
+  ///
+  ///   Why the inventoryDeducted guard:
+  ///     If the baker already started preparing (inventoryDeducted = true), the
+  ///     physical product exists. The surplus reservation is consumed. The baker
+  ///     should manually list the finished product as new surplus — we must NOT
+  ///     auto-restock the original reservation because that surplus slot may no
+  ///     longer reflect reality (quantity, freshness, etc.).
+  ///
+  ///   Why only items with a surplusId:
+  ///     Regular order items (surplusId = null) have no surplus record to restock.
+  ///
+  /// ── FIRESTORE RULE: ALL READS BEFORE ALL WRITES ────────────────────────────
+  /// All tx.get() calls are completed in Phase 1 before any tx.update() / tx.set()
+  /// calls in Phase 2. Interleaving reads and writes inside a transaction causes
+  /// the '_command is empty' assertion error.
   Future<void> updateOrderStatusWithAtomicInventory({
     required String orderId,
     required String newStatus,
   }) async {
     await _db.runTransaction((tx) async {
-      final orderRef = _db.collection(AppConstants.ordersCollection).doc(orderId);
+
+      // ── PHASE 1: ALL READS ──────────────────────────────────────────────────
+
+      final orderRef =
+          _db.collection(AppConstants.ordersCollection).doc(orderId);
       final orderSnap = await tx.get(orderRef);
 
       if (!orderSnap.exists) {
@@ -366,57 +372,94 @@ class FirestoreService {
 
       final order = OrderModel.fromFirestore(orderSnap);
 
-      final isProductionStage =
-          newStatus == AppConstants.orderPreparing ||
-          newStatus == AppConstants.orderReady ||
-          newStatus == AppConstants.orderDelivered;
+      final shouldDeductIngredients =
+          newStatus == AppConstants.orderPreparing && !order.inventoryDeducted;
 
-      final isCancellation = newStatus == AppConstants.orderCancelled;
+      final shouldRestockSurplus =
+          (newStatus == AppConstants.orderCancelled ||
+                  newStatus == AppConstants.orderRejected) &&
+              !order.inventoryDeducted;
 
-      if (isProductionStage && !order.inventoryDeducted) {
-        // Deduct ingredients exactly once.
+      // { ingredientId -> { ref, snap, totalToReduce } }
+      // Accumulated so a shared ingredient across multiple products is only
+      // read once and deducted once with the correct combined total.
+      final Map<String, Map<String, dynamic>> ingredientReads = {};
+
+      if (shouldDeductIngredients) {
         for (final item in order.items) {
-          final productRef = _db.collection(AppConstants.productsCollection).doc(item.productId);
+          // Skip surplus/flash deal items — already made, no ingredients to deduct.
+          if (item.surplusId != null && item.surplusId!.isNotEmpty) continue;
+
+          final productRef = _db
+              .collection(AppConstants.productsCollection)
+              .doc(item.productId);
           final productSnap = await tx.get(productRef);
 
           if (!productSnap.exists) continue;
 
           final product = ProductModel.fromFirestore(productSnap);
+
           for (final entry in product.ingredients.entries) {
             final ingredientId = entry.key;
-            final qtyPerUnit = entry.value;
+            final qtyPerUnit = entry.value; // quantity needed per 1 unit of product
             final totalToReduce = qtyPerUnit * item.quantity;
 
-            final ingredientRef =
-                _db.collection(AppConstants.ingredientsCollection).doc(ingredientId);
-            final ingredientSnap = await tx.get(ingredientRef);
+            if (ingredientReads.containsKey(ingredientId)) {
+              ingredientReads[ingredientId]!['totalToReduce'] += totalToReduce;
+            } else {
+              final ingredientRef = _db
+                  .collection(AppConstants.ingredientsCollection)
+                  .doc(ingredientId);
+              final ingredientSnap = await tx.get(ingredientRef);
 
-            if (!ingredientSnap.exists) {
-              // Gracefully skip missing ingredients to avoid blocking the baker
-              continue;
+              ingredientReads[ingredientId] = {
+                'ref': ingredientRef,
+                'snap': ingredientSnap,
+                'totalToReduce': totalToReduce,
+              };
             }
-
-            final currentQty = (ingredientSnap.data()?['quantity'] ?? 0).toDouble();
-            
-            // We allow negative stock so the baker can see what needs restocking 
-            // without being blocked from starting the order.
-            tx.update(ingredientRef, {
-              'quantity': currentQty - totalToReduce,
-              'updatedAt': FieldValue.serverTimestamp(),
-            });
           }
         }
+      }
 
+      // No surplus reads needed — FieldValue.increment handles restock writes
+      // without needing to read current values first.
+
+      // ── PHASE 2: ALL WRITES ─────────────────────────────────────────────────
+
+      if (shouldDeductIngredients) {
+        for (final entry in ingredientReads.entries) {
+          final snap = entry.value['snap'] as DocumentSnapshot;
+          if (!snap.exists) continue; // missing ingredient — skip gracefully
+
+          final ref = entry.value['ref'] as DocumentReference;
+          final totalToReduce = entry.value['totalToReduce'] as double;
+          final data = snap.data() as Map<String, dynamic>? ?? {};
+          final currentQty = (data['quantity'] ?? 0 as num).toDouble();
+
+          // Negative stock is intentional — baker can see what needs restocking
+          // without being blocked from starting the order.
+          tx.update(ref, {
+            'quantity': currentQty - totalToReduce,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+
+        // Flip the guard so this block never re-runs on retries or future status changes.
         tx.update(orderRef, {'inventoryDeducted': true});
       }
 
-      if (isCancellation) {
-        // Restock any surplus items for this order.
+      if (shouldRestockSurplus) {
         for (final item in order.items) {
           final surplusId = item.surplusId;
           if (surplusId == null || surplusId.isEmpty) continue;
 
-          final surplusRef = _db.collection(AppConstants.surplusItemsCollection).doc(surplusId);
+          final surplusRef = _db
+              .collection(AppConstants.surplusItemsCollection)
+              .doc(surplusId);
+
+          // FieldValue.increment is safe here without a prior read because we are
+          // not reading the current value — just applying a delta.
           tx.update(surplusRef, {
             'quantity': FieldValue.increment(item.quantity),
             'active': true,
@@ -424,11 +467,11 @@ class FirestoreService {
         }
       }
 
-      // Finally update order status.
+      // Status update is always the final write.
       tx.update(orderRef, {'status': newStatus});
     });
 
-    // Notify Customer (outside transaction)
+    // Customer notification — outside transaction (safe to read here).
     final order = await getOrder(orderId);
     if (order == null) return;
 
@@ -443,6 +486,8 @@ class FirestoreService {
       body = 'Enjoy your treats! Your order has been delivered.';
     } else if (newStatus == AppConstants.orderCancelled) {
       body = 'Your order has been cancelled.';
+    } else if (newStatus == AppConstants.orderRejected) {
+      body = 'Your order has been rejected by the baker.';
     }
 
     await addNotification(
@@ -458,49 +503,79 @@ class FirestoreService {
     );
   }
 
-  // Create new order (atomic surplus decrement via transaction)
+  /// Creates an order and atomically decrements surplus stock for flash deal items.
+  ///
+  /// Regular items (surplusId = null) have no stock to check at placement time.
+  /// Ingredient deduction happens later when the baker clicks Start Preparing.
+  ///
+  /// All tx.get() calls happen before any tx.update() / tx.set() calls.
   Future<void> saveOrder(OrderModel order) async {
     await _db.runTransaction((tx) async {
-      // First validate + decrement each surplus item atomically.
-      // Note: If the same surplusId appears multiple times, we still apply each item quantity
-      // sequentially inside the same transaction reads/writes.
+
+      // ── PHASE 1: ALL READS ──────────────────────────────────────────────────
+
+      // { surplusId -> { ref, snap, requestedQuantity, productName } }
+      final Map<String, Map<String, dynamic>> surplusReads = {};
+
       for (final item in order.items) {
         final surplusId = item.surplusId;
         if (surplusId == null || surplusId.isEmpty) continue;
 
-        final surplusRef = _db.collection(AppConstants.surplusItemsCollection).doc(surplusId);
-        final surplusSnap = await tx.get(surplusRef);
+        if (surplusReads.containsKey(surplusId)) {
+          surplusReads[surplusId]!['requestedQuantity'] += item.quantity;
+        } else {
+          final surplusRef = _db
+              .collection(AppConstants.surplusItemsCollection)
+              .doc(surplusId);
+          final surplusSnap = await tx.get(surplusRef);
 
-        if (!surplusSnap.exists) {
-          throw Exception('The flash deal for ${item.productName} is no longer available.');
+          surplusReads[surplusId] = {
+            'ref': surplusRef,
+            'snap': surplusSnap,
+            'requestedQuantity': item.quantity,
+            'productName': item.productName,
+          };
+        }
+      }
+
+      // ── PHASE 2: VALIDATE + ALL WRITES ─────────────────────────────────────
+
+      for (final entry in surplusReads.entries) {
+        final snap = entry.value['snap'] as DocumentSnapshot;
+        final ref = entry.value['ref'] as DocumentReference;
+        final requested = entry.value['requestedQuantity'] as int;
+        final productName = entry.value['productName'] as String;
+
+        if (!snap.exists) {
+          throw Exception(
+              'The flash deal for $productName is no longer available.');
         }
 
-        final data = surplusSnap.data() as Map<String, dynamic>? ?? {};
-        final isActive = (data['active'] ?? false) == true;
-        if (!isActive) {
-          throw Exception('The flash deal for ${item.productName} is no longer available.');
+        final data = snap.data() as Map<String, dynamic>? ?? {};
+        if ((data['active'] ?? false) != true) {
+          throw Exception(
+              'The flash deal for $productName is no longer available.');
         }
 
-        final available = (data['quantity'] ?? 0);
-        final requested = item.quantity;
-
+        final available = (data['quantity'] ?? 0) as int;
         if (requested > available) {
-          throw Exception('Only $available ${item.productName} flash deal item(s) left.');
+          throw Exception(
+              'Only $available $productName flash deal item(s) left.');
         }
 
         final newQuantity = available - requested;
-        tx.update(surplusRef, {
+        tx.update(ref, {
           'quantity': newQuantity,
           'active': newQuantity > 0,
         });
       }
 
-      // Then create the order.
-      final orderRef = _db.collection(AppConstants.ordersCollection).doc(order.id);
+      final orderRef =
+          _db.collection(AppConstants.ordersCollection).doc(order.id);
       tx.set(orderRef, order.toFirestore());
     });
 
-    // Notify Baker of new order (outside the transaction)
+    // Baker notification — outside transaction.
     await addNotification(
       order.bakerId,
       NotificationModel(
@@ -514,14 +589,15 @@ class FirestoreService {
     );
   }
 
-  // Get single order
   Future<OrderModel?> getOrder(String orderId) async {
-    final doc = await _db.collection(AppConstants.ordersCollection).doc(orderId).get();
+    final doc = await _db
+        .collection(AppConstants.ordersCollection)
+        .doc(orderId)
+        .get();
     if (!doc.exists) return null;
     return OrderModel.fromFirestore(doc);
   }
 
-  // Get order count for a specific date (Capacity Check)
   Future<int> getOrdersCountForDate(String bakerId, DateTime date) async {
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
@@ -541,21 +617,19 @@ class FirestoreService {
 
   // ─── REVIEW OPERATIONS ──────────────────────────────────────────
 
-  // Save review and update baker's rating (simple version)
   Future<void> saveReview(ReviewModel review) async {
     final batch = _db.batch();
-    
-    // Save review
-    final reviewRef = _db.collection(AppConstants.reviewsCollection).doc(review.id);
+
+    final reviewRef =
+        _db.collection(AppConstants.reviewsCollection).doc(review.id);
     batch.set(reviewRef, review.toFirestore());
 
-    // Mark order as reviewed
-    final orderRef = _db.collection(AppConstants.ordersCollection).doc(review.orderId);
+    final orderRef =
+        _db.collection(AppConstants.ordersCollection).doc(review.orderId);
     batch.update(orderRef, {'isReviewed': true});
 
     await batch.commit();
 
-    // Update baker rating (aggregate)
     final reviews = await _db
         .collection(AppConstants.reviewsCollection)
         .where('bakerId', isEqualTo: review.bakerId)
@@ -565,15 +639,17 @@ class FirestoreService {
     for (var doc in reviews.docs) {
       totalRating += (doc.data()['rating'] ?? 0.0).toDouble();
     }
-    double avgRating = totalRating / reviews.docs.length;
+    final double avgRating = totalRating / reviews.docs.length;
 
-    await _db.collection(AppConstants.usersCollection).doc(review.bakerId).update({
+    await _db
+        .collection(AppConstants.usersCollection)
+        .doc(review.bakerId)
+        .update({
       'rating': avgRating,
       'totalReviews': reviews.docs.length,
     });
   }
 
-  // Stream reviews for a baker
   Stream<List<ReviewModel>> streamBakerReviews(String bakerId) {
     return _db
         .collection(AppConstants.reviewsCollection)
@@ -583,7 +659,6 @@ class FirestoreService {
       final reviews = snapshot.docs
           .map((doc) => ReviewModel.fromFirestore(doc))
           .toList();
-      // Sort in memory
       reviews.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return reviews;
     });
@@ -603,37 +678,34 @@ class FirestoreService {
     });
   }
 
-  // Stream customer's orders
   Stream<List<OrderModel>> streamCustomerOrders(String customerId) {
     return _db
         .collection(AppConstants.ordersCollection)
         .where('customerId', isEqualTo: customerId)
         .snapshots()
         .map((snapshot) {
-          try {
-            final orders = snapshot.docs
-                .map((doc) {
-                  try {
-                    return OrderModel.fromFirestore(doc);
-                  } catch (e) {
-                    print('Error parsing order ${doc.id}: $e');
-                    return null;
-                  }
-                })
-                .where((o) => o != null)
-                .cast<OrderModel>()
-                .toList();
-            // Sort in memory
-            orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-            return orders;
-          } catch (e) {
-            print('Error in orders stream: $e');
-            return <OrderModel>[];
-          }
-        });
+      try {
+        final orders = snapshot.docs
+            .map((doc) {
+              try {
+                return OrderModel.fromFirestore(doc);
+              } catch (e) {
+                print('Error parsing order ${doc.id}: $e');
+                return null;
+              }
+            })
+            .where((o) => o != null)
+            .cast<OrderModel>()
+            .toList();
+        orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return orders;
+      } catch (e) {
+        print('Error in orders stream: $e');
+        return <OrderModel>[];
+      }
+    });
   }
 
-  // Get earnings summary (simple calculation from delivered orders)
   Stream<double> streamTotalEarnings(String bakerId) {
     return _db
         .collection(AppConstants.ordersCollection)
@@ -648,9 +720,11 @@ class FirestoreService {
       return total;
     });
   }
+
   // ─── NOTIFICATION OPERATIONS ──────────────────────────────────
-  
-  Future<void> addNotification(String userId, NotificationModel notification) async {
+
+  Future<void> addNotification(
+      String userId, NotificationModel notification) async {
     await _db
         .collection(AppConstants.usersCollection)
         .doc(userId)
@@ -666,28 +740,29 @@ class FirestoreService {
         .collection('notifications')
         .snapshots()
         .map((snapshot) {
-          try {
-            return snapshot.docs
-                .map((doc) {
-                  try {
-                    return NotificationModel.fromFirestore(doc);
-                  } catch (e) {
-                    print('Error parsing notification ${doc.id}: $e');
-                    return null;
-                  }
-                })
-                .where((n) => n != null)
-                .cast<NotificationModel>()
-                .toList()
-              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          } catch (e) {
-            print('Error in notifications stream: $e');
-            return <NotificationModel>[];
-          }
-        });
+      try {
+        return snapshot.docs
+            .map((doc) {
+              try {
+                return NotificationModel.fromFirestore(doc);
+              } catch (e) {
+                print('Error parsing notification ${doc.id}: $e');
+                return null;
+              }
+            })
+            .where((n) => n != null)
+            .cast<NotificationModel>()
+            .toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      } catch (e) {
+        print('Error in notifications stream: $e');
+        return <NotificationModel>[];
+      }
+    });
   }
 
-  Future<void> markNotificationAsRead(String userId, String notificationId) async {
+  Future<void> markNotificationAsRead(
+      String userId, String notificationId) async {
     await _db
         .collection(AppConstants.usersCollection)
         .doc(userId)
