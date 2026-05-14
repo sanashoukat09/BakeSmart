@@ -41,6 +41,19 @@ class OrderNotifier extends StateNotifier<AsyncValue<void>> {
       final isCancellation = newStatus == AppConstants.orderCancelled ||
           newStatus == AppConstants.orderRejected;
 
+      if (isCancellation) {
+        final order = await firestore.getOrder(orderId);
+        if (order == null) {
+          throw Exception('Order not found.');
+        }
+        if (newStatus == AppConstants.orderCancelled && order.status != AppConstants.orderPlaced) {
+          throw Exception('Only orders in the placed state can be cancelled.');
+        }
+        if (newStatus == AppConstants.orderRejected && order.status != AppConstants.orderPlaced) {
+          throw Exception('Only orders in the placed state can be rejected.');
+        }
+      }
+
       // Atomic inventory handling is now delegated to FirestoreService.
       if (isProductionStage || isCancellation) {
         await firestore.updateOrderStatusWithAtomicInventory(

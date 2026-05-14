@@ -26,16 +26,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   DateTime _deliveryDate = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _deliveryTime = const TimeOfDay(hour: 12, minute: 0);
   String _paymentMethod = 'COD';
-  bool _isAtCapacity = false;
-  int _bakerCapacity = 10;
-  int _currentOrderCount = 0;
   bool _didPrefill = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkCapacity();
-  }
 
   void _prefillDeliveryDetails() {
     if (_didPrefill) return;
@@ -74,28 +65,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
     if (picked != null) {
       setState(() => _deliveryDate = picked);
-      _checkCapacity();
     }
   }
 
-  Future<void> _checkCapacity() async {
-    final cart = ref.read(cartProvider);
-    if (cart.isEmpty) return;
-
-    final bakerId = cart.first.bakerId;
-    final count = await ref
-        .read(firestoreServiceProvider)
-        .getOrdersCountForDate(bakerId, _deliveryDate);
-    final baker = await ref.read(firestoreServiceProvider).getBakerProfile(bakerId);
-
-    if (mounted) {
-      setState(() {
-        _currentOrderCount = count;
-        _bakerCapacity = baker?.dailyOrderCapacity ?? 10;
-        _isAtCapacity = _currentOrderCount >= _bakerCapacity;
-      });
-    }
-  }
 
   Future<void> _selectTime() async {
     final picked = await showTimePicker(context: context, initialTime: _deliveryTime);
@@ -145,10 +117,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       customerPhone: _phoneController.text.trim(),
       customerNote: _noteController.text.trim(),
       referencePhotos: cart.expand((item) => item.referencePhotos).toList(),
-      capacityWarning: _isAtCapacity,
-      capacityWarningMessage: _isAtCapacity
-          ? 'Baker has $_currentOrderCount orders for this date and a daily capacity of $_bakerCapacity.'
-          : null,
       paymentMethod: _paymentMethod,
     );
 
@@ -273,41 +241,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              if (_isAtCapacity)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 20),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFFECACA)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.warning_amber_rounded,
-                          color: Color(0xFFDC2626), size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Busy Day! 🥐',
-                              style: TextStyle(
-                                  color: Color(0xFF991B1B),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13),
-                            ),
-                            const Text(
-                              'This baker is at capacity for this date. We suggest picking the next available day.',
-                              style: TextStyle(color: Color(0xFFB91C1C), fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               const SizedBox(height: 20),
 
               const Text('Payment Method', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),

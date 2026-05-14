@@ -11,14 +11,36 @@ service cloud.firestore {
       return isAuthenticated();
     }
 
-    // Users: private by default
+    function isOrderCustomer() {
+      return isAuthenticated() && request.auth.uid == request.resource.data.customerId;
+    }
+
+    function isOrderBaker() {
+      return isAuthenticated() && request.auth.uid == request.resource.data.bakerId;
+    }
+
+    function isValidCustomerOrderCancel() {
+      return isOrderCustomer()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status == 'cancelled'
+        && resource.data.status == 'placed';
+    }
+
+    function isValidBakerOrderUpdate() {
+      return isOrderBaker()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'inventoryDeducted', 'capacityWarning', 'capacityWarningMessage'])
+        && request.resource.data.status != resource.data.status;
+    }
+
+    // Users: profiles readable by authenticated users (for baker info), write only by self
     match /users/{userId} {
-      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow read: if isAuthenticated();
       allow write: if isAuthenticated() && request.auth.uid == userId;
 
-      // Notifications: only owning user can read/update
+      // Notifications: only owning user can read/update, anyone authenticated can create
       match /notifications/{notificationId} {
         allow read: if isAuthenticated() && request.auth.uid == userId;
+        allow create: if isAuthenticated();
         allow update: if isAuthenticated() && request.auth.uid == userId;
       }
     }
@@ -36,21 +58,17 @@ service cloud.firestore {
       allow create: if canWrite() && request.auth.uid == request.resource.data.bakerId;
     }
 
-    // Orders: authenticity enforced on create + participants can read/update
     match /orders/{orderId} {
       allow read: if isAuthenticated()
-        && (request.auth.uid == resource.data.bakerId
-            || request.auth.uid == resource.data.customerId);
+        && (request.auth.uid == resource.data.customerId
+            || request.auth.uid == resource.data.bakerId);
 
-      // Customer/baker can create only for themselves
+      // Customers may create orders only for themselves.
       allow create: if canWrite()
-        && (request.auth.uid == request.resource.data.customerId
-            || request.auth.uid == request.resource.data.bakerId);
+        && request.auth.uid == request.resource.data.customerId;
 
-      // Participant updates (status transitions should be validated at app/backend; kept permissive here)
-      allow update: if canWrite()
-        && (request.auth.uid == resource.data.bakerId
-            || request.auth.uid == resource.data.customerId);
+      // Status transitions and inventory guard updates only.
+      allow update: if isValidCustomerOrderCancel() || isValidBakerOrderUpdate();
 
       // Optional: disallow deletes
       allow delete: if false;
@@ -58,14 +76,15 @@ service cloud.firestore {
 
     // Reviews:
     // - Public read (storefront shared URLs)
-    // - Write requires verified auth AND "delivered order only"
+    // - Write requires verified auth AND delivered order ownership
     match /reviews/{reviewId} {
       allow read: if true;
 
       allow create: if canWrite()
         && request.auth.uid == request.resource.data.customerId
-        && (get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.status
-            == 'delivered')
+        && request.resource.data.customerId == get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.customerId
+        && request.resource.data.bakerId == get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.bakerId
+        && get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.status == 'delivered'
         // Prevent overwriting an existing review
         && !exists(/databases/$(database)/documents/reviews/$(reviewId));
 

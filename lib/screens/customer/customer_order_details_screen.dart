@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/customer_order_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../models/order_model.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/router/app_router.dart';
@@ -24,8 +25,12 @@ class CustomerOrderDetailsScreen extends ConsumerWidget {
       ),
       body: ordersAsync.when(
         data: (orders) {
-          final order = orders.firstWhere((o) => o.id == orderId);
-          return _OrderDetailsBody(order: order);
+          final matchingOrders = orders.where((o) => o.id == orderId).toList();
+          if (matchingOrders.isEmpty) {
+            return const Center(child: Text('Order not found.'));
+          }
+
+          return _OrderDetailsBody(order: matchingOrders.first);
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
@@ -34,9 +39,69 @@ class CustomerOrderDetailsScreen extends ConsumerWidget {
   }
 }
 
-class _OrderDetailsBody extends StatelessWidget {
+class _OrderDetailsBody extends ConsumerStatefulWidget {
   final OrderModel order;
   const _OrderDetailsBody({required this.order});
+
+  @override
+  ConsumerState<_OrderDetailsBody> createState() => _OrderDetailsBodyState();
+}
+
+class _OrderDetailsBodyState extends ConsumerState<_OrderDetailsBody> {
+  bool _isCancelling = false;
+
+  bool get _canCancelOrder => widget.order.status == AppConstants.orderPlaced;
+
+  Future<void> _handleCancelOrder() async {
+    if (!_canCancelOrder) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This order cannot be cancelled at its current stage.')),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Cancel Order?'),
+        content: const Text('Are you sure you want to cancel this order? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep Order'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Cancel Order', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isCancelling = true);
+
+    try {
+      await ref.read(firestoreServiceProvider).updateOrderStatusWithAtomicInventory(
+        orderId: widget.order.id,
+        newStatus: AppConstants.orderCancelled,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Order cancelled successfully')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error cancelling order: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isCancelling = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,19 +110,19 @@ class _OrderDetailsBody extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Order #${order.id.substring(0, 8).toUpperCase()}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          Text('Order #${widget.order.id.substring(0, 8).toUpperCase()}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           const SizedBox(height: 8),
-          Text(DateFormat('MMM dd, yyyy • hh:mm a').format(order.createdAt), style: const TextStyle(color: Colors.grey)),
+          Text(DateFormat('MMM dd, yyyy • hh:mm a').format(widget.order.createdAt), style: const TextStyle(color: Colors.grey)),
           const Divider(height: 48),
 
           const Text('Track Order', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 24),
-          _StatusTimeline(currentStatus: order.status),
+          _StatusTimeline(currentStatus: widget.order.status),
           const Divider(height: 48),
 
           const Text('Items', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 16),
-          ...order.items.map((item) => Padding(
+          ...widget.order.items.map((item) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -72,32 +137,34 @@ class _OrderDetailsBody extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Total Amount', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('Rs. ${order.totalAmount.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFFD97706))),
+              Text('Rs. ${widget.order.totalAmount.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFFD97706))),
             ],
           ),
 
           const SizedBox(height: 40),
-          if (order.status == AppConstants.orderPlaced)
+          if (widget.order.status == AppConstants.orderPlaced)
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
-                onPressed: () {}, // Cancel logic
+                onPressed: _isCancelling ? null : _handleCancelOrder,
                 style: OutlinedButton.styleFrom(foregroundColor: Colors.red, side: const BorderSide(color: Colors.red)),
-                child: const Text('Cancel Order'),
+                child: _isCancelling
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Cancel Order'),
               ),
             ),
           
-          if (order.status == AppConstants.orderDelivered && !order.isReviewed)
+          if (widget.order.status == AppConstants.orderDelivered && !widget.order.isReviewed)
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => context.push('${AppRoutes.customerSubmitReview}/${order.id}'),
+                onPressed: () => context.push('${AppRoutes.customerSubmitReview}/${widget.order.id}'),
                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD97706), foregroundColor: Colors.white),
                 child: const Text('Rate & Review'),
               ),
             ),
           
-          if (order.isReviewed)
+          if (widget.order.isReviewed)
             const Center(
               child: Padding(
                 padding: EdgeInsets.only(top: 16),
