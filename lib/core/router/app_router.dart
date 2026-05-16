@@ -19,6 +19,7 @@ import '../../screens/baker/order_list_screen.dart';
 import '../../screens/baker/order_details_screen.dart';
 import '../../screens/baker/baker_earnings_screen.dart';
 import '../../screens/splash_screen.dart';
+import '../../providers/splash_provider.dart';
 import '../../screens/customer/customer_onboarding_screen.dart';
 import '../../screens/customer/customer_home_screen.dart';
 import '../../screens/customer/customer_profile_screen.dart';
@@ -86,11 +87,23 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: AppRoutes.splash,
-        builder: (context, state) => const SplashScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const SplashScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+              FadeTransition(opacity: animation, child: child),
+          transitionDuration: const Duration(milliseconds: 600),
+        ),
       ),
       GoRoute(
         path: AppRoutes.login,
-        builder: (context, state) => const LoginScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const LoginScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+              FadeTransition(opacity: animation, child: child),
+          transitionDuration: const Duration(milliseconds: 600),
+        ),
       ),
       GoRoute(
         path: AppRoutes.register,
@@ -107,7 +120,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.bakerDashboard,
-        builder: (context, state) => const BakerDashboard(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const BakerDashboard(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+              FadeTransition(opacity: animation, child: child),
+          transitionDuration: const Duration(milliseconds: 600),
+        ),
       ),
       GoRoute(
         path: AppRoutes.bakerProfile,
@@ -258,6 +277,10 @@ class RouterNotifier extends ChangeNotifier {
       }),
       (_, __) => notifyListeners(),
     );
+    _ref.listen(
+      splashMinTimeElapsedProvider,
+      (_, __) => notifyListeners(),
+    );
   }
 
   String? redirect(BuildContext context, GoRouterState state) {
@@ -266,6 +289,8 @@ class RouterNotifier extends ChangeNotifier {
 
     final isAuthLoading = authState.isLoading;
     final isUserLoading = authState.valueOrNull != null && currentUser.isLoading;
+
+    final isSplashTimerReady = _ref.read(splashMinTimeElapsedProvider);
 
     if (isAuthLoading || isUserLoading) return null;
 
@@ -290,6 +315,8 @@ class RouterNotifier extends ChangeNotifier {
     }
 
     if (state.matchedLocation == AppRoutes.splash) {
+      if (!isSplashTimerReady) return null; // Wait for animation
+
       if (!isLoggedIn) return AppRoutes.login;
       if (user != null) {
         if (user.isBaker) {

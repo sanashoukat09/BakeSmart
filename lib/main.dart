@@ -11,8 +11,11 @@ import 'firebase_options.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  print("Handling a background message: ${message.messageId}");
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  debugPrint("Handling a background message: ${message.messageId}");
 }
 
 void main() async {
@@ -24,12 +27,15 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
 
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  // Warm up the rendering engine just before starting the app
+  WidgetsBinding.instance.scheduleWarmUpFrame();
 
   runApp(
     const ProviderScope(
@@ -49,7 +55,8 @@ class _BakeSmartAppState extends ConsumerState<BakeSmartApp> {
   @override
   void initState() {
     super.initState();
-    // Initialize Notifications only ONCE when the app starts
+
+    // Initialize notifications only once when the app starts
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(notificationServiceProvider).init();
     });
