@@ -81,30 +81,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   ),
                 );
               },
-              child: Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(32),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF78350F).withOpacity(0.05),
-                      blurRadius: 40,
-                      spreadRadius: 5,
-                    ),
-                  ],
-                  border: Border.all(color: const Color(0xFFFEF3C7), width: 2),
-                ),
-                child: const Icon(
-                  Icons.bakery_dining_rounded,
-                  size: 64,
-                  color: Color(0xFF78350F),
-                ),
+              child: Image.asset(
+                'assets/images/bakesmart_logo.png',
+                width: 180,
+                height: 180,
+                fit: BoxFit.contain,
               ),
             ),
-            const SizedBox(height: 32),
-            // App Name
+            const SizedBox(height: 24),
+            // App Name & Tagline
             AnimatedBuilder(
               animation: _textController,
               builder: (context, child) {
@@ -121,35 +106,23 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   const Text(
                     'BakeSmart',
                     style: TextStyle(
-                      color: Color(0xFF451A03),
-                      fontSize: 42,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -1.0,
+                      color: Color(0xFF8B5A2B), // Professional brown
+                      fontSize: 48,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'serif', // Using serif for premium look
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 8),
                   const Text(
-                    'Bake. Sell. Deliver.',
+                    'The Secret Ingredient is AI',
                     style: TextStyle(
-                      color: Color(0xFF92400E),
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      fontStyle: FontStyle.italic,
+                      color: Color(0xFF5D4037),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 80),
-            // Loading indicator
-            SizedBox(
-              width: 28,
-              height: 28,
-              child: CircularProgressIndicator(
-                strokeWidth: 3,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  const Color(0xFF78350F).withOpacity(0.3),
-                ),
               ),
             ),
           ],
