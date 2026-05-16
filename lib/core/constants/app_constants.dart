@@ -78,4 +78,7 @@ class AppConstants {
     'Breads',
     'Macarons',
   ];
+  // Product Constraints
+  static const double minProductPrice = 20.0;
+  static const double maxProductPrice = 250000.0;
 }

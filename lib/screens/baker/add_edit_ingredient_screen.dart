@@ -136,15 +136,30 @@ class _AddEditIngredientScreenState extends ConsumerState<AddEditIngredientScree
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Expanded(child: _Field(controller: _quantityController, label: 'Current Quantity *', hint: '0.0', keyboardType: TextInputType.number, validator: (v) => v!.isEmpty ? 'Required' : null)),
+                  Expanded(child: _Field(controller: _quantityController, label: 'Current Quantity *', hint: '0.0', keyboardType: TextInputType.number, validator: (v) {
+                    if (v == null || v.isEmpty) return 'Required';
+                    final val = double.tryParse(v);
+                    if (val == null || val < 0) return 'Must be >= 0';
+                    return null;
+                  })),
                   const SizedBox(width: 16),
                   Expanded(child: _Field(controller: _unitController, label: 'Unit *', hint: 'e.g. kg, pieces', validator: (v) => v!.isEmpty ? 'Required' : null)),
                 ],
               ),
               const SizedBox(height: 16),
-              _Field(controller: _thresholdController, label: 'Low Stock Threshold *', hint: '1.0', keyboardType: TextInputType.number, validator: (v) => v!.isEmpty ? 'Required' : null),
+              _Field(controller: _thresholdController, label: 'Low Stock Threshold *', hint: '1.0', keyboardType: TextInputType.number, validator: (v) {
+                if (v == null || v.isEmpty) return 'Required';
+                final val = double.tryParse(v);
+                if (val == null || val < 0) return 'Must be >= 0';
+                return null;
+              }),
               const SizedBox(height: 16),
-              _Field(controller: _unitPriceController, label: 'Unit Price (Rs.) *', hint: '0.0', keyboardType: TextInputType.number, validator: (v) => v!.isEmpty ? 'Required' : null),
+              _Field(controller: _unitPriceController, label: 'Unit Price (Rs.) *', hint: '0.0', keyboardType: TextInputType.number, validator: (v) {
+                if (v == null || v.isEmpty) return 'Required';
+                final val = double.tryParse(v);
+                if (val == null || val < 0) return 'Must be >= 0';
+                return null;
+              }),
               const SizedBox(height: 16),
               
               // Expiry Date Picker

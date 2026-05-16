@@ -159,6 +159,21 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
   }
 
   Future<void> _save() async {
+    // Explicit price check for high visibility snackbar
+    final priceInput = double.tryParse(_priceController.text.trim());
+    if (priceInput == null || priceInput < AppConstants.minProductPrice || priceInput > AppConstants.maxProductPrice) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Price must be between Rs. ${AppConstants.minProductPrice.toInt()} and Rs. ${AppConstants.maxProductPrice.toInt()}'),
+          backgroundColor: const Color(0xFF991B1B),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      // Still call validate to show field-level error
+      _formKey.currentState!.validate();
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedDietary.isEmpty && !_includesAllDietaryLabels && !_includesNoDietaryLabels) {
@@ -373,6 +388,12 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                                         ),
                                         onChanged: (v) {
                                           final qty = double.tryParse(v) ?? 0.0;
+                                          if (qty < 0) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Ingredient quantity cannot be negative.')),
+                                            );
+                                            return;
+                                          }
                                           setState(() => _selectedIngredients[entry.key] = qty);
                                         },
                                       ),
@@ -429,7 +450,13 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Required';
                         final price = double.tryParse(v);
-                        if (price == null || price <= 0) return 'Enter a valid price';
+                        if (price == null) return 'Enter a valid price';
+                        if (price < AppConstants.minProductPrice) {
+                          return 'Min Rs. 20';
+                        }
+                        if (price > AppConstants.maxProductPrice) {
+                          return 'Max Rs. 250,000';
+                        }
                         return null;
                       },
                     ),

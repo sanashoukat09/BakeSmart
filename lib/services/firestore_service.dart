@@ -108,6 +108,12 @@ class FirestoreService {
   // ─── PRODUCT OPERATIONS ────────────────────────────────────────
 
   Future<void> saveProduct(ProductModel product) async {
+    if (product.price < AppConstants.minProductPrice ||
+        product.price > AppConstants.maxProductPrice) {
+      throw Exception(
+          'Product price must be between Rs. ${AppConstants.minProductPrice.toInt()} and Rs. ${AppConstants.maxProductPrice.toInt()}.');
+    }
+
     await _db
         .collection(AppConstants.productsCollection)
         .doc(product.id.isEmpty ? null : product.id)
@@ -436,9 +442,13 @@ class FirestoreService {
           final totalToReduce = entry.value['totalToReduce'] as double;
           final data = snap.data() as Map<String, dynamic>? ?? {};
           final currentQty = (data['quantity'] ?? 0 as num).toDouble();
+          final ingredientName = data['name'] ?? 'Unknown Ingredient';
 
-          // Negative stock is intentional — baker can see what needs restocking
-          // without being blocked from starting the order.
+          if (currentQty < totalToReduce) {
+            throw Exception(
+                'Insufficient stock for $ingredientName. Available: $currentQty, Required: $totalToReduce. Please refill it.');
+          }
+
           tx.update(ref, {
             'quantity': currentQty - totalToReduce,
             'updatedAt': FieldValue.serverTimestamp(),

@@ -193,7 +193,13 @@ class _IngredientCard extends ConsumerWidget {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Color(0xFF92400E)))),
           ElevatedButton(
             onPressed: () {
-              final newQty = double.tryParse(controller.text) ?? ingredient.quantity;
+              final newQty = double.tryParse(controller.text);
+              if (newQty == null || newQty < 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a valid non-negative quantity.')),
+                );
+                return;
+              }
               ref.read(inventoryNotifierProvider.notifier).updateQuantity(ingredient.id, newQty);
               Navigator.pop(context);
             },
