@@ -5,16 +5,40 @@ import 'package:image_picker/image_picker.dart';
 import '../../providers/ai_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/product_provider.dart';
-import '../../core/theme/baker_theme.dart';
+import '../../core/constants/app_constants.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
-class AiColors {
-  static const Color primary = Color(0xFF3D1A0E); // Matching Dashboard Espresso
-  static const Color accent = Color(0xFFC49A7A); // Matching Dashboard Tan
-  static const Color surface = Color(0xFFFDFCF9); // Native Baker Cream
-  static const Color card = Colors.white;
-  static const Color text = Color(0xFF3D1A0E); 
+// ════════════════════════════════════════════════════════════════════════════
+//  DESIGN TOKENS
+// ════════════════════════════════════════════════════════════════════════════
+
+abstract class _T {
+  static const canvas    = Color(0xFFFFFDF8);
+  static const brown     = Color(0xFFB05E27);
+  static const taupe     = Color(0xFF6F3C2C);
+  static const pink      = Color(0xFFFF8B9F);
+  static const pinkL     = Color(0xFFFFF4F5);
+  static const copper    = Color(0xFFE67E22);
+  static const cream     = Color(0xFFFAF0E6);
+  
+  static const surface   = Color(0xFFFFFFFF);
+  static const surfaceWarm = Color(0xFFFFF9F2);
+  static const rimLight  = Color(0xFFF2EAE0);
+
+  static const ink       = Color(0xFF4A2B20);
+  static const inkMid    = Color(0xFF8C6D5F);
+  static const inkFaint  = Color(0xFFD6C8BE);
+
+  // Vibrant accents for status and icons
+  static const statusPink = Color(0xFFFF6B81);
+  static const statusBrown = Color(0xFFB37E56);
+  static const statusCopper = Color(0xFFF39C12);
+  static const statusGreen = Color(0xFF52B788);
+
+  static List<BoxShadow> shadowSm = [
+    BoxShadow(color: brown.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+  ];
 }
 
 class AiAssistantScreen extends ConsumerStatefulWidget {
@@ -68,9 +92,10 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: const TextStyle(color: Colors.white)),
-        backgroundColor: AiColors.primary,
+        content: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+        backgroundColor: _T.statusPink,
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -87,14 +112,14 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
     setState(() => _isUploading = true);
 
     try {
-      // 1. Upload to Cloudinary using existing Service
+      // 1. Upload to Cloudinary
       final cloudinary = ref.read(cloudinaryServiceProvider);
       final imageUrl = await cloudinary.uploadImage(
         imageFile: _selectedImage!,
         folder: 'bakesmart/photo_analysis',
       );
 
-      // 2. Call AI Analysis directly from Flutter
+      // 2. Call AI Analysis directly
       await ref.read(aiNotifierProvider.notifier).analyzeImage(
             imageUrl: imageUrl,
             bakerId: user.uid,
@@ -116,28 +141,32 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Photo Assistant', style: TextStyle(color: AiColors.primary, fontWeight: FontWeight.bold)),
-        backgroundColor: BakerTheme.background,
+        title: const Text(
+          'AI Photo Assistant', 
+          style: TextStyle(color: _T.brown, fontWeight: FontWeight.w800, fontSize: 18),
+        ),
+        backgroundColor: _T.canvas,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.history, color: AiColors.primary),
+            icon: const Icon(Icons.history, color: _T.brown),
             onPressed: () => _showHistoryBottomSheet(context, historyAsync),
           ),
         ],
       ),
-      backgroundColor: BakerTheme.background,
+      backgroundColor: _T.canvas,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 40),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
             _buildImagePicker(),
-            const SizedBox(height: 30),
+            const SizedBox(height: 28),
             _buildAnalyzeButton(aiState.isLoading || _isUploading),
-            const SizedBox(height: 30),
+            const SizedBox(height: 28),
             _buildResult(aiState),
           ],
         ),
@@ -154,10 +183,12 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AiColors.primary.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(14),
+                color: _T.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: _T.rimLight, width: 1.5),
+                boxShadow: _T.shadowSm,
               ),
-              child: const Icon(Icons.auto_awesome_rounded, color: AiColors.primary, size: 28),
+              child: const Icon(Icons.auto_awesome_rounded, color: _T.brown, size: 28),
             ),
             const SizedBox(width: 16),
             const Expanded(
@@ -167,18 +198,18 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
                   Text(
                     'Cake Design Analyzer',
                     style: TextStyle(
-                      color: AiColors.primary,
+                      color: _T.ink,
                       fontSize: 22,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w800,
                       letterSpacing: -0.5,
                     ),
                   ),
                   Text(
                     'Powered by Gemini AI',
                     style: TextStyle(
-                      color: AiColors.accent,
+                      color: _T.statusCopper,
                       fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ],
@@ -187,12 +218,13 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        Text(
+        const Text(
           'Upload a photo to automatically extract decoration steps, ingredients, and professional baking tips.',
           style: TextStyle(
-            color: BakerTheme.textSecondary.withOpacity(0.8),
+            color: _T.inkMid,
             fontSize: 14,
             height: 1.5,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ],
@@ -206,17 +238,11 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
         height: 250,
         width: double.infinity,
         decoration: BoxDecoration(
-          color: BakerTheme.cardColor,
+          color: _T.surface,
           borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: BakerTheme.primary.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: _T.shadowSm,
           border: Border.all(
-            color: BakerTheme.divider,
+            color: _T.rimLight,
             width: 1.5,
           ),
         ),
@@ -234,7 +260,7 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
                     child: CircleAvatar(
                       backgroundColor: Colors.white,
                       child: IconButton(
-                        icon: const Icon(Icons.close, color: AiColors.primary),
+                        icon: const Icon(Icons.close, color: _T.ink),
                         onPressed: () => setState(() => _selectedImage = null),
                       ),
                     ),
@@ -246,22 +272,22 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: AiColors.primary.withOpacity(0.08),
+                    decoration: const BoxDecoration(
+                      color: _T.pinkL,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.add_a_photo_rounded,
-                        size: 40, color: AiColors.primary),
+                        size: 40, color: _T.statusPink),
                   ),
                   const SizedBox(height: 16),
                   const Text(
                     'Select Cake Photo',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AiColors.primary),
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: _T.ink),
                   ),
                   const SizedBox(height: 4),
                   const Text(
                     'JPG, PNG, WEBP (Max 5MB)',
-                    style: TextStyle(color: BakerTheme.textMuted, fontSize: 12),
+                    style: TextStyle(color: _T.inkFaint, fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -280,16 +306,16 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Gallery'),
+              leading: const Icon(Icons.photo_library, color: _T.brown),
+              title: const Text('Gallery', style: TextStyle(fontWeight: FontWeight.w700, color: _T.ink)),
               onTap: () {
                 Navigator.pop(context);
                 _pickImage(ImageSource.gallery);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Camera'),
+              leading: const Icon(Icons.camera_alt, color: _T.brown),
+              title: const Text('Camera', style: TextStyle(fontWeight: FontWeight.w700, color: _T.ink)),
               onTap: () {
                 Navigator.pop(context);
                 _pickImage(ImageSource.camera);
@@ -303,37 +329,32 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
 
   Widget _buildAnalyzeButton(bool isLoading) {
     return Container(
+      width: double.infinity,
+      height: 54,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          if (!isLoading)
-            BoxShadow(
-              color: AiColors.primary.withOpacity(0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
-            ),
-        ],
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: _T.shadowSm,
       ),
       child: ElevatedButton(
         onPressed: isLoading ? null : _analyze,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AiColors.primary,
+          backgroundColor: _T.brown,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          disabledBackgroundColor: _T.rimLight,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
         child: isLoading
             ? const SizedBox(
                 height: 20,
                 width: 20,
-                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
               )
             : const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.auto_awesome, size: 20),
                   SizedBox(width: 12),
-                  Text('Analyze Cake Design', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text('Analyze Cake Design', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
                 ],
               ),
       ),
@@ -356,10 +377,12 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
           padding: EdgeInsets.all(40),
           child: Column(
             children: [
-              CircularProgressIndicator(color: AiColors.primary),
-              SizedBox(height: 20),
-              Text('Gemini AI is analyzing your design...', 
-                style: TextStyle(fontWeight: FontWeight.w600, color: BakerTheme.textPrimary)),
+              CircularProgressIndicator(color: _T.statusCopper),
+              const SizedBox(height: 20),
+              Text(
+                'Gemini AI is analyzing your design...', 
+                style: TextStyle(fontWeight: FontWeight.w800, color: _T.ink),
+              ),
             ],
           ),
         ),
@@ -394,22 +417,22 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: BakerTheme.error.withOpacity(0.05),
+        color: _T.pinkL,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: BakerTheme.error.withOpacity(0.2)),
+        border: Border.all(color: _T.pink.withOpacity(0.3), width: 1.5),
       ),
       child: Column(
         children: [
-          Icon(icon, color: BakerTheme.error, size: 40),
+          Icon(icon, color: _T.statusPink, size: 40),
           const SizedBox(height: 12),
           Text(
             message.contains('Exception:') ? message.replaceFirst('Exception: ', '') : message,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: BakerTheme.error, fontWeight: FontWeight.bold),
+            style: const TextStyle(color: _T.statusPink, fontWeight: FontWeight.w800),
           ),
           if (icon == Icons.error_outline) ...[
              const SizedBox(height: 8),
-             Text(errorType, style: TextStyle(fontSize: 10, color: BakerTheme.error.withOpacity(0.5))),
+             Text(errorType, style: const TextStyle(fontSize: 11, color: _T.inkMid, fontWeight: FontWeight.w600)),
           ]
         ],
       ),
@@ -428,38 +451,45 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
         expand: false,
         builder: (context, scrollController) => Container(
           decoration: const BoxDecoration(
-            color: BakerTheme.background,
+            color: _T.canvas,
             borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
           ),
           child: Column(
             children: [
               const SizedBox(height: 12),
-              Container(width: 40, height: 4, decoration: BoxDecoration(color: AiColors.primary.withOpacity(0.2), borderRadius: BorderRadius.circular(2))),
-              Padding(
-                padding: const EdgeInsets.all(24),
+              Container(width: 40, height: 4, decoration: BoxDecoration(color: _T.rimLight, borderRadius: BorderRadius.circular(2))),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(24, 24, 24, 12),
                 child: Row(
                   children: [
-                    const Text('Analysis History', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: BakerTheme.textPrimary)),
+                    Text('Analysis History', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _T.ink)),
                   ],
                 ),
               ),
               Expanded(
                 child: history.when(
                   data: (list) {
-                    if (list.isEmpty) return const Center(child: Text('No previous analyses found.'));
+                    if (list.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          'No previous analyses found.',
+                          style: TextStyle(color: _T.inkMid, fontWeight: FontWeight.w600),
+                        ),
+                      );
+                    }
                     return ListView.separated(
                       controller: scrollController,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
                       itemCount: list.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final item = list[index];
                         return Card(
                           elevation: 0,
-                          color: Colors.white,
+                          color: _T.surface,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
-                            side: BorderSide(color: AiColors.primary.withOpacity(0.05)),
+                            side: const BorderSide(color: _T.rimLight, width: 1.5),
                           ),
                           child: ListTile(
                             contentPadding: const EdgeInsets.all(12),
@@ -467,12 +497,12 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
                               borderRadius: BorderRadius.circular(12),
                               child: Image.network(item['imageUrl'], width: 60, height: 60, fit: BoxFit.cover),
                             ),
-                            title: Text('Cake Design #${list.length - index}', style: const TextStyle(fontWeight: FontWeight.bold, color: BakerTheme.textPrimary)),
+                            title: Text('Cake Design #${list.length - index}', style: const TextStyle(fontWeight: FontWeight.w800, color: _T.ink)),
                             subtitle: Text(
                               DateFormat('MMM dd, yyyy • hh:mm a').format((item['analyzedAt'] as Timestamp).toDate()),
-                              style: const TextStyle(color: BakerTheme.textSecondary, fontSize: 12),
+                              style: const TextStyle(color: _T.inkMid, fontSize: 12, fontWeight: FontWeight.w600),
                             ),
-                            trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: AiColors.primary),
+                            trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: _T.brown),
                             onTap: () {
                               Navigator.pop(context);
                               _showAnalysisDetail(context, item);
@@ -482,8 +512,8 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
                       },
                     );
                   },
-                  loading: () => const Center(child: CircularProgressIndicator(color: AiColors.primary)),
-                  error: (e, _) => Center(child: Text('Error: $e')),
+                  loading: () => const Center(child: CircularProgressIndicator(color: _T.brown)),
+                  error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: _T.statusPink))),
                 ),
               ),
             ],
@@ -497,15 +527,17 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
     showDialog(
       context: context,
       builder: (context) => Dialog.fullscreen(
-        backgroundColor: BakerTheme.background,
+        backgroundColor: _T.canvas,
         child: Scaffold(
-          backgroundColor: BakerTheme.background,
+          backgroundColor: _T.canvas,
           appBar: AppBar(
-            backgroundColor: BakerTheme.background,
-            title: const Text('Analysis Detail'),
-            leading: IconButton(icon: const Icon(Icons.close, color: AiColors.primary), onPressed: () => Navigator.pop(context)),
+            backgroundColor: _T.canvas,
+            title: const Text('Analysis Detail', style: TextStyle(fontWeight: FontWeight.w800, color: _T.brown, fontSize: 18)),
+            leading: IconButton(icon: const Icon(Icons.close, color: _T.brown), onPressed: () => Navigator.pop(context)),
+            elevation: 0,
           ),
           body: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
             child: Column(
               children: [
                 Hero(
@@ -538,14 +570,17 @@ class _AnalysisResultView extends StatelessWidget {
         children: [
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: _T.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: BakerTheme.divider),
+              border: Border.all(color: _T.rimLight, width: 1.5),
+              boxShadow: _T.shadowSm,
             ),
             child: TabBar(
-              labelColor: AiColors.primary,
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: AiColors.primary,
+              labelColor: _T.brown,
+              unselectedLabelColor: _T.inkMid,
+              indicatorColor: _T.brown,
+              labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
               indicatorSize: TabBarIndicatorSize.label,
               dividerColor: Colors.transparent,
               tabs: const [
@@ -573,28 +608,38 @@ class _AnalysisResultView extends StatelessWidget {
 
   Widget _buildListTab(List<dynamic> items) {
     return ListView.builder(
+      physics: const BouncingScrollPhysics(),
       itemCount: items.length,
       itemBuilder: (context, index) => Container(
         margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AiColors.primary.withOpacity(0.05)),
+          color: _T.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: _T.rimLight, width: 1.5),
+          boxShadow: _T.shadowSm,
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AiColors.primary.withOpacity(0.1),
+              decoration: const BoxDecoration(
+                color: _T.pinkL,
                 shape: BoxShape.circle,
               ),
-              child: Text('${index + 1}', style: const TextStyle(fontSize: 12, color: AiColors.primary, fontWeight: FontWeight.bold)),
+              child: Text(
+                '${index + 1}', 
+                style: const TextStyle(fontSize: 12, color: _T.statusPink, fontWeight: FontWeight.w800),
+              ),
             ),
-            const SizedBox(width: 12),
-            Expanded(child: Text(items[index].toString(), style: const TextStyle(height: 1.4, color: BakerTheme.textPrimary))),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                items[index].toString(), 
+                style: const TextStyle(height: 1.4, color: _T.ink, fontWeight: FontWeight.w600, fontSize: 13.5),
+              ),
+            ),
           ],
         ),
       ),
@@ -603,6 +648,7 @@ class _AnalysisResultView extends StatelessWidget {
 
   Widget _buildDetailsTab(BuildContext context) {
     return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -619,14 +665,15 @@ class _AnalysisResultView extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AiColors.primary.withOpacity(0.05)),
+        color: _T.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _T.rimLight, width: 1.5),
+        boxShadow: _T.shadowSm,
       ),
       child: ListTile(
-        leading: Icon(icon, color: AiColors.primary),
-        title: Text(label, style: const TextStyle(fontSize: 12, color: BakerTheme.textSecondary)),
-        subtitle: Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: BakerTheme.textPrimary)),
+        leading: Icon(icon, color: _T.brown),
+        title: Text(label, style: const TextStyle(fontSize: 11, color: _T.inkMid, fontWeight: FontWeight.w600)),
+        subtitle: Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: _T.ink)),
       ),
     );
   }
@@ -635,17 +682,18 @@ class _AnalysisResultView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 12),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 14),
+        Text(label, style: const TextStyle(fontSize: 12, color: _T.ink, fontWeight: FontWeight.w800)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: items.map((item) => Chip(
             label: Text(item.toString()),
-            backgroundColor: AiColors.primary.withOpacity(0.05),
-            labelStyle: const TextStyle(color: AiColors.primary, fontSize: 12, fontWeight: FontWeight.bold),
-            side: BorderSide(color: AiColors.primary.withOpacity(0.1)),
+            backgroundColor: _T.pinkL,
+            labelStyle: const TextStyle(color: _T.statusPink, fontSize: 12, fontWeight: FontWeight.w800),
+            side: const BorderSide(color: _T.pink, width: 1),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           )).toList(),
         ),
       ],

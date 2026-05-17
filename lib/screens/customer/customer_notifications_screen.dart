@@ -6,6 +6,38 @@ import 'package:go_router/go_router.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/auth_provider.dart';
 
+// ════════════════════════════════════════════════════════════════════════════
+//  DESIGN TOKENS
+// ════════════════════════════════════════════════════════════════════════════
+
+abstract class _T {
+  static const canvas    = Color(0xFFFFFDF8);
+  static const brown     = Color(0xFFB05E27);
+  static const taupe     = Color(0xFF6F3C2C);
+  static const pink      = Color(0xFFFF8B9F);
+  static const pinkL     = Color(0xFFFFF4F5);
+  static const copper    = Color(0xFFE67E22);
+  static const cream     = Color(0xFFFAF0E6);
+  
+  static const surface   = Color(0xFFFFFFFF);
+  static const surfaceWarm = Color(0xFFFFF9F2);
+  static const rimLight  = Color(0xFFF2EAE0);
+
+  static const ink       = Color(0xFF4A2B20);
+  static const inkMid    = Color(0xFF8C6D5F);
+  static const inkFaint  = Color(0xFFD6C8BE);
+
+  // Vibrant accents for status and icons
+  static const statusPink = Color(0xFFFF6B81);
+  static const statusBrown = Color(0xFFB37E56);
+  static const statusCopper = Color(0xFFF39C12);
+  static const statusGreen = Color(0xFF52B788);
+
+  static List<BoxShadow> shadowSm = [
+    BoxShadow(color: brown.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+  ];
+}
+
 class CustomerNotificationsScreen extends ConsumerWidget {
   const CustomerNotificationsScreen({super.key});
 
@@ -15,23 +47,31 @@ class CustomerNotificationsScreen extends ConsumerWidget {
     final user = ref.watch(currentUserProvider).valueOrNull;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFCF9),
+      backgroundColor: _T.canvas,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: _T.canvas,
         elevation: 0,
+        leadingWidth: 56,
+        titleSpacing: 0,
         title: const Text(
           'Notifications',
-          style: TextStyle(color: Color(0xFF451A03), fontWeight: FontWeight.bold),
+          style: TextStyle(color: _T.brown, fontWeight: FontWeight.w800, fontSize: 18),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF451A03)),
+          icon: const Icon(Icons.arrow_back, color: _T.brown),
           onPressed: () => GoRouter.of(context).pop(),
         ),
         actions: [
           if (notificationsAsync.valueOrNull?.isNotEmpty ?? false)
-            TextButton(
-              onPressed: () => _markAllAsRead(user?.uid),
-              child: const Text('Mark all as read', style: TextStyle(color: Color(0xFFD97706))),
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: TextButton(
+                onPressed: () => _markAllAsRead(user?.uid),
+                child: const Text(
+                  'Mark all as read', 
+                  style: TextStyle(color: _T.copper, fontWeight: FontWeight.w800, fontSize: 13),
+                ),
+              ),
             ),
         ],
       ),
@@ -39,19 +79,46 @@ class CustomerNotificationsScreen extends ConsumerWidget {
         data: (notifications) {
           if (notifications.isEmpty) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.notifications_off_outlined, size: 64, color: Colors.grey[300]),
-                  const SizedBox(height: 16),
-                  const Text('No notifications yet', style: TextStyle(color: Colors.grey)),
-                ],
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 32),
+                padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+                decoration: BoxDecoration(
+                  color: _T.surfaceWarm,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: _T.rimLight, width: 1.5),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: _T.surface,
+                        shape: BoxShape.circle,
+                        boxShadow: _T.shadowSm,
+                      ),
+                      child: const Icon(Icons.notifications_off_outlined, size: 28, color: _T.inkFaint),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'No notifications yet', 
+                      style: TextStyle(color: _T.ink, fontSize: 16, fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'We will let you know when updates arrive.', 
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: _T.inkMid, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
               ),
             );
           }
 
           return ListView.separated(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             itemCount: notifications.length,
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
@@ -60,8 +127,8 @@ class CustomerNotificationsScreen extends ConsumerWidget {
             },
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        loading: () => const Center(child: CircularProgressIndicator(color: _T.copper)),
+        error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: _T.statusPink))),
       ),
     );
   }
@@ -90,15 +157,20 @@ class _NotificationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isUnread = !notification.isRead;
     return Container(
       decoration: BoxDecoration(
-        color: notification.isRead ? Colors.white : const Color(0xFFFEF3C7).withOpacity(0.3),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFEF3C7)),
+        color: isUnread ? _T.surfaceWarm : _T.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isUnread ? _T.pink.withOpacity(0.3) : _T.rimLight, 
+          width: 1.5,
+        ),
+        boxShadow: isUnread ? _T.shadowSm : null,
       ),
       child: ListTile(
         onTap: () {
-          if (!notification.isRead && userId != null) {
+          if (isUnread && userId != null) {
             FirebaseFirestore.instance
                 .collection('users')
                 .doc(userId)
@@ -106,33 +178,38 @@ class _NotificationTile extends StatelessWidget {
                 .doc(notification.id)
                 .update({'isRead': true});
           }
-          // Navigate based on type if needed
         },
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         leading: Container(
-          padding: const EdgeInsets.all(8),
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
-            color: _getIconColor(notification.type).withOpacity(0.1),
+            color: _getIconColor(notification.type).withOpacity(0.12),
             shape: BoxShape.circle,
           ),
-          child: Icon(_getIcon(notification.type), color: _getIconColor(notification.type), size: 20),
+          child: Icon(_getIcon(notification.type), color: _getIconColor(notification.type), size: 22),
         ),
         title: Text(
           notification.title,
           style: TextStyle(
-            fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
+            color: _T.ink,
+            fontWeight: isUnread ? FontWeight.w800 : FontWeight.w600,
             fontSize: 14,
+            letterSpacing: -0.2,
           ),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 4),
-            Text(notification.body, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+            const SizedBox(height: 5),
+            Text(
+              notification.body, 
+              style: const TextStyle(color: _T.inkMid, fontSize: 13, height: 1.3, fontWeight: FontWeight.w500),
+            ),
             const SizedBox(height: 8),
             Text(
               DateFormat('MMM dd, hh:mm a').format(notification.createdAt),
-              style: TextStyle(color: Colors.grey[400], fontSize: 11),
+              style: const TextStyle(color: _T.inkFaint, fontSize: 11, fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -151,10 +228,10 @@ class _NotificationTile extends StatelessWidget {
 
   Color _getIconColor(String? type) {
     switch (type) {
-      case 'order': return const Color(0xFF3B82F6);
-      case 'deal': return const Color(0xFFDC2626);
-      case 'promo': return const Color(0xFFD97706);
-      default: return Colors.grey;
+      case 'order': return _T.statusGreen;
+      case 'deal': return _T.statusPink;
+      case 'promo': return _T.statusCopper;
+      default: return _T.statusBrown;
     }
   }
 }

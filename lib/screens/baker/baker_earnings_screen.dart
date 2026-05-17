@@ -9,8 +9,39 @@ import '../../models/order_model.dart';
 import '../../models/product_model.dart';
 import '../../models/review_model.dart';
 import '../../core/constants/app_constants.dart';
-import '../../core/theme/baker_theme.dart';
 import '../../widgets/baker/baker_bottom_nav.dart';
+
+// ════════════════════════════════════════════════════════════════════════════
+//  DESIGN TOKENS
+// ════════════════════════════════════════════════════════════════════════════
+
+abstract class _T {
+  static const canvas    = Color(0xFFFFFDF8);
+  static const brown     = Color(0xFFB05E27);
+  static const taupe     = Color(0xFF6F3C2C);
+  static const pink      = Color(0xFFFF8B9F);
+  static const pinkL     = Color(0xFFFFF4F5);
+  static const copper    = Color(0xFFE67E22);
+  static const cream     = Color(0xFFFAF0E6);
+  
+  static const surface   = Color(0xFFFFFFFF);
+  static const surfaceWarm = Color(0xFFFFF9F2);
+  static const rimLight  = Color(0xFFF2EAE0);
+
+  static const ink       = Color(0xFF4A2B20);
+  static const inkMid    = Color(0xFF8C6D5F);
+  static const inkFaint  = Color(0xFFD6C8BE);
+
+  // Vibrant accents for status and icons
+  static const statusPink = Color(0xFFFF6B81);
+  static const statusBrown = Color(0xFFB37E56);
+  static const statusCopper = Color(0xFFF39C12);
+  static const statusGreen = Color(0xFF52B788);
+
+  static List<BoxShadow> shadowSm = [
+    BoxShadow(color: brown.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+  ];
+}
 
 enum AnalyticsRange { week, month }
 
@@ -31,15 +62,22 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
     final productsAsync = ref.watch(bakerProductsProvider);
 
     return Scaffold(
-      backgroundColor: BakerTheme.background,
+      backgroundColor: _T.canvas,
       bottomNavigationBar: const BakerBottomNav(currentIndex: 3),
       appBar: AppBar(
-        backgroundColor: BakerTheme.background,
+        backgroundColor: _T.canvas,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Bakery Analytics', style: TextStyle(color: BakerTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 22)),
-            Text(_range == AnalyticsRange.week ? 'Weekly report' : DateFormat('MMMM yyyy').format(DateTime.now()), style: const TextStyle(color: BakerTheme.textSecondary, fontSize: 12)),
+            const Text(
+              'Bakery Analytics', 
+              style: TextStyle(color: _T.brown, fontWeight: FontWeight.w800, fontSize: 18),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              _range == AnalyticsRange.week ? 'Weekly report' : DateFormat('MMMM yyyy').format(DateTime.now()), 
+              style: const TextStyle(color: _T.inkMid, fontSize: 11, fontWeight: FontWeight.w600),
+            ),
           ],
         ),
         elevation: 0,
@@ -48,7 +86,7 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
             currentRange: _range,
             onChanged: (value) => setState(() => _range = value),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 16),
         ],
       ),
       body: ordersAsync.when(
@@ -213,7 +251,6 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
 
               // Axis limits
               final maxRev = dailyRevenue.values.fold(0.0, (p, e) => e > p ? e : p);
-              final maxProfit = dailyProfit.values.fold(0.0, (p, e) => e > p ? e : p);
               final maxOrders = dailyOrders.values.fold(0, (p, e) => e > p ? e : p).toDouble();
 
               final revenueMaxY = maxRev > 0 ? maxRev * 1.2 : 5000.0;
@@ -221,22 +258,43 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
 
               return SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 40),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // QUICK STATS CAROUSEL (Simulated with a Row/Wrap)
+                    // QUICK STATS CAROUSEL
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       physics: const BouncingScrollPhysics(),
-                      child: Row(
-                        children: [
-                          _QuickStatCard(title: 'Total Revenue', value: 'Rs. ${NumberFormat.compact().format(totalRevenue)}', trend: revenueTrend, icon: Icons.payments_outlined, color: BakerTheme.secondary),
-                          const SizedBox(width: 12),
-                          _QuickStatCard(title: 'Net Profit', value: 'Rs. ${NumberFormat.compact().format(totalProfit)}', trend: profitTrend, icon: Icons.auto_graph_outlined, color: const Color(0xFF10B981)),
-                          const SizedBox(width: 12),
-                          _QuickStatCard(title: 'Avg. Margin', value: '${avgMargin.toStringAsFixed(1)}%', trend: 0, icon: Icons.percent_outlined, color: BakerTheme.primary),
-                        ],
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            _QuickStatCard(
+                              title: 'Total Revenue', 
+                              value: 'Rs. ${NumberFormat.compact().format(totalRevenue)}', 
+                              trend: revenueTrend, 
+                              icon: Icons.payments_outlined, 
+                              color: _T.statusCopper,
+                            ),
+                            const SizedBox(width: 12),
+                            _QuickStatCard(
+                              title: 'Net Profit', 
+                              value: 'Rs. ${NumberFormat.compact().format(totalProfit)}', 
+                              trend: profitTrend, 
+                              icon: Icons.auto_graph_outlined, 
+                              color: _T.statusGreen,
+                            ),
+                            const SizedBox(width: 12),
+                            _QuickStatCard(
+                              title: 'Avg. Margin', 
+                              value: '${avgMargin.toStringAsFixed(1)}%', 
+                              trend: 0, 
+                              icon: Icons.percent_outlined, 
+                              color: _T.brown,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     
@@ -246,17 +304,17 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
                     _AnalyticsCard(
                       title: 'Revenue vs Profit',
                       subtitle: _range == AnalyticsRange.week ? 'Weekly performance' : 'Monthly performance',
+                      legend: const [
+                        _LegendItem(label: 'Revenue', color: _T.statusCopper),
+                        _LegendItem(label: 'Profit', color: _T.statusGreen),
+                      ],
                       child: SizedBox(
                         height: 200,
                         child: LineChart(_buildRevenueProfitLineChart(dailyRevenue, dailyProfit, revenueMaxY)),
                       ),
-                      legend: [
-                        _LegendItem(label: 'Revenue', color: BakerTheme.secondary),
-                        _LegendItem(label: 'Profit', color: const Color(0xFF10B981)),
-                      ],
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
 
                     // SMART INSIGHTS
                     const _SectionHeader(title: 'Smart Insights ✨'),
@@ -271,20 +329,20 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
                         ),
                         if (revenueTrend < 0)
                           _InsightItem(text: 'Revenue is down ${revenueTrend.abs().toStringAsFixed(1)}% vs last week.', type: InsightType.negative),
-                        _InsightItem(text: 'Suggestion: Adjust pricing for seasonal cakes to increase profit by 12%.', type: InsightType.ai),
+                        const _InsightItem(text: 'Suggestion: Adjust pricing for seasonal cakes to increase profit by 12%.', type: InsightType.ai),
                       ],
                     ),
 
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
 
                     // WEEKLY ORDERS TREND AREA GRAPH
                     _AnalyticsCard(
                       title: 'Order Activity',
                       subtitle: _range == AnalyticsRange.week ? 'Received / Completed / Rejected (by day)' : 'Received / Completed / Rejected (by bucket)',
-                      legend: [
-                        _LegendItem(label: 'Received', color: BakerTheme.secondary),
-                        _LegendItem(label: 'Completed', color: const Color(0xFF10B981)),
-                        _LegendItem(label: 'Rejected', color: const Color(0xFFEF4444)),
+                      legend: const [
+                        _LegendItem(label: 'Received', color: _T.statusCopper),
+                        _LegendItem(label: 'Completed', color: _T.statusGreen),
+                        _LegendItem(label: 'Rejected', color: _T.statusPink),
                       ],
                       child: SizedBox(
                         height: 180,
@@ -299,7 +357,7 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
 
                     // PRODUCT SALES BAR CHART
                     _AnalyticsCard(
@@ -311,27 +369,27 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
 
                     // PROFIT MARGIN PIE CHART
                     _AnalyticsCard(
                       title: 'Profit Contribution',
                       subtitle: 'By Category',
+                      legend: categoryProfit.entries.map((e) => _LegendItem(label: e.key, color: _getCategoryColor(e.key))).toList(),
                       child: SizedBox(
                         height: 200,
                         child: PieChart(_buildProfitPieChart(categoryProfit, totalProfit)),
                       ),
-                      legend: categoryProfit.entries.map((e) => _LegendItem(label: e.key, color: _getCategoryColor(e.key))).toList(),
                     ),
 
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
 
-                    // FE-4: Reviews leaderboard (all-time)
+                    // Reviews leaderboard (all-time)
                     _ReviewsLeaderboardSection(
                       products: products,
                     ),
 
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
 
                     // TOP PERFORMING PRODUCTS LIST
                     const _SectionHeader(title: 'Leaderboard 🏆'),
@@ -343,18 +401,16 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
                       final revenue = productEarnings[e.key] ?? 0;
                       return _ProductPerformanceTile(name: e.key, sales: e.value, revenue: revenue);
                     }),
-
-                    const SizedBox(height: 40),
                   ],
                 ),
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator(color: BakerTheme.secondary)),
-            error: (e, _) => Center(child: Text('Data Error: $e')),
+            loading: () => const Center(child: CircularProgressIndicator(color: _T.copper)),
+            error: (e, _) => Center(child: Text('Data Error: $e', style: const TextStyle(color: _T.statusPink))),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator(color: BakerTheme.secondary)),
-        error: (e, _) => Center(child: Text('System Error: $e')),
+        loading: () => const Center(child: CircularProgressIndicator(color: _T.copper)),
+        error: (e, _) => Center(child: Text('System Error: $e', style: const TextStyle(color: _T.statusPink))),
       ),
     );
   }
@@ -365,7 +421,7 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
       minY: 0,
       lineTouchData: LineTouchData(
         touchTooltipData: LineTouchTooltipData(
-          getTooltipColor: (spot) => BakerTheme.primary,
+          getTooltipColor: (spot) => _T.brown,
           getTooltipItems: (spots) => spots.map((spot) => LineTooltipItem(
             'Rs. ${NumberFormat.compact().format(spot.y)}',
             const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
@@ -376,7 +432,7 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
         show: true,
         drawVerticalLine: false,
         horizontalInterval: maxY / 5 > 0 ? maxY / 5 : 1000,
-        getDrawingHorizontalLine: (value) => FlLine(color: BakerTheme.divider.withOpacity(0.5), strokeWidth: 1),
+        getDrawingHorizontalLine: (value) => FlLine(color: _T.rimLight.withOpacity(0.5), strokeWidth: 1),
       ),
       titlesData: _buildAxesTitles(),
       borderData: FlBorderData(show: false),
@@ -385,14 +441,14 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
           spots: revenue.entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
           isCurved: true,
           curveSmoothness: 0.35,
-          color: BakerTheme.secondary,
+          color: _T.statusCopper,
           barWidth: 2.5,
           isStrokeCapRound: true,
-          dotData: FlDotData(show: true, getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(radius: 3, color: Colors.white, strokeWidth: 2, strokeColor: BakerTheme.secondary)),
+          dotData: FlDotData(show: true, getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(radius: 3, color: Colors.white, strokeWidth: 2, strokeColor: _T.statusCopper)),
           belowBarData: BarAreaData(
             show: true,
             gradient: LinearGradient(
-              colors: [BakerTheme.secondary.withOpacity(0.2), BakerTheme.secondary.withOpacity(0.0)],
+              colors: [_T.statusCopper.withOpacity(0.12), _T.statusCopper.withOpacity(0.0)],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -402,14 +458,14 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
           spots: profit.entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
           isCurved: true,
           curveSmoothness: 0.35,
-          color: const Color(0xFF10B981),
+          color: _T.statusGreen,
           barWidth: 2.5,
           isStrokeCapRound: true,
-          dotData: FlDotData(show: true, getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(radius: 3, color: Colors.white, strokeWidth: 2, strokeColor: const Color(0xFF10B981))),
+          dotData: FlDotData(show: true, getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(radius: 3, color: Colors.white, strokeWidth: 2, strokeColor: _T.statusGreen)),
           belowBarData: BarAreaData(
             show: true,
             gradient: LinearGradient(
-              colors: [const Color(0xFF10B981).withOpacity(0.2), const Color(0xFF10B981).withOpacity(0.0)],
+              colors: [_T.statusGreen.withOpacity(0.12), _T.statusGreen.withOpacity(0.0)],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -439,14 +495,14 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
               .toList(),
           isCurved: true,
           curveSmoothness: 0.4,
-          color: BakerTheme.secondary,
+          color: _T.statusCopper,
           barWidth: 3,
           isStrokeCapRound: true,
           dotData: const FlDotData(show: false),
           belowBarData: BarAreaData(
             show: true,
             gradient: LinearGradient(
-              colors: [BakerTheme.secondary.withOpacity(0.18), BakerTheme.secondary.withOpacity(0.0)],
+              colors: [_T.statusCopper.withOpacity(0.12), _T.statusCopper.withOpacity(0.0)],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -458,14 +514,14 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
               .toList(),
           isCurved: true,
           curveSmoothness: 0.4,
-          color: const Color(0xFF10B981),
+          color: _T.statusGreen,
           barWidth: 3,
           isStrokeCapRound: true,
           dotData: const FlDotData(show: false),
           belowBarData: BarAreaData(
             show: true,
             gradient: LinearGradient(
-              colors: [const Color(0xFF10B981).withOpacity(0.18), const Color(0xFF10B981).withOpacity(0.0)],
+              colors: [_T.statusGreen.withOpacity(0.12), _T.statusGreen.withOpacity(0.0)],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -477,14 +533,14 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
               .toList(),
           isCurved: true,
           curveSmoothness: 0.4,
-          color: const Color(0xFFEF4444),
+          color: _T.statusPink,
           barWidth: 3,
           isStrokeCapRound: true,
           dotData: const FlDotData(show: false),
           belowBarData: BarAreaData(
             show: true,
             gradient: LinearGradient(
-              colors: [const Color(0xFFEF4444).withOpacity(0.18), const Color(0xFFEF4444).withOpacity(0.0)],
+              colors: [_T.statusPink.withOpacity(0.12), _T.statusPink.withOpacity(0.0)],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -508,7 +564,10 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
               if (value.toInt() < sorted.length) {
                 return Padding(
                   padding: const EdgeInsets.only(top: 8.0),
-                  child: Text(sorted[value.toInt()].key.substring(0, 3), style: const TextStyle(fontSize: 10, color: BakerTheme.textSecondary)),
+                  child: Text(
+                    sorted[value.toInt()].key.substring(0, 3), 
+                    style: const TextStyle(fontSize: 10, color: _T.inkMid, fontWeight: FontWeight.w600),
+                  ),
                 );
               }
               return const SizedBox.shrink();
@@ -526,7 +585,7 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
         barRods: [
           BarChartRodData(
             toY: e.value.value,
-            color: BakerTheme.primary,
+            color: _T.brown,
             width: 20,
             borderRadius: BorderRadius.circular(4),
           ),
@@ -542,14 +601,15 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
       sections: total <= 0
           ? [
               PieChartSectionData(
-                color: BakerTheme.divider,
+                color: _T.rimLight,
                 value: 1,
                 title: '0%',
                 radius: 50,
                 titleStyle: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white),
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               )
             ]
           : profit.entries.map((e) {
@@ -591,7 +651,7 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
   }
 
   Color _getCategoryColor(String category) {
-    final colors = [BakerTheme.primary, BakerTheme.secondary, const Color(0xFF10B981), const Color(0xFF3B82F6), const Color(0xFF8B5CF6)];
+    final colors = [_T.brown, _T.statusCopper, _T.statusGreen, _T.statusPink, _T.taupe];
     return colors[category.hashCode % colors.length];
   }
 
@@ -612,7 +672,10 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
             if (index < 0 || index >= labels.length) {
               return const SizedBox.shrink();
             }
-            return Text(labels[index], style: const TextStyle(color: BakerTheme.textMuted, fontSize: 10));
+            return Text(
+              labels[index], 
+              style: const TextStyle(color: _T.inkMid, fontSize: 10, fontWeight: FontWeight.w600),
+            );
           },
         ),
       ),
@@ -622,7 +685,10 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
           reservedSize: 35,
           getTitlesWidget: (value, meta) {
             if (value == 0) return const SizedBox.shrink();
-            return Text(NumberFormat.compact().format(value), style: const TextStyle(color: BakerTheme.textMuted, fontSize: 9));
+            return Text(
+              NumberFormat.compact().format(value), 
+              style: const TextStyle(color: _T.inkMid, fontSize: 9, fontWeight: FontWeight.w600),
+            );
           },
         ),
       ),
@@ -630,7 +696,9 @@ class _BakerEarningsScreenState extends ConsumerState<BakerEarningsScreen> {
   }
 }
 
-// --- SUPPORTING UI COMPONENTS ---
+// ════════════════════════════════════════════════════════════════════════════
+//  SUPPORTING UI COMPONENTS
+// ════════════════════════════════════════════════════════════════════════════
 
 class _DateRangeSelector extends StatelessWidget {
   final AnalyticsRange currentRange;
@@ -641,23 +709,23 @@ class _DateRangeSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 10),
       padding: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _T.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: BakerTheme.divider, width: 1.5),
+        border: Border.all(color: _T.rimLight, width: 1.5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           _RangeButton(
-            label: 'W',
+            label: 'Week',
             isSelected: currentRange == AnalyticsRange.week,
             onTap: () => onChanged(AnalyticsRange.week),
           ),
           _RangeButton(
-            label: 'M',
+            label: 'Month',
             isSelected: currentRange == AnalyticsRange.month,
             onTap: () => onChanged(AnalyticsRange.month),
           ),
@@ -681,15 +749,15 @@ class _RangeButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? BakerTheme.primary : Colors.transparent,
+          color: isSelected ? _T.brown : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : BakerTheme.textSecondary,
+            color: isSelected ? Colors.white : _T.inkMid,
             fontSize: 12,
-            fontWeight: FontWeight.bold,
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
           ),
         ),
       ),
@@ -709,32 +777,35 @@ class _QuickStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 160,
+      width: 150,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: color.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 10))],
-        border: Border.all(color: BakerTheme.divider, width: 1.5),
+        color: _T.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: _T.shadowSm,
+        border: Border.all(color: _T.rimLight, width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
             child: Icon(icon, color: color, size: 20),
           ),
-          const SizedBox(height: 16),
-          Text(title, style: const TextStyle(color: BakerTheme.textSecondary, fontSize: 12)),
+          const SizedBox(height: 14),
+          Text(title, style: const TextStyle(color: _T.inkMid, fontSize: 11, fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
-          Text(value, style: const TextStyle(color: BakerTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(value, style: const TextStyle(color: _T.ink, fontSize: 16, fontWeight: FontWeight.w800)),
           const SizedBox(height: 8),
           Row(
             children: [
-              Icon(trend >= 0 ? Icons.trending_up : Icons.trending_down, size: 14, color: trend >= 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444)),
+              Icon(trend >= 0 ? Icons.trending_up : Icons.trending_down, size: 14, color: trend >= 0 ? _T.statusGreen : _T.statusPink),
               const SizedBox(width: 4),
-              Text('${trend.abs().toStringAsFixed(1)}%', style: TextStyle(color: trend >= 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444), fontSize: 12, fontWeight: FontWeight.bold)),
+              Text(
+                '${trend.abs().toStringAsFixed(1)}%', 
+                style: TextStyle(color: trend >= 0 ? _T.statusGreen : _T.statusPink, fontSize: 11, fontWeight: FontWeight.w800),
+              ),
             ],
           ),
         ],
@@ -757,10 +828,10 @@ class _AnalyticsCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: BakerTheme.divider, width: 1.5),
-        boxShadow: [BoxShadow(color: BakerTheme.primary.withOpacity(0.03), blurRadius: 30, offset: const Offset(0, 15))],
+        color: _T.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: _T.rimLight, width: 1.5),
+        boxShadow: _T.shadowSm,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -772,21 +843,30 @@ class _AnalyticsCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(color: BakerTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
-                    Text(subtitle, style: const TextStyle(color: BakerTheme.textMuted, fontSize: 11), overflow: TextOverflow.ellipsis),
+                    Text(
+                      title, 
+                      style: const TextStyle(color: _T.ink, fontSize: 15.5, fontWeight: FontWeight.w800), 
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle, 
+                      style: const TextStyle(color: _T.inkMid, fontSize: 11, fontWeight: FontWeight.w600), 
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               ),
               if (legend != null)
                 Wrap(
                   crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 12,
+                  spacing: 8,
                   runSpacing: 4,
                   children: legend!,
                 ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           child,
         ],
       ),
@@ -801,11 +881,11 @@ class _InsightCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [BakerTheme.primary.withOpacity(0.05), BakerTheme.primary.withOpacity(0.02)]),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: BakerTheme.primary.withOpacity(0.1)),
+        color: _T.surfaceWarm,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _T.rimLight, width: 1.5),
       ),
       child: Column(children: insights),
     );
@@ -822,10 +902,22 @@ class _InsightItem extends StatelessWidget {
     IconData icon;
     Color color;
     switch (type) {
-      case InsightType.positive: icon = Icons.star_rounded; color = const Color(0xFF10B981); break;
-      case InsightType.negative: icon = Icons.info_outline_rounded; color = const Color(0xFFEF4444); break;
-      case InsightType.neutral: icon = Icons.analytics_outlined; color = BakerTheme.secondary; break;
-      case InsightType.ai: icon = Icons.auto_awesome_outlined; color = BakerTheme.primary; break;
+      case InsightType.positive: 
+        icon = Icons.star_rounded; 
+        color = _T.statusGreen; 
+        break;
+      case InsightType.negative: 
+        icon = Icons.info_outline_rounded; 
+        color = _T.statusPink; 
+        break;
+      case InsightType.neutral: 
+        icon = Icons.analytics_outlined; 
+        color = _T.statusCopper; 
+        break;
+      case InsightType.ai: 
+        icon = Icons.auto_awesome_outlined; 
+        color = _T.brown; 
+        break;
     }
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -834,7 +926,12 @@ class _InsightItem extends StatelessWidget {
         children: [
           Icon(icon, size: 18, color: color),
           const SizedBox(width: 12),
-          Expanded(child: Text(text, style: TextStyle(color: BakerTheme.textPrimary.withOpacity(0.8), fontSize: 13, height: 1.4))),
+          Expanded(
+            child: Text(
+              text, 
+              style: const TextStyle(color: _T.ink, fontSize: 13, height: 1.4, fontWeight: FontWeight.w600),
+            ),
+          ),
         ],
       ),
     );
@@ -854,28 +951,39 @@ class _ProductPerformanceTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _T.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: BakerTheme.divider),
+        border: Border.all(color: _T.rimLight, width: 1.5),
+        boxShadow: _T.shadowSm,
       ),
       child: Row(
         children: [
           Container(
             width: 40, height: 40,
-            decoration: BoxDecoration(color: BakerTheme.primary.withOpacity(0.1), shape: BoxShape.circle),
-            child: const Icon(Icons.cake_outlined, color: BakerTheme.primary, size: 20),
+            decoration: const BoxDecoration(color: _T.surfaceWarm, shape: BoxShape.circle),
+            child: const Icon(Icons.cake_outlined, color: _T.brown, size: 20),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(color: BakerTheme.textPrimary, fontWeight: FontWeight.bold)),
-                Text('$sales units sold', style: const TextStyle(color: BakerTheme.textSecondary, fontSize: 12)),
+                Text(
+                  name, 
+                  style: const TextStyle(color: _T.ink, fontWeight: FontWeight.w800, fontSize: 14),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$sales units sold', 
+                  style: const TextStyle(color: _T.inkMid, fontSize: 12, fontWeight: FontWeight.w600),
+                ),
               ],
             ),
           ),
-          Text('Rs. ${NumberFormat.compact().format(revenue)}', style: const TextStyle(color: BakerTheme.primary, fontWeight: FontWeight.bold)),
+          Text(
+            'Rs. ${NumberFormat.compact().format(revenue)}', 
+            style: const TextStyle(color: _T.brown, fontWeight: FontWeight.w800, fontSize: 14),
+          ),
         ],
       ),
     );
@@ -887,7 +995,10 @@ class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.title});
   @override
   Widget build(BuildContext context) {
-    return Text(title, style: const TextStyle(color: BakerTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold));
+    return Text(
+      title, 
+      style: const TextStyle(color: _T.ink, fontSize: 15, fontWeight: FontWeight.w800),
+    );
   }
 }
 
@@ -898,10 +1009,14 @@ class _LegendItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 4),
-        Text(label, style: const TextStyle(color: BakerTheme.textMuted, fontSize: 10, fontWeight: FontWeight.w600)),
+        Text(
+          label, 
+          style: const TextStyle(color: _T.inkMid, fontSize: 10, fontWeight: FontWeight.w600),
+        ),
       ],
     );
   }
@@ -915,8 +1030,6 @@ class _ReviewsLeaderboardSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // This file is a ConsumerStatefulWidget, but this section is a plain StatelessWidget.
-    // We use Consumer widgets below for access to providers/streams.
     return _ReviewsLeaderboardBody(products: products);
   }
 }
@@ -936,7 +1049,7 @@ class _ReviewsLeaderboardBody extends ConsumerWidget {
       stream: ref.read(firestoreServiceProvider).streamBakerReviews(bakerId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: BakerTheme.secondary));
+          return const Center(child: CircularProgressIndicator(color: _T.copper));
         }
         final reviews = snapshot.data ?? [];
         if (reviews.isEmpty) {
@@ -949,7 +1062,6 @@ class _ReviewsLeaderboardBody extends ConsumerWidget {
         final Map<String, double> avgRatingByProduct = {};
 
         for (final review in reviews) {
-          // Use productIds from ReviewModel
           final pids = review.productIds;
           if (pids.isEmpty) continue;
 
@@ -982,10 +1094,6 @@ class _ReviewsLeaderboardBody extends ConsumerWidget {
             final bc = reviewCountByProduct[b.key] ?? 0;
             return bc.compareTo(ac);
           });
-
-        String _productName(String productId) {
-          return products.firstWhere((p) => p.id == productId, orElse: () => ProductModel(id: productId, bakerId: '', name: productId, description: '', price: 0, category: '', images: const [], dietaryLabels: const [], ingredients: const {}, addOns: const {}, isAvailable: true, profitMargin: 0, createdAt: DateTime.fromMillisecondsSinceEpoch(0))).name;
-        }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1068,16 +1176,18 @@ class _ReviewsAnalyticsCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: BakerTheme.divider, width: 1.5),
+        color: _T.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: _T.rimLight, width: 1.5),
+        boxShadow: _T.shadowSm,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: BakerTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
-          Text(subtitle, style: const TextStyle(color: BakerTheme.textMuted, fontSize: 11)),
-          const SizedBox(height: 12),
+          Text(title, style: const TextStyle(color: _T.ink, fontSize: 15, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 2),
+          Text(subtitle, style: const TextStyle(color: _T.inkMid, fontSize: 11, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 14),
           child,
         ],
       ),
@@ -1097,13 +1207,13 @@ class _ProductReviewRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: BakerTheme.textPrimary, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text(subtitle, style: const TextStyle(color: BakerTheme.textSecondary, fontSize: 12)),
+          Text(title, style: const TextStyle(color: _T.ink, fontWeight: FontWeight.w800, fontSize: 13.5)),
+          const SizedBox(height: 3),
+          Text(subtitle, style: const TextStyle(color: _T.inkMid, fontSize: 11.5, fontWeight: FontWeight.w600)),
         ],
       ),
     );

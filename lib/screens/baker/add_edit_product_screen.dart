@@ -15,34 +15,34 @@ import '../../core/constants/app_constants.dart';
 // ════════════════════════════════════════════════════════════════════════════
 
 abstract class _T {
-  static const canvas    = Color(0xFFFDFCF9);
-  static const brown     = Color(0xFF8B5A2B);
-  static const taupe     = Color(0xFF5D4037);
-  static const pink      = Color(0xFFFFB6C1);
-  static const pinkL     = Color(0xFFFFF0F2);
-  static const copper    = Color(0xFFB8794C);
-  static const cream     = Color(0xFFF9F5F0);
+  static const canvas    = Color(0xFFFFFDF8);
+  static const brown     = Color(0xFFB05E27);
+  static const taupe     = Color(0xFF6F3C2C);
+  static const pink      = Color(0xFFFF8B9F);
+  static const pinkL     = Color(0xFFFFF4F5);
+  static const copper    = Color(0xFFE67E22);
+  static const cream     = Color(0xFFFAF0E6);
   
   static const surface   = Color(0xFFFFFFFF);
-  static const surfaceWarm = Color(0xFFFBF8F4);
-  static const rimLight  = Color(0xFFEFEBE4);
+  static const surfaceWarm = Color(0xFFFFF9F2);
+  static const rimLight  = Color(0xFFF2EAE0);
 
-  static const ink       = Color(0xFF5D4037);
-  static const inkMid    = Color(0xFF8B7971);
-  static const inkFaint  = Color(0xFFCFC4BC);
+  static const ink       = Color(0xFF4A2B20);
+  static const inkMid    = Color(0xFF8C6D5F);
+  static const inkFaint  = Color(0xFFD6C8BE);
 
-  // Soft accents for status and icons
-  static const statusPink = Color(0xFFE598A4);
-  static const statusBrown = Color(0xFF9E7E6E);
-  static const statusCopper = Color(0xFFC08962);
-  static const statusGreen = Color(0xFF87A18E);
+  // Vibrant accents for status and icons
+  static const statusPink = Color(0xFFFF6B81);
+  static const statusBrown = Color(0xFFB37E56);
+  static const statusCopper = Color(0xFFF39C12);
+  static const statusGreen = Color(0xFF52B788);
 
   static const gPink = LinearGradient(
-    colors: [Color(0xFFFFD1D8), Color(0xFFFFB6C1)],
+    colors: [Color(0xFFFFD1D8), Color(0xFFFF8B9F)],
     begin: Alignment.topLeft, end: Alignment.bottomRight,
   );
   static const gCopper = LinearGradient(
-    colors: [Color(0xFFD9A07E), Color(0xFFB8794C)],
+    colors: [Color(0xFFF39C12), Color(0xFFE67E22)],
     begin: Alignment.topLeft, end: Alignment.bottomRight,
   );
   
