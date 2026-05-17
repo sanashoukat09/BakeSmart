@@ -10,6 +10,50 @@ import '../../providers/inventory_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/constants/app_constants.dart';
 
+// ════════════════════════════════════════════════════════════════════════════
+//  DESIGN TOKENS
+// ════════════════════════════════════════════════════════════════════════════
+
+abstract class _T {
+  static const canvas    = Color(0xFFFDFCF9);
+  static const brown     = Color(0xFF8B5A2B);
+  static const taupe     = Color(0xFF5D4037);
+  static const pink      = Color(0xFFFFB6C1);
+  static const pinkL     = Color(0xFFFFF0F2);
+  static const copper    = Color(0xFFB8794C);
+  static const cream     = Color(0xFFF9F5F0);
+  
+  static const surface   = Color(0xFFFFFFFF);
+  static const surfaceWarm = Color(0xFFFBF8F4);
+  static const rimLight  = Color(0xFFEFEBE4);
+
+  static const ink       = Color(0xFF5D4037);
+  static const inkMid    = Color(0xFF8B7971);
+  static const inkFaint  = Color(0xFFCFC4BC);
+
+  // Soft accents for status and icons
+  static const statusPink = Color(0xFFE598A4);
+  static const statusBrown = Color(0xFF9E7E6E);
+  static const statusCopper = Color(0xFFC08962);
+  static const statusGreen = Color(0xFF87A18E);
+
+  static const gPink = LinearGradient(
+    colors: [Color(0xFFFFD1D8), Color(0xFFFFB6C1)],
+    begin: Alignment.topLeft, end: Alignment.bottomRight,
+  );
+  static const gCopper = LinearGradient(
+    colors: [Color(0xFFD9A07E), Color(0xFFB8794C)],
+    begin: Alignment.topLeft, end: Alignment.bottomRight,
+  );
+  
+  static List<BoxShadow> shadowSm = [
+    BoxShadow(color: brown.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+  ];
+  static List<BoxShadow> shadowMd = [
+    BoxShadow(color: brown.withOpacity(0.06), blurRadius: 20, offset: const Offset(0, 8)),
+  ];
+}
+
 class AddEditProductScreen extends ConsumerStatefulWidget {
   final String? productId;
   const AddEditProductScreen({super.key, this.productId});
@@ -232,12 +276,15 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
     final isSaving = ref.watch(productNotifierProvider).isLoading;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFCF9),
+      backgroundColor: _T.canvas,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFDFCF9),
+        backgroundColor: _T.canvas,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF451A03)),
-        title: Text(widget.productId == null ? 'Add Product' : 'Edit Product', style: const TextStyle(color: Color(0xFF451A03))),
+        iconTheme: const IconThemeData(color: _T.brown),
+        title: Text(
+          widget.productId == null ? 'Add Product' : 'Edit Product',
+          style: const TextStyle(color: _T.brown, fontWeight: FontWeight.w800, fontSize: 18),
+        ),
         actions: [
           if (isSaving)
             const Center(
@@ -246,13 +293,13 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                 child: SizedBox(
                   width: 20,
                   height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF78350F)),
+                  child: CircularProgressIndicator(strokeWidth: 2, color: _T.brown),
                 ),
               ),
             )
           else
             IconButton(
-              icon: const Icon(Icons.check, color: Color(0xFF78350F)),
+              icon: const Icon(Icons.check, color: _T.brown),
               onPressed: _save,
             ),
         ],
@@ -265,7 +312,10 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Images
-              const Text('Images *', style: TextStyle(color: Color(0xFF78350F))),
+              const Text(
+                'Images *',
+                style: TextStyle(color: _T.brown, fontWeight: FontWeight.w700, fontSize: 13),
+              ),
               const SizedBox(height: 8),
               SizedBox(
                 height: 100,
@@ -277,10 +327,11 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                       child: Container(
                         width: 100,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFEF3C7),
+                          color: _T.pinkL,
                           borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: _T.pink.withOpacity(0.3), width: 1.5),
                         ),
-                        child: const Icon(Icons.add_a_photo_outlined, color: Color(0xFF92400E)),
+                        child: const Icon(Icons.add_a_photo_outlined, color: _T.copper),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -312,14 +363,14 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                 maxLines: 3,
                 validator: (v) => v!.isEmpty ? 'Required' : null,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               // Ingredients Linking
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Expanded(child: Text('Ingredients Used', style: TextStyle(color: Color(0xFF78350F), fontWeight: FontWeight.w600))),
+                  const Expanded(child: Text('Ingredients Used', style: TextStyle(color: _T.brown, fontWeight: FontWeight.w700, fontSize: 13))),
                   Text('Total Cost: Rs. ${_calculateTotalCost(ingredientsAsync).toStringAsFixed(2)}', 
-                    style: const TextStyle(color: Color(0xFF92400E), fontSize: 12, fontWeight: FontWeight.bold)),
+                    style: const TextStyle(color: _T.copper, fontSize: 12.5, fontWeight: FontWeight.w800)),
                 ],
               ),
               const SizedBox(height: 8),
@@ -328,8 +379,13 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                   if (allIngredients.isEmpty) {
                     return Container(
                       padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFEF3C7))),
-                      child: const Text('No ingredients in inventory. Add them first!', style: TextStyle(color: Color(0xFF92400E), fontSize: 13)),
+                      decoration: BoxDecoration(
+                        color: _T.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: _T.rimLight, width: 1.5),
+                        boxShadow: _T.shadowSm,
+                      ),
+                      child: const Text('No ingredients in inventory. Add them first!', style: TextStyle(color: _T.copper, fontSize: 13, fontWeight: FontWeight.w600)),
                     );
                   }
                   
@@ -344,18 +400,19 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                           margin: const EdgeInsets.only(bottom: 10),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFFEF3C7)),
+                            color: _T.surface,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: _T.rimLight, width: 1.5),
+                            boxShadow: _T.shadowSm,
                           ),
                           child: Column(
                             children: [
                               Row(
                                 children: [
                                   Expanded(
-                                    child: Text(ingredient.name, style: const TextStyle(color: Color(0xFF451A03), fontWeight: FontWeight.bold)),
+                                    child: Text(ingredient.name, style: const TextStyle(color: _T.ink, fontWeight: FontWeight.w800)),
                                   ),
-                                  Text('Rs. ${cost.toStringAsFixed(2)}', style: const TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.bold, fontSize: 13)),
+                                  Text('Rs. ${cost.toStringAsFixed(2)}', style: const TextStyle(color: _T.statusGreen, fontWeight: FontWeight.w800, fontSize: 13)),
                                   const SizedBox(width: 8),
                                   IconButton(
                                     icon: const Icon(Icons.remove_circle_outline, color: Color(0xFFEF4444), size: 20),
@@ -365,10 +422,10 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                                   ),
                                 ],
                               ),
-                              const Divider(height: 16, color: Color(0xFFFEF3C7)),
+                              const Divider(height: 16, color: _T.rimLight),
                               Row(
                                 children: [
-                                  const Text('Quantity:', style: TextStyle(color: Color(0xFF92400E), fontSize: 12)),
+                                  const Text('Quantity:', style: TextStyle(color: _T.taupe, fontSize: 12, fontWeight: FontWeight.w600)),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: SizedBox(
@@ -376,15 +433,16 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                                       child: TextFormField(
                                         initialValue: entry.value.toString(),
                                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                        style: const TextStyle(fontSize: 14, color: Color(0xFF451A03)),
+                                        style: const TextStyle(fontSize: 14, color: _T.ink),
                                         decoration: InputDecoration(
                                           contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
                                           filled: true,
-                                          fillColor: const Color(0xFFFDFCF9),
+                                          fillColor: _T.surfaceWarm,
                                           suffixText: ingredient.unit,
-                                          suffixStyle: const TextStyle(color: Color(0xFF92400E), fontSize: 12),
-                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFFEF3C7))),
-                                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFFEF3C7))),
+                                          suffixStyle: const TextStyle(color: _T.copper, fontSize: 12, fontWeight: FontWeight.w600),
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _T.rimLight)),
+                                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _T.rimLight)),
+                                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _T.brown)),
                                         ),
                                         onChanged: (v) {
                                           final qty = double.tryParse(v) ?? 0.0;
@@ -400,21 +458,21 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  Text('(@ Rs. ${ingredient.unitPrice}/${ingredient.unit})', style: const TextStyle(color: Color(0xFFA8A29E), fontSize: 10)),
+                                  Text('(@ Rs. ${ingredient.unitPrice}/${ingredient.unit})', style: const TextStyle(color: _T.inkFaint, fontSize: 10)),
                                 ],
                               ),
                             ],
                           ),
                         );
                       }).toList(),
-
+ 
                       // Dropdown to add new ingredient
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
                         key: ValueKey(_selectedIngredients.length),
                         value: null,
                         hint: const Text('Add an ingredient...', style: TextStyle(fontSize: 14)),
-                        dropdownColor: Colors.white,
+                        dropdownColor: _T.surface,
                         decoration: _inputDecoration('Select to add'),
                         items: allIngredients
                             .where((i) => !_selectedIngredients.containsKey(i.id))
@@ -430,7 +488,7 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                     ],
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF78350F))),
+                loading: () => const Center(child: CircularProgressIndicator(color: _T.brown)),
                 error: (_, __) => const Text('Error loading ingredients'),
               ),
               const SizedBox(height: 24),
@@ -466,12 +524,12 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Category *', style: TextStyle(color: Color(0xFF78350F), fontSize: 12)),
+                        const Text('Category *', style: TextStyle(color: _T.brown, fontSize: 12, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 4),
                         DropdownButtonFormField<String>(
                           value: _selectedCategory,
-                          dropdownColor: const Color(0xFFFEF3C7),
-                          style: const TextStyle(color: Color(0xFF451A03)),
+                          dropdownColor: _T.surfaceWarm,
+                          style: const TextStyle(color: _T.ink, fontWeight: FontWeight.w600),
                           decoration: _inputDecoration('Select'),
                           items: AppConstants.productCategories
                               .map((c) => DropdownMenuItem(value: c, child: Text(c)))
@@ -487,8 +545,8 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
               const SizedBox(height: 24),
 
               // Dietary Labels
-              const Text('Dietary Labels', style: TextStyle(color: Color(0xFF78350F))),
-              const SizedBox(height: 8),
+              const Text('Dietary Labels', style: TextStyle(color: _T.brown, fontWeight: FontWeight.w700, fontSize: 13)),
+              const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -560,11 +618,18 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                                 }
                               });
                             },
-                      selectedColor: const Color(0xFFFEF3C7),
+                      selectedColor: _T.pinkL,
+                      backgroundColor: _T.surface,
+                      side: BorderSide(
+                        color: isSelected ? _T.pink.withOpacity(0.5) : _T.rimLight,
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      showCheckmark: false,
                       labelStyle: TextStyle(
-                        color: isSelected
-                            ? const Color(0xFF78350F)
-                            : const Color(0xFF451A03),
+                        color: isSelected ? _T.brown : _T.taupe,
+                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                        fontSize: 13,
                       ),
                     );
                   }).toList(),
@@ -585,11 +650,18 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                         }
                       });
                     },
-                    selectedColor: const Color(0xFFFEF3C7),
+                    selectedColor: _T.pinkL,
+                    backgroundColor: _T.surface,
+                    side: BorderSide(
+                      color: _includesAllDietaryLabels ? _T.pink.withOpacity(0.5) : _T.rimLight,
+                      width: 1.5,
+                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    showCheckmark: false,
                     labelStyle: TextStyle(
-                      color: _includesAllDietaryLabels
-                          ? const Color(0xFF78350F)
-                          : const Color(0xFF451A03),
+                      color: _includesAllDietaryLabels ? _T.brown : _T.taupe,
+                      fontWeight: _includesAllDietaryLabels ? FontWeight.w800 : FontWeight.w600,
+                      fontSize: 13,
                     ),
                   ),
                   FilterChip(
@@ -604,11 +676,18 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                         }
                       });
                     },
-                    selectedColor: const Color(0xFFFEF3C7),
+                    selectedColor: _T.pinkL,
+                    backgroundColor: _T.surface,
+                    side: BorderSide(
+                      color: _includesNoDietaryLabels ? _T.pink.withOpacity(0.5) : _T.rimLight,
+                      width: 1.5,
+                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    showCheckmark: false,
                     labelStyle: TextStyle(
-                      color: _includesNoDietaryLabels
-                          ? const Color(0xFF78350F)
-                          : const Color(0xFF451A03),
+                      color: _includesNoDietaryLabels ? _T.brown : _T.taupe,
+                      fontWeight: _includesNoDietaryLabels ? FontWeight.w800 : FontWeight.w600,
+                      fontSize: 13,
                     ),
                   ),
                 ],
@@ -627,17 +706,20 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
         padding: const EdgeInsets.all(12),
         width: double.infinity,
         decoration: BoxDecoration(
-          color: const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          color: _T.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _T.rimLight, width: 1.5),
+          boxShadow: _T.shadowSm,
         ),
         child: const Row(
           children: [
-            Icon(Icons.info_outline, color: Color(0xFF64748B), size: 18),
+            Icon(Icons.info_outline, color: _T.copper, size: 18),
             SizedBox(width: 8),
             Expanded(
-              child: Text('Add ingredients above to calculate suggested price.', 
-                style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+              child: Text(
+                'Add ingredients above to calculate suggested price.', 
+                style: TextStyle(color: _T.taupe, fontSize: 12.5, fontWeight: FontWeight.w600),
+              ),
             ),
           ],
         ),
@@ -658,9 +740,9 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFFFEF3C7).withOpacity(0.3),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFFEF3C7), width: 1.5),
+            color: _T.pinkL.withOpacity(0.4),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: _T.pink.withOpacity(0.2), width: 1.5),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -668,30 +750,32 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Pricing & Profit Calculator',
-                      style: TextStyle(color: Color(0xFF451A03), fontWeight: FontWeight.bold)),
-                  Icon(Icons.calculate_outlined, color: const Color(0xFF78350F).withOpacity(0.5), size: 20),
+                  const Text(
+                    'Pricing & Profit Calculator',
+                    style: TextStyle(color: _T.brown, fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  Icon(Icons.calculate_outlined, color: _T.copper.withOpacity(0.5), size: 20),
                 ],
               ),
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Expanded(child: Text('Ingredient Cost', style: TextStyle(color: Color(0xFF92400E)))),
-                  Text('Rs. ${cost.toStringAsFixed(2)}', style: const TextStyle(color: Color(0xFF451A03), fontWeight: FontWeight.bold)),
+                  const Expanded(child: Text('Ingredient Cost', style: TextStyle(color: _T.taupe, fontWeight: FontWeight.w600))),
+                  Text('Rs. ${cost.toStringAsFixed(2)}', style: const TextStyle(color: _T.brown, fontWeight: FontWeight.bold)),
                 ],
               ),
               const SizedBox(height: 12),
               Row(
                 children: [
-                  const Expanded(child: Text('Profit Margin (%)', style: TextStyle(color: Color(0xFF92400E)))),
+                  const Expanded(child: Text('Profit Margin (%)', style: TextStyle(color: _T.taupe, fontWeight: FontWeight.w600))),
                   SizedBox(
                     width: 60,
                     child: TextFormField(
                       initialValue: _profitMargin.toStringAsFixed(0),
                       keyboardType: TextInputType.number,
-                      style: const TextStyle(color: Color(0xFF78350F), fontWeight: FontWeight.bold),
-                      decoration: const InputDecoration(isDense: true, border: UnderlineInputBorder()),
+                      style: const TextStyle(color: _T.brown, fontWeight: FontWeight.bold),
+                      decoration: const InputDecoration(isDense: true, border: UnderlineInputBorder(borderSide: BorderSide(color: _T.rimLight))),
                       onChanged: (v) {
                         final val = double.tryParse(v) ?? 30.0;
                         setState(() => _profitMargin = val);
@@ -700,16 +784,16 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                   ),
                 ],
               ),
-              const Divider(color: Color(0xFFFEF3C7), height: 24),
+              const Divider(color: _T.rimLight, height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Expanded(child: Text('Suggested Price', style: TextStyle(color: Color(0xFF92400E)))),
+                  const Expanded(child: Text('Suggested Price', style: TextStyle(color: _T.taupe, fontWeight: FontWeight.w700))),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text('Rs. ${suggestedPrice.toStringAsFixed(0)}', 
-                        style: const TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.bold, fontSize: 18)),
+                        style: const TextStyle(color: _T.statusGreen, fontWeight: FontWeight.bold, fontSize: 18)),
                       if (suggestedPrice > 0) ...[
                         const SizedBox(width: 4),
                         TextButton(
@@ -722,7 +806,7 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
-                          child: const Text('Apply', style: TextStyle(color: Color(0xFF78350F), fontWeight: FontWeight.bold, fontSize: 12)),
+                          child: const Text('Apply', style: TextStyle(color: _T.copper, fontWeight: FontWeight.bold, fontSize: 12)),
                         ),
                       ],
                     ],
@@ -730,8 +814,10 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
                 ],
               ),
               const SizedBox(height: 8),
-              const Text('Suggested price covers ingredient costs and target profit.', 
-                style: TextStyle(color: Color(0xFF92400E), fontSize: 10, fontStyle: FontStyle.italic)),
+              const Text(
+                'Suggested price covers ingredient costs and target profit.', 
+                style: TextStyle(color: _T.inkMid, fontSize: 10, fontStyle: FontStyle.italic),
+              ),
             ],
           ),
         );
@@ -744,12 +830,12 @@ class _AddEditProductScreenState extends ConsumerState<AddEditProductScreen> {
   InputDecoration _inputDecoration(String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(color: Color(0xFFA8A29E), fontSize: 14),
+      hintStyle: const TextStyle(color: _T.inkFaint, fontSize: 14),
       filled: true,
-      fillColor: Colors.white,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFFEF3C7), width: 1.5)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFFEF3C7), width: 1.5)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF78350F), width: 1.5)),
+      fillColor: _T.surface,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _T.rimLight, width: 1.5)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _T.rimLight, width: 1.5)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _T.brown, width: 1.5)),
     );
   }
 }
@@ -776,22 +862,22 @@ class _Field extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Color(0xFF92400E), fontSize: 12)),
+        Text(label, style: const TextStyle(color: _T.taupe, fontSize: 12, fontWeight: FontWeight.w700)),
         const SizedBox(height: 4),
         TextFormField(
           controller: controller,
           maxLines: maxLines,
           keyboardType: keyboardType,
           validator: validator,
-          style: const TextStyle(color: Color(0xFF451A03)),
+          style: const TextStyle(color: _T.ink),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: Color(0xFFA8A29E), fontSize: 14),
+            hintStyle: const TextStyle(color: _T.inkFaint, fontSize: 14),
             filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFFEF3C7), width: 1.5)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFFEF3C7), width: 1.5)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF78350F), width: 1.5)),
+            fillColor: _T.surface,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _T.rimLight, width: 1.5)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _T.rimLight, width: 1.5)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _T.brown, width: 1.5)),
           ),
         ),
       ],
