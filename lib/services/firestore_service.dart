@@ -731,6 +731,31 @@ class FirestoreService {
     });
   }
 
+  Stream<List<OrderModel>> streamAllOrders() {
+    return _db
+        .collection(AppConstants.ordersCollection)
+        .snapshots()
+        .map((snapshot) {
+      try {
+        return snapshot.docs
+            .map((doc) {
+              try {
+                return OrderModel.fromFirestore(doc);
+              } catch (e) {
+                print('Error parsing order ${doc.id}: $e');
+                return null;
+              }
+            })
+            .where((o) => o != null)
+            .cast<OrderModel>()
+            .toList();
+      } catch (e) {
+        print('Error in all orders stream: $e');
+        return <OrderModel>[];
+      }
+    });
+  }
+
   // ─── NOTIFICATION OPERATIONS ──────────────────────────────────
 
   Future<void> addNotification(

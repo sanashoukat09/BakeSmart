@@ -77,3 +77,7 @@ final orderNotifierProvider =
     StateNotifierProvider<OrderNotifier, AsyncValue<void>>((ref) {
   return OrderNotifier(ref);
 });
+
+final allOrdersProvider = StreamProvider<List<OrderModel>>((ref) {
+  return ref.watch(firestoreServiceProvider).streamAllOrders();
+});

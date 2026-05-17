@@ -4,6 +4,28 @@ import 'package:go_router/go_router.dart';
 import '../../core/router/app_router.dart';
 import '../../providers/auth_provider.dart';
 
+// ════════════════════════════════════════════════════════════════════════════
+//  DESIGN TOKENS
+// ════════════════════════════════════════════════════════════════════════════
+
+abstract class _T {
+  static const canvas    = Color(0xFFFFFDF8);
+  static const brown     = Color(0xFFB05E27);
+  static const surface   = Color(0xFFFFFFFF);
+  static const rimLight  = Color(0xFFF2EAE0);
+
+  static const ink       = Color(0xFF4A2B20);
+  static const inkMid    = Color(0xFF8C6D5F);
+  static const inkFaint  = Color(0xFFD6C8BE);
+
+  static const statusPink = Color(0xFFFF6B81);
+  static const statusRed   = Color(0xFFE74C3C);
+
+  static List<BoxShadow> shadowSm = [
+    BoxShadow(color: brown.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+  ];
+}
+
 class CustomerOnboardingScreen extends ConsumerStatefulWidget {
   const CustomerOnboardingScreen({super.key});
 
@@ -79,13 +101,8 @@ class _CustomerOnboardingScreenState
 
   @override
   Widget build(BuildContext context) {
-    const primary = Color(0xFFC2410C);
-    const bg = Color(0xFFFFFBF5);
-    const textPrimary = Color(0xFF1C1917);
-    const textSecondary = Color(0xFF57534E);
-
     return Scaffold(
-      backgroundColor: bg,
+      backgroundColor: _T.canvas,
       body: SafeArea(
         child: Column(
           children: [
@@ -101,8 +118,8 @@ class _CustomerOnboardingScreenState
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: primary,
-                          borderRadius: BorderRadius.circular(10),
+                          color: _T.brown,
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(Icons.bakery_dining_rounded,
                             color: Colors.white, size: 22),
@@ -111,9 +128,9 @@ class _CustomerOnboardingScreenState
                       const Text(
                         'BakeSmart',
                         style: TextStyle(
-                          color: textPrimary,
+                          color: _T.ink,
                           fontSize: 20,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
                     ],
@@ -123,13 +140,13 @@ class _CustomerOnboardingScreenState
                     children: List.generate(2, (i) {
                       return Expanded(
                         child: Container(
-                          height: 4,
+                          height: 5,
                           margin: EdgeInsets.only(right: i < 1 ? 8 : 0),
                           decoration: BoxDecoration(
                             color: i <= _currentPage
-                                ? primary
-                                : const Color(0xFFE7E5E4),
-                            borderRadius: BorderRadius.circular(2),
+                                ? _T.brown
+                                : _T.rimLight,
+                            borderRadius: BorderRadius.circular(3),
                           ),
                         ),
                       );
@@ -139,7 +156,7 @@ class _CustomerOnboardingScreenState
                   Text(
                     'Step ${_currentPage + 1} of 2',
                     style: const TextStyle(
-                        color: textSecondary, fontSize: 12),
+                        color: _T.inkMid, fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -152,6 +169,7 @@ class _CustomerOnboardingScreenState
                 children: [
                   // Page 1: Dietary
                   SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -159,16 +177,16 @@ class _CustomerOnboardingScreenState
                         const Text(
                           "Your food\npreferences 🌿",
                           style: TextStyle(
-                            color: textPrimary,
-                            fontSize: 30,
+                            color: _T.ink,
+                            fontSize: 28,
                             fontWeight: FontWeight.w800,
-                            height: 1.2,
+                            height: 1.25,
                           ),
                         ),
                         const SizedBox(height: 8),
                         const Text(
                           "We'll filter products to match your needs.",
-                          style: TextStyle(color: textSecondary, fontSize: 15),
+                          style: TextStyle(color: _T.inkMid, fontSize: 14.5, fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 28),
                         ..._dietaryOptions.map((opt) {
@@ -186,19 +204,20 @@ class _CustomerOnboardingScreenState
                             },
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 150),
-                              margin: const EdgeInsets.only(bottom: 10),
-                              padding: const EdgeInsets.all(14),
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? primary.withOpacity(0.06)
-                                    : const Color(0xFFFFFFFF),
-                                borderRadius: BorderRadius.circular(12),
+                                    ? const Color(0xFFFFECE0)
+                                    : _T.surface,
+                                borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
                                   color: isSelected
-                                      ? primary
-                                      : const Color(0xFFE7E5E4),
-                                  width: isSelected ? 1.5 : 1,
+                                      ? _T.brown
+                                      : _T.rimLight,
+                                  width: 1.5,
                                 ),
+                                boxShadow: isSelected ? _T.shadowSm : null,
                               ),
                               child: Row(
                                 children: [
@@ -213,18 +232,18 @@ class _CustomerOnboardingScreenState
                                         Text(
                                           opt['label'],
                                           style: TextStyle(
-                                            color: isSelected
-                                                ? primary
-                                                : textPrimary,
+                                            color: _T.ink,
                                             fontSize: 15,
-                                            fontWeight: FontWeight.w700,
+                                            fontWeight: FontWeight.w800,
                                           ),
                                         ),
+                                        const SizedBox(height: 2),
                                         Text(
                                           opt['desc'],
                                           style: const TextStyle(
-                                            color: textSecondary,
+                                            color: _T.inkMid,
                                             fontSize: 12,
+                                            fontWeight: FontWeight.w600,
                                           ),
                                         ),
                                       ],
@@ -234,8 +253,8 @@ class _CustomerOnboardingScreenState
                                     Container(
                                       width: 24,
                                       height: 24,
-                                      decoration: BoxDecoration(
-                                        color: primary,
+                                      decoration: const BoxDecoration(
+                                        color: _T.brown,
                                         shape: BoxShape.circle,
                                       ),
                                       child: const Icon(Icons.check,
@@ -252,6 +271,7 @@ class _CustomerOnboardingScreenState
 
                   // Page 2: Allergens
                   SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -259,17 +279,17 @@ class _CustomerOnboardingScreenState
                         const Text(
                           "Any allergies\nwe should know? ⚠️",
                           style: TextStyle(
-                            color: textPrimary,
-                            fontSize: 30,
+                            color: _T.ink,
+                            fontSize: 28,
                             fontWeight: FontWeight.w800,
-                            height: 1.2,
+                            height: 1.25,
                           ),
                         ),
                         const SizedBox(height: 8),
                         const Text(
                           "We'll show warnings if a product contains these.",
                           style:
-                              TextStyle(color: textSecondary, fontSize: 15),
+                              TextStyle(color: _T.inkMid, fontSize: 14.5, fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 28),
                         Wrap(
@@ -294,15 +314,16 @@ class _CustomerOnboardingScreenState
                                     horizontal: 16, vertical: 12),
                                 decoration: BoxDecoration(
                                   color: isSelected
-                                      ? const Color(0xFFDC2626).withOpacity(0.08)
-                                      : const Color(0xFFFFFFFF),
-                                  borderRadius: BorderRadius.circular(12),
+                                      ? _T.statusPink.withOpacity(0.08)
+                                      : _T.surface,
+                                  borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
                                     color: isSelected
-                                        ? const Color(0xFFDC2626)
-                                        : const Color(0xFFE7E5E4),
-                                    width: isSelected ? 1.5 : 1,
+                                        ? _T.statusPink
+                                        : _T.rimLight,
+                                    width: 1.5,
                                   ),
+                                  boxShadow: isSelected ? _T.shadowSm : null,
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -315,12 +336,10 @@ class _CustomerOnboardingScreenState
                                       opt['label'],
                                       style: TextStyle(
                                         color: isSelected
-                                            ? const Color(0xFFDC2626)
-                                            : textPrimary,
-                                        fontSize: 14,
-                                        fontWeight: isSelected
-                                            ? FontWeight.w700
-                                            : FontWeight.w500,
+                                            ? _T.statusPink
+                                            : _T.ink,
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w800,
                                       ),
                                     ),
                                   ],
@@ -329,26 +348,26 @@ class _CustomerOnboardingScreenState
                             );
                           }).toList(),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 28),
                         Container(
-                          padding: const EdgeInsets.all(14),
+                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFEF9C3),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                                color: const Color(0xFFFDE047)),
+                            color: const Color(0xFFFFECE0), // Soft cream
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: _T.rimLight, width: 1.5),
                           ),
                           child: const Row(
                             children: [
-                              Icon(Icons.info_outline,
-                                  color: Color(0xFFCA8A04), size: 18),
-                              SizedBox(width: 8),
+                              Icon(Icons.info_outline_rounded,
+                                  color: _T.brown, size: 20),
+                              SizedBox(width: 10),
                               Expanded(
                                 child: Text(
                                   'You can update these anytime in your profile settings.',
                                   style: TextStyle(
-                                      color: Color(0xFF78350F),
-                                      fontSize: 13),
+                                      color: _T.ink,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600),
                                 ),
                               ),
                             ],
@@ -370,18 +389,18 @@ class _CustomerOnboardingScreenState
                     Expanded(
                       flex: 1,
                       child: SizedBox(
-                        height: 52,
+                        height: 54,
                         child: OutlinedButton(
                           onPressed: _prevPage,
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(
-                                color: Color(0xFFE7E5E4)),
+                                color: _T.rimLight, width: 1.5),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            foregroundColor: textPrimary,
+                            foregroundColor: _T.ink,
                           ),
-                          child: const Text('Back'),
+                          child: const Text('Back', style: TextStyle(fontWeight: FontWeight.w800)),
                         ),
                       ),
                     ),
@@ -389,15 +408,16 @@ class _CustomerOnboardingScreenState
                   Expanded(
                     flex: 2,
                     child: SizedBox(
-                      height: 52,
+                      height: 54,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _nextPage,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: primary,
+                          backgroundColor: _T.brown,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(16),
                           ),
+                          elevation: 0,
                         ),
                         child: _isLoading
                             ? const SizedBox(
@@ -428,12 +448,14 @@ class _CustomerOnboardingScreenState
             GestureDetector(
               onTap: _isLoading ? null : _completeOnboarding,
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.only(bottom: 24),
                 child: Text(
                   'Skip for now',
                   style: TextStyle(
-                    color: textSecondary.withOpacity(0.6),
-                    fontSize: 13,
+                    color: _T.inkMid.withOpacity(0.7),
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    decoration: TextDecoration.underline,
                   ),
                 ),
               ),

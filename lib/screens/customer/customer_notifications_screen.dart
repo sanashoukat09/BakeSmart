@@ -55,10 +55,10 @@ class CustomerNotificationsScreen extends ConsumerWidget {
         titleSpacing: 0,
         title: const Text(
           'Notifications',
-          style: TextStyle(color: _T.brown, fontWeight: FontWeight.w800, fontSize: 18),
+          style: TextStyle(color: _T.ink, fontWeight: FontWeight.w800, fontSize: 19),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: _T.brown),
+          icon: const Icon(Icons.arrow_back, color: _T.ink),
           onPressed: () => GoRouter.of(context).pop(),
         ),
         actions: [
@@ -69,7 +69,7 @@ class CustomerNotificationsScreen extends ConsumerWidget {
                 onPressed: () => _markAllAsRead(user?.uid),
                 child: const Text(
                   'Mark all as read', 
-                  style: TextStyle(color: _T.copper, fontWeight: FontWeight.w800, fontSize: 13),
+                  style: TextStyle(color: _T.brown, fontWeight: FontWeight.w800, fontSize: 13),
                 ),
               ),
             ),
@@ -127,7 +127,7 @@ class CustomerNotificationsScreen extends ConsumerWidget {
             },
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator(color: _T.copper)),
+        loading: () => const Center(child: CircularProgressIndicator(color: _T.brown)),
         error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: _T.statusPink))),
       ),
     );

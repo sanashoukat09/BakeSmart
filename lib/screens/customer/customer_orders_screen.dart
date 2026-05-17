@@ -7,6 +7,29 @@ import '../../models/order_model.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/router/app_router.dart';
 
+// ════════════════════════════════════════════════════════════════════════════
+//  DESIGN TOKENS
+// ════════════════════════════════════════════════════════════════════════════
+
+abstract class _T {
+  static const canvas    = Color(0xFFFFFDF8);
+  static const brown     = Color(0xFFB05E27);
+  static const surface   = Color(0xFFFFFFFF);
+  static const rimLight  = Color(0xFFF2EAE0);
+
+  static const ink       = Color(0xFF4A2B20);
+  static const inkMid    = Color(0xFF8C6D5F);
+  static const inkFaint  = Color(0xFFD6C8BE);
+
+  static const statusPink = Color(0xFFFF6B81);
+  static const statusRed   = Color(0xFFE74C3C);
+  static const statusGreen = Color(0xFF52B788);
+
+  static List<BoxShadow> shadowSm = [
+    BoxShadow(color: brown.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+  ];
+}
+
 class CustomerOrdersScreen extends ConsumerWidget {
   const CustomerOrdersScreen({super.key});
 
@@ -17,19 +40,41 @@ class CustomerOrdersScreen extends ConsumerWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: const Color(0xFFFDFCF9),
+        backgroundColor: _T.canvas,
         appBar: AppBar(
-          backgroundColor: Colors.white,
-          title: const Text('My Orders', style: TextStyle(fontWeight: FontWeight.bold)),
+          backgroundColor: _T.canvas,
           elevation: 0,
-          bottom: const TabBar(
-            labelColor: Color(0xFFD97706),
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: Color(0xFFD97706),
-            tabs: [
-              Tab(text: 'Active'),
-              Tab(text: 'Past'),
-            ],
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: _T.ink),
+            onPressed: () => context.pop(),
+          ),
+          title: const Text(
+            'My Orders',
+            style: TextStyle(
+              color: _T.ink,
+              fontWeight: FontWeight.w800,
+              fontSize: 19,
+            ),
+          ),
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(48),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TabBar(
+                isScrollable: true,
+                labelColor: _T.brown,
+                unselectedLabelColor: _T.inkMid,
+                indicatorColor: _T.brown,
+                indicatorWeight: 3,
+                labelStyle: TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5),
+                unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5),
+                tabs: [
+                  Tab(text: 'Active Orders'),
+                  Tab(text: 'Past Orders'),
+                ],
+              ),
+            ),
           ),
         ),
         body: ordersAsync.when(
@@ -38,14 +83,15 @@ class CustomerOrdersScreen extends ConsumerWidget {
             final pastOrders = orders.where((o) => o.status == AppConstants.orderDelivered || o.status == AppConstants.orderRejected).toList();
 
             return TabBarView(
+              physics: const BouncingScrollPhysics(),
               children: [
                 _OrderList(orders: activeOrders),
                 _OrderList(orders: pastOrders),
               ],
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Error: $e')),
+          loading: () => const Center(child: CircularProgressIndicator(color: _T.brown)),
+          error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: _T.statusRed))),
         ),
       ),
     );
@@ -63,16 +109,32 @@ class _OrderList extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.receipt_long_outlined, size: 64, color: Color(0xFFFEF3C7)),
-            const SizedBox(height: 16),
-            Text('No orders here', style: TextStyle(color: Colors.grey[600])),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: _T.inkFaint.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.receipt_long_outlined, size: 64, color: _T.inkFaint),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'No orders here', 
+              style: TextStyle(color: _T.ink, fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Your active and past treats will show up here.',
+              style: TextStyle(color: _T.inkMid, fontSize: 13, fontWeight: FontWeight.w600),
+            ),
           ],
         ),
       );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(20),
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       itemCount: orders.length,
       itemBuilder: (context, i) => _OrderCard(order: orders[i]),
     );
@@ -85,33 +147,70 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
-      ),
-      child: ListTile(
-        onTap: () => context.push('${AppRoutes.customerOrderDetails}/${order.id}'),
-        contentPadding: const EdgeInsets.all(16),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('Order #${order.id.substring(0, 8).toUpperCase()}', style: const TextStyle(fontWeight: FontWeight.bold)),
-            _StatusBadge(status: order.status),
-          ],
+    return GestureDetector(
+      onTap: () => context.push('${AppRoutes.customerOrderDetails}/${order.id}'),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: _T.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: _T.rimLight, width: 1.5),
+          boxShadow: _T.shadowSm,
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 8),
-            Text('${order.items.length} items • Rs. ${order.totalAmount.toStringAsFixed(0)}', style: const TextStyle(color: Color(0xFFD97706), fontWeight: FontWeight.w600)),
-            const SizedBox(height: 4),
-            Text('Delivery: ${DateFormat('MMM dd, hh:mm a').format(order.deliveryDate)}', style: const TextStyle(fontSize: 12)),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Order #${order.id.substring(0, 8).toUpperCase()}',
+                          style: const TextStyle(
+                            color: _T.ink,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14.5,
+                          ),
+                        ),
+                        _StatusBadge(status: order.status),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '${order.items.length} item${order.items.length > 1 ? "s" : ""} • Rs. ${order.totalAmount.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        color: _T.statusPink,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13.5,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.access_time_rounded, color: _T.inkFaint, size: 14),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Delivery: ${DateFormat('MMM dd, hh:mm a').format(order.deliveryDate)}',
+                          style: const TextStyle(
+                            color: _T.inkMid,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right_rounded, color: _T.inkFaint),
+            ],
+          ),
         ),
-        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
       ),
     );
   }
@@ -126,7 +225,7 @@ class _StatusBadge extends StatelessWidget {
     Color color;
     switch (status) {
       case AppConstants.orderPlaced:
-        color = const Color(0xFFF59E0B);
+        color = _T.brown;
         break;
       case AppConstants.orderAccepted:
         color = const Color(0xFF3B82F6);
@@ -135,21 +234,32 @@ class _StatusBadge extends StatelessWidget {
         color = const Color(0xFF8B5CF6);
         break;
       case AppConstants.orderReady:
-        color = const Color(0xFF10B981);
+        color = _T.statusGreen;
         break;
       case AppConstants.orderDelivered:
-        color = Colors.grey;
+        color = _T.statusGreen;
         break;
       case AppConstants.orderRejected:
-        color = Colors.red;
+        color = _T.statusRed;
         break;
       default:
         color = Colors.grey;
     }
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-      child: Text(status.toUpperCase(), style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(
+          color: color,
+          fontSize: 9.5,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.5,
+        ),
+      ),
     );
   }
 }

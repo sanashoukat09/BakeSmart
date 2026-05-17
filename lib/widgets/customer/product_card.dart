@@ -6,6 +6,29 @@ import '../../providers/surplus_provider.dart';
 import '../../providers/store_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../models/cart_item_model.dart';
+import '../../providers/wishlist_provider.dart';
+
+// ════════════════════════════════════════════════════════════════════════════
+//  DESIGN TOKENS
+// ════════════════════════════════════════════════════════════════════════════
+
+abstract class _T {
+  static const canvas    = Color(0xFFFFFDF8);
+  static const brown     = Color(0xFFB05E27);
+  static const surface   = Color(0xFFFFFFFF);
+  static const rimLight  = Color(0xFFF2EAE0);
+
+  static const ink       = Color(0xFF4A2B20);
+  static const inkMid    = Color(0xFF8C6D5F);
+  static const inkFaint  = Color(0xFFD6C8BE);
+
+  static const statusPink = Color(0xFFFF6B81);
+  static const statusRed   = Color(0xFFE74C3C);
+
+  static List<BoxShadow> shadowSm = [
+    BoxShadow(color: ink.withOpacity(0.03), blurRadius: 12, offset: const Offset(0, 4)),
+  ];
+}
 
 class ProductCard extends ConsumerWidget {
   final ProductModel product;
@@ -24,24 +47,19 @@ class ProductCard extends ConsumerWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: _T.surface,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          border: Border.all(color: _T.rimLight, width: 1.2),
+          boxShadow: _T.shadowSm,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image
+            // Image Section
             Expanded(
               flex: 5,
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -51,11 +69,11 @@ class ProductCard extends ConsumerWidget {
                             width: double.infinity,
                             fit: BoxFit.cover,
                             placeholder: (context, url) =>
-                                Container(color: Colors.grey[200]),
+                                Container(color: _T.rimLight),
                           )
                         : Container(
-                            color: Colors.grey[200],
-                            child: const Icon(Icons.cake, color: Colors.grey),
+                            color: _T.rimLight,
+                            child: const Icon(Icons.cake_outlined, color: _T.inkMid, size: 24),
                           ),
                     if (hasDeal)
                       Positioned(
@@ -63,33 +81,73 @@ class ProductCard extends ConsumerWidget {
                         left: 8,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
+                            horizontal: 6,
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFDC2626),
-                            borderRadius: BorderRadius.circular(10),
+                            color: _T.brown,
+                            borderRadius: BorderRadius.circular(6),
                           ),
                           child: const Text(
-                            'DEAL',
+                            'SPECIAL DEAL',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 8,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.2,
                             ),
                           ),
                         ),
                       ),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Consumer(
+                        builder: (context, ref, child) {
+                          final wishlist = ref.watch(wishlistProvider);
+                          final isFav = wishlist.contains(product.id);
+                          return GestureDetector(
+                            onTap: () {
+                              final added = ref.read(wishlistProvider.notifier).toggleWishlist(product.id);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    added ? '${product.name} added to wishlist' : '${product.name} removed from wishlist',
+                                  ),
+                                  behavior: SnackBarBehavior.floating,
+                                  backgroundColor: _T.ink,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  duration: const Duration(seconds: 1),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(5),
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
+                              ),
+                              child: Icon(
+                                isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                color: _T.statusPink,
+                                size: 16,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
 
-            // Info
+            // Info Section
             Expanded(
-              flex: 4,
+              flex: 5,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -99,10 +157,12 @@ class ProductCard extends ConsumerWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
+                        color: _T.ink,
+                        fontWeight: FontWeight.w800,
                         fontSize: 14,
                       ),
                     ),
+                    const SizedBox(height: 2),
                     if (hasDeal)
                       Row(
                         children: [
@@ -111,21 +171,22 @@ class ProductCard extends ConsumerWidget {
                               'Rs. ${surplus!.discountPrice.toStringAsFixed(0)}',
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                color: Color(0xFFDC2626),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
+                                color: _T.brown,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13.5,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 5),
+                          const SizedBox(width: 6),
                           Flexible(
                             child: Text(
                               'Rs. ${product.price.toStringAsFixed(0)}',
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                color: Colors.grey,
+                                color: _T.inkFaint,
                                 decoration: TextDecoration.lineThrough,
                                 fontSize: 10,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
@@ -135,11 +196,12 @@ class ProductCard extends ConsumerWidget {
                       Text(
                         'Rs. ${product.price.toStringAsFixed(0)}',
                         style: const TextStyle(
-                          color: Color(0xFFD97706),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                          color: _T.brown,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13.5,
                         ),
                       ),
+                    const Divider(color: _T.rimLight, height: 10, thickness: 1),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -151,21 +213,23 @@ class ProductCard extends ConsumerWidget {
                                 baker?.bakeryName ?? 'Home Bakery',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: Colors.grey[600],
+                                style: const TextStyle(
+                                  color: _T.inkMid,
                                   fontSize: 11,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                               const SizedBox(height: 2),
                               Row(
                                 children: [
-                                  const Icon(Icons.star, color: Colors.amber, size: 12),
-                                  const SizedBox(width: 4),
+                                  const Icon(Icons.star_rounded, color: Colors.amber, size: 12),
+                                  const SizedBox(width: 2),
                                   Text(
                                     baker?.rating.toStringAsFixed(1) ?? '4.8',
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 11,
+                                    style: const TextStyle(
+                                      color: _T.inkMid,
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                 ],
@@ -173,9 +237,8 @@ class ProductCard extends ConsumerWidget {
                             ],
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.add_shopping_cart, color: Color(0xFFD97706), size: 20),
-                          onPressed: () {
+                        GestureDetector(
+                          onTap: () {
                             ref.read(cartProvider.notifier).addItemFromModel(
                               CartItemModel(
                                 productId: product.id,
@@ -188,16 +251,26 @@ class ProductCard extends ConsumerWidget {
                             );
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('${product.name} added to cart'),
-                                duration: const Duration(seconds: 1),
+                                content: Text('Added ${product.name} to cart'),
+                                duration: const Duration(milliseconds: 1500),
                                 behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                backgroundColor: _T.ink,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
                             );
                           },
-                          constraints: const BoxConstraints(),
-                          padding: EdgeInsets.zero,
-                          visualDensity: VisualDensity.compact,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(
+                              color: _T.brown,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.add_shopping_cart_rounded,
+                              color: Colors.white,
+                              size: 14,
+                            ),
+                          ),
                         ),
                       ],
                     ),

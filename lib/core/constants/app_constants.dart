@@ -55,6 +55,7 @@ class AppConstants {
     'Pastries',
     'Donuts',
     'Custom Cakes',
+    'Beverages',
   ];
 
   // Dietary Labels

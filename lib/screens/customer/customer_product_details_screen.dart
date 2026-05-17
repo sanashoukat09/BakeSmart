@@ -12,6 +12,7 @@ import '../../models/product_model.dart';
 import '../../models/cart_item_model.dart';
 import '../../models/review_model.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/wishlist_provider.dart';
 
 class CustomerProductDetailsScreen extends ConsumerStatefulWidget {
   final String productId;
@@ -112,6 +113,31 @@ class _CustomerProductDetailsScreenState extends ConsumerState<CustomerProductDe
                 expandedHeight: 350,
                 pinned: true,
                 actions: [
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final wishlist = ref.watch(wishlistProvider);
+                      final isFav = wishlist.contains(product.id);
+                      return IconButton(
+                        icon: Icon(
+                          isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                          color: isFav ? const Color(0xFFFF6B81) : Colors.white,
+                        ),
+                        onPressed: () {
+                          final added = ref.read(wishlistProvider.notifier).toggleWishlist(product.id);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                added ? '${product.name} added to wishlist ✓' : '${product.name} removed from wishlist ✓',
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              duration: const Duration(seconds: 1),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
                   IconButton(
                     icon: const Icon(Icons.share_outlined),
                     onPressed: () => ShareUtil.shareProduct(

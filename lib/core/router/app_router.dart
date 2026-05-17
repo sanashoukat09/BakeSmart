@@ -33,6 +33,8 @@ import '../../screens/customer/customer_order_details_screen.dart';
 import '../../screens/customer/submit_review_screen.dart';
 import '../../screens/customer/surplus_deals_screen.dart';
 import '../../screens/customer/customer_notifications_screen.dart';
+import '../../screens/customer/wishlist_screen.dart';
+import '../../screens/customer/category_products_screen.dart';
 
 // Route names
 class AppRoutes {
@@ -73,6 +75,8 @@ class AppRoutes {
   static const customerSubmitReview = '/customer/submit-review';
   static const customerSurplus = '/customer/surplus-deals';
   static const customerNotifications = '/customer/notifications';
+  static const customerWishlist = '/customer/wishlist';
+  static const customerCategoryProducts = '/customer/category-products';
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -218,6 +222,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.customerCart,
         builder: (context, state) => const CartScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.customerWishlist,
+        builder: (context, state) => const WishlistScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.customerCategoryProducts}/:category',
+        builder: (context, state) => CategoryProductsScreen(
+          category: state.pathParameters['category']!,
+        ),
       ),
       GoRoute(
         path: AppRoutes.customerCheckout,

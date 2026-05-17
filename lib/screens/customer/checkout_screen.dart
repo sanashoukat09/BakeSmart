@@ -10,6 +10,28 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import '../../core/utils/validation_util.dart';
 
+// ════════════════════════════════════════════════════════════════════════════
+//  DESIGN TOKENS
+// ════════════════════════════════════════════════════════════════════════════
+
+abstract class _T {
+  static const canvas    = Color(0xFFFFFDF8);
+  static const brown     = Color(0xFFB05E27);
+  static const surface   = Color(0xFFFFFFFF);
+  static const rimLight  = Color(0xFFF2EAE0);
+
+  static const ink       = Color(0xFF4A2B20);
+  static const inkMid    = Color(0xFF8C6D5F);
+  static const inkFaint  = Color(0xFFD6C8BE);
+
+  static const statusPink = Color(0xFFFF6B81);
+  static const statusRed   = Color(0xFFE74C3C);
+
+  static List<BoxShadow> shadowSm = [
+    BoxShadow(color: brown.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+  ];
+}
+
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
 
@@ -62,15 +84,41 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       initialDate: _deliveryDate,
       firstDate: DateTime.now().add(const Duration(days: 1)),
       lastDate: DateTime.now().add(const Duration(days: 30)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: _T.brown,
+              onPrimary: Colors.white,
+              onSurface: _T.ink,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null) {
       setState(() => _deliveryDate = picked);
     }
   }
 
-
   Future<void> _selectTime() async {
-    final picked = await showTimePicker(context: context, initialTime: _deliveryTime);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _deliveryTime,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: _T.brown,
+              onPrimary: Colors.white,
+              onSurface: _T.ink,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
     if (picked != null) setState(() => _deliveryTime = picked);
   }
 
@@ -173,57 +221,131 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     _prefillDeliveryDetails();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFCF9),
+      backgroundColor: _T.canvas,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        title: const Text('Checkout'),
+        backgroundColor: _T.canvas,
         elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: _T.ink),
+          onPressed: () => context.pop(),
+        ),
+        title: const Text(
+          'Checkout',
+          style: TextStyle(
+            color: _T.ink,
+            fontSize: 19,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Delivery Address', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 12),
+              // Section: Address
+              const Text(
+                'Delivery Address',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5, color: _T.ink),
+              ),
+              const SizedBox(height: 10),
               TextFormField(
                 controller: _addressController,
                 maxLines: 2,
+                cursorColor: _T.brown,
+                style: const TextStyle(color: _T.ink, fontWeight: FontWeight.w600, fontSize: 14.5),
                 decoration: InputDecoration(
                   hintText: 'Full address (House #, Street, Area)',
-                  fillColor: Colors.white,
+                  hintStyle: const TextStyle(color: _T.inkFaint, fontWeight: FontWeight.w500, fontSize: 13.5),
+                  fillColor: _T.surface,
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: _T.rimLight, width: 1.5),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: _T.rimLight, width: 1.5),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: _T.brown, width: 1.5),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 ),
-                validator: (v) => v!.isEmpty ? 'Required' : null,
+                validator: (v) => v!.isEmpty ? 'Address is required' : null,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               
-              const Text('Contact Phone', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 12),
+              // Section: Phone
+              const Text(
+                'Contact Phone',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5, color: _T.ink),
+              ),
+              const SizedBox(height: 10),
               TextFormField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
                 inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9+]'))],
+                cursorColor: _T.brown,
+                style: const TextStyle(color: _T.ink, fontWeight: FontWeight.w600, fontSize: 14.5),
                 decoration: InputDecoration(
                   hintText: '03xx xxxxxxx',
-                  fillColor: Colors.white,
+                  hintStyle: const TextStyle(color: _T.inkFaint, fontWeight: FontWeight.w500, fontSize: 13.5),
+                  fillColor: _T.surface,
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: _T.rimLight, width: 1.5),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: _T.rimLight, width: 1.5),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: _T.brown, width: 1.5),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 ),
                 validator: ValidationUtil.validatePhoneNumber,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
 
-              const Text('Delivery Schedule', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 12),
+              // Section: Schedule
+              const Text(
+                'Delivery Schedule',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5, color: _T.ink),
+              ),
+              const SizedBox(height: 10),
               Row(
                 children: [
                   Expanded(
                     child: InkWell(
                       onTap: _selectDate,
+                      borderRadius: BorderRadius.circular(16),
                       child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(12)),
-                        child: Text(DateFormat('MMM dd, yyyy').format(_deliveryDate)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        decoration: BoxDecoration(
+                          color: _T.surface,
+                          border: Border.all(color: _T.rimLight, width: 1.5),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: _T.shadowSm,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              DateFormat('MMM dd, yyyy').format(_deliveryDate),
+                              style: const TextStyle(color: _T.ink, fontWeight: FontWeight.w700, fontSize: 13.5),
+                            ),
+                            const Icon(Icons.calendar_month_rounded, color: _T.brown, size: 20),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -231,45 +353,83 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   Expanded(
                     child: InkWell(
                       onTap: _selectTime,
+                      borderRadius: BorderRadius.circular(16),
                       child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(12)),
-                        child: Text(_deliveryTime.format(context)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        decoration: BoxDecoration(
+                          color: _T.surface,
+                          border: Border.all(color: _T.rimLight, width: 1.5),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: _T.shadowSm,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              _deliveryTime.format(context),
+                              style: const TextStyle(color: _T.ink, fontWeight: FontWeight.w700, fontSize: 13.5),
+                            ),
+                            const Icon(Icons.access_time_rounded, color: _T.brown, size: 20),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
 
-              const Text('Payment Method', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 12),
+              // Section: Payment
+              const Text(
+                'Payment Method',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5, color: _T.ink),
+              ),
+              const SizedBox(height: 10),
               _PaymentOption(
                 label: 'Cash on Delivery',
                 value: 'COD',
                 groupValue: _paymentMethod,
                 onChanged: (v) => setState(() => _paymentMethod = v!),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
 
+              // Summary card
               Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(16)),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFAF0E6), // Elegant warm cream/ivory
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: _T.rimLight, width: 1.5),
+                ),
                 child: Column(
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Total Amount', style: TextStyle(fontWeight: FontWeight.bold)),
-                        Text('Rs. ${cartTotal.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Color(0xFFD97706))),
+                        const Text(
+                          'Total Amount', 
+                          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _T.ink),
+                        ),
+                        Text(
+                          'Rs. ${cartTotal.toStringAsFixed(0)}', 
+                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: _T.statusPink),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: _placeOrder,
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD97706), foregroundColor: Colors.white),
-                      child: const Text('Place Order'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _T.brown, 
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 54),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Place Order',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                      ),
                     ),
                   ],
                 ),
@@ -293,13 +453,31 @@ class _PaymentOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RadioListTile<String>(
-      title: Text(label),
-      value: value,
-      groupValue: groupValue,
-      onChanged: onChanged,
-      activeColor: const Color(0xFFD97706),
-      contentPadding: EdgeInsets.zero,
+    final bool isSelected = value == groupValue;
+    return Container(
+      decoration: BoxDecoration(
+        color: isSelected ? const Color(0xFFFFECE0) : _T.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isSelected ? _T.brown : _T.rimLight,
+          width: 1.5,
+        ),
+      ),
+      child: RadioListTile<String>(
+        title: Text(
+          label,
+          style: const TextStyle(
+            color: _T.ink,
+            fontWeight: FontWeight.w800,
+            fontSize: 14.5,
+          ),
+        ),
+        value: value,
+        groupValue: groupValue,
+        onChanged: onChanged,
+        activeColor: _T.brown,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+      ),
     );
   }
 }
