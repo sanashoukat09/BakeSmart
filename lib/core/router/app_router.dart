@@ -8,7 +8,7 @@ import '../../screens/auth/forgot_password_screen.dart';
 import '../../screens/baker/baker_onboarding_screen.dart';
 import '../../screens/baker/baker_dashboard.dart';
 import '../../screens/baker/baker_profile_screen.dart';
-import '../../screens/baker/ai_assistant_screen.dart';
+import '../../phototoinstruction/photo.dart';
 import '../../screens/baker/product_list_screen.dart';
 import '../../screens/baker/add_edit_product_screen.dart';
 import '../../screens/baker/inventory_screen.dart';
@@ -192,7 +192,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.bakerAiAssistant,
-        builder: (context, state) => const AiAssistantScreen(),
+        builder: (context, state) => const PhotoToInstructionScreen(),
       ),
       // Customer routes
       GoRoute(
@@ -282,6 +282,9 @@ class RouterNotifier extends ChangeNotifier {
   final Ref _ref;
 
   RouterNotifier(this._ref) {
+    // Reset splash timer to false on router initialization to guarantee splash is shown
+    _ref.read(splashMinTimeElapsedProvider.notifier).state = false;
+
     _ref.listen(firebaseAuthStateProvider, (_, __) => notifyListeners());
     _ref.listen(
       currentUserProvider.select((userAsync) {

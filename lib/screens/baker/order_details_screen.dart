@@ -94,20 +94,25 @@ class _OrderDetailsBody extends ConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Order #${order.id.substring(0, 8).toUpperCase()}',
-                      style: const TextStyle(color: _T.inkMid, fontSize: 12, fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      DateFormat('MMM dd, yyyy • hh:mm a').format(order.createdAt),
-                      style: const TextStyle(color: _T.brown, fontWeight: FontWeight.w800, fontSize: 15),
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Order #${order.id.substring(0, 8).toUpperCase()}',
+                        style: const TextStyle(color: _T.inkMid, fontSize: 12, fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        DateFormat('MMM dd, yyyy • hh:mm a').format(order.createdAt),
+                        style: const TextStyle(color: _T.brown, fontWeight: FontWeight.w800, fontSize: 15),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 12),
                 // Status Badge
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

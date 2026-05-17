@@ -37,6 +37,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   void initState() {
     super.initState();
 
+    // Reset splash timer to false on entry to guarantee minimum display duration
+    Future.microtask(() {
+      if (mounted) {
+        ref.read(splashMinTimeElapsedProvider.notifier).state = false;
+      }
+    });
+
     // ── Intro: one-shot entrance ─────────────────────────────────────────────
     _introController = AnimationController(
       vsync: this,
@@ -105,9 +112,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     });
 
     // ── Splash minimum display time ───────────────────────────────────────────
+    final splashTimerNotifier = ref.read(splashMinTimeElapsedProvider.notifier);
     Future.delayed(const Duration(milliseconds: 2800), () {
       if (mounted) {
-        ref.read(splashMinTimeElapsedProvider.notifier).state = true;
+        splashTimerNotifier.state = true;
       }
     });
   }

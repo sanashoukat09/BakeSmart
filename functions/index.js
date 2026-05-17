@@ -364,7 +364,7 @@ exports.onReviewCreatedUpdateBakerAnalytics = functions.firestore
 // ─────────────────────────────────────────────────────────────
 // Module 7 — Step 1: Photo-to-Instruction Assistant (Gemini 2.0 Flash)
 // ─────────────────────────────────────────────────────────────
-const GEMINI_API_KEY = 'AIzaSyACyy06R4AjDT8v8s11EQKHJoFcYh3bzlo';
+const GEMINI_API_KEY = '';
 const GEMINI_MODEL = 'gemini-2.0-flash';
 
 exports.analyzeCakeDesign = functions.https.onRequest(async (req, res) => {

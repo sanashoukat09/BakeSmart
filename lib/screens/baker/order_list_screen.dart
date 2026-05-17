@@ -184,9 +184,13 @@ class _OrderCard extends StatelessWidget {
                           children: [
                             const Icon(Icons.calendar_today_outlined, color: _T.inkMid, size: 12),
                             const SizedBox(width: 4),
-                            Text(
-                              'Delivery: ${DateFormat('MMM dd, hh:mm a').format(order.deliveryDate)}',
-                              style: const TextStyle(color: _T.inkMid, fontSize: 12, fontWeight: FontWeight.w600),
+                            Expanded(
+                              child: Text(
+                                'Delivery: ${DateFormat('MMM dd, hh:mm a').format(order.deliveryDate)}',
+                                style: const TextStyle(color: _T.inkMid, fontSize: 12, fontWeight: FontWeight.w600),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ],
                         ),
