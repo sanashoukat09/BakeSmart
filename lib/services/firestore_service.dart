@@ -627,7 +627,7 @@ class FirestoreService {
 
   // ─── REVIEW OPERATIONS ──────────────────────────────────────────
 
-  Future<void> saveReview(ReviewModel review) async {
+ Future<void> saveReview(ReviewModel review) async {
     final batch = _db.batch();
 
     final reviewRef =
@@ -639,25 +639,6 @@ class FirestoreService {
     batch.update(orderRef, {'isReviewed': true});
 
     await batch.commit();
-
-    final reviews = await _db
-        .collection(AppConstants.reviewsCollection)
-        .where('bakerId', isEqualTo: review.bakerId)
-        .get();
-
-    double totalRating = 0;
-    for (var doc in reviews.docs) {
-      totalRating += (doc.data()['rating'] ?? 0.0).toDouble();
-    }
-    final double avgRating = totalRating / reviews.docs.length;
-
-    await _db
-        .collection(AppConstants.usersCollection)
-        .doc(review.bakerId)
-        .update({
-      'rating': avgRating,
-      'totalReviews': reviews.docs.length,
-    });
   }
 
   Stream<List<ReviewModel>> streamBakerReviews(String bakerId) {
@@ -755,7 +736,6 @@ class FirestoreService {
       }
     });
   }
-
   // ─── NOTIFICATION OPERATIONS ──────────────────────────────────
 
   Future<void> addNotification(

@@ -73,10 +73,17 @@ class _SubmitReviewScreenState extends ConsumerState<SubmitReviewScreen> {
       createdAt: DateTime.now(),
     );
 
-    await ref.read(reviewNotifierProvider.notifier).submitReview(review);
-
-    if (mounted) {
-      context.pop();
+    try {
+      await ref.read(reviewNotifierProvider.notifier).submitReview(review);
+      if (mounted) {
+        context.pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not submit review: $e')),
+        );
+      }
     }
   }
 
