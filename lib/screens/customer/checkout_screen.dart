@@ -9,6 +9,8 @@ import '../../core/router/app_router.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import '../../core/utils/validation_util.dart';
+import '../../services/capacity_service.dart';
+import '../../widgets/customer/alternate_dates_modal.dart';
 
 // ════════════════════════════════════════════════════════════════════════════
 //  DESIGN TOKENS
@@ -49,6 +51,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   TimeOfDay _deliveryTime = const TimeOfDay(hour: 12, minute: 0);
   String _paymentMethod = 'COD';
   bool _didPrefill = false;
+  bool _isPlacing = false;
 
   void _prefillDeliveryDetails() {
     if (_didPrefill) return;
@@ -132,43 +135,91 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       return;
     }
     final total = ref.read(cartProvider.notifier).totalAmount;
+    final bakerId = cart.first.bakerId;
 
-    final deliveryDateTime = DateTime(
-      _deliveryDate.year,
-      _deliveryDate.month,
-      _deliveryDate.day,
-      _deliveryTime.hour,
-      _deliveryTime.minute,
-    );
-
-    final order = OrderModel(
-      id: const Uuid().v4(),
-      customerId: user.uid,
-      bakerId: cart.first.bakerId,
-      items: cart
-          .map((item) => OrderItem(
-                productId: item.productId,
-                productName: item.productName,
-                quantity: item.quantity,
-                price: item.price,
-                imageUrl: item.imageUrl,
-                selectedAddOns: item.selectedAddOns,
-                surplusId: item.surplusId,
-              ))
-          .toList(),
-      totalAmount: total,
-      status: 'placed',
-      createdAt: DateTime.now(),
-      deliveryDate: deliveryDateTime,
-      deliveryAddress: _addressController.text.trim(),
-      customerName: user.displayName ?? 'Customer',
-      customerPhone: _phoneController.text.trim(),
-      customerNote: _noteController.text.trim(),
-      referencePhotos: cart.expand((item) => item.referencePhotos).toList(),
-      paymentMethod: _paymentMethod,
-    );
+    setState(() => _isPlacing = true);
 
     try {
+      // Check baker capacity
+      final capacityService = CapacityService();
+      final capacityInfo = await capacityService.checkCapacity(
+        bakerId: bakerId,
+        deliveryDate: _deliveryDate,
+      );
+
+      DateTime finalDeliveryDate = _deliveryDate;
+
+      // If baker is at 70% or more capacity, show alternate dates
+      if (capacityInfo['percentFull'] >= 70) {
+        setState(() => _isPlacing = false);
+
+        // Get alternate dates
+        final alternateDates = await capacityService.getAlternateDates(
+          bakerId: bakerId,
+          requestedDate: _deliveryDate,
+        );
+
+        // Show modal
+        if (!mounted) return;
+        final selectedDate = await showModalBottomSheet<DateTime?>(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (context) => AlternateDatesModal(
+            requestedDate: _deliveryDate,
+            alternateDates: alternateDates,
+            capacityInfo: capacityInfo,
+            onDateSelected: (date) {
+              Navigator.pop(context, date);
+            },
+          ),
+        );
+
+        if (selectedDate != null) {
+          finalDeliveryDate = selectedDate;
+          setState(() {
+            _deliveryDate = selectedDate;
+          });
+        }
+
+        setState(() => _isPlacing = true);
+      }
+
+      final deliveryDateTime = DateTime(
+        finalDeliveryDate.year,
+        finalDeliveryDate.month,
+        finalDeliveryDate.day,
+        _deliveryTime.hour,
+        _deliveryTime.minute,
+      );
+
+      final order = OrderModel(
+        id: const Uuid().v4(),
+        customerId: user.uid,
+        bakerId: bakerId,
+        items: cart
+            .map((item) => OrderItem(
+                  productId: item.productId,
+                  productName: item.productName,
+                  quantity: item.quantity,
+                  price: item.price,
+                  imageUrl: item.imageUrl,
+                  selectedAddOns: item.selectedAddOns,
+                  surplusId: item.surplusId,
+                ))
+            .toList(),
+        totalAmount: total,
+        status: 'placed',
+        createdAt: DateTime.now(),
+        deliveryDate: deliveryDateTime,
+        deliveryAddress: _addressController.text.trim(),
+        customerName: user.displayName ?? 'Customer',
+        customerPhone: _phoneController.text.trim(),
+        customerNote: _noteController.text.trim(),
+        referencePhotos: cart.expand((item) => item.referencePhotos).toList(),
+        paymentMethod: _paymentMethod,
+      );
+
       await ref.read(firestoreServiceProvider).saveOrder(order);
       await _saveDeliveryDetails(user.uid);
 
@@ -179,6 +230,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString())),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _isPlacing = false);
+      }
     }
   }
 
@@ -418,7 +473,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
-                      onPressed: _placeOrder,
+                      onPressed: _isPlacing ? null : _placeOrder,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _T.brown, 
                         foregroundColor: Colors.white,
@@ -426,10 +481,19 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         elevation: 0,
                       ),
-                      child: const Text(
-                        'Place Order',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-                      ),
+                      child: _isPlacing
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'Place Order',
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                            ),
                     ),
                   ],
                 ),

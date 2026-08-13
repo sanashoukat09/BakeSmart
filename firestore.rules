@@ -59,9 +59,7 @@ service cloud.firestore {
     }
 
     match /orders/{orderId} {
-      allow read: if isAuthenticated()
-        && (request.auth.uid == resource.data.customerId
-            || request.auth.uid == resource.data.bakerId);
+      allow read: if isAuthenticated();
 
       // Customers may create orders only for themselves.
       allow create: if canWrite()

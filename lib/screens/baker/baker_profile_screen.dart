@@ -53,6 +53,7 @@ class _BakerProfileScreenState extends ConsumerState<BakerProfileScreen> {
   final _locationController = TextEditingController();
   final _bioController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _capacityController = TextEditingController();
   bool _isEditing = false;
   bool _isSaving = false;
   final _formKey = GlobalKey<FormState>();
@@ -74,6 +75,7 @@ class _BakerProfileScreenState extends ConsumerState<BakerProfileScreen> {
     _locationController.dispose();
     _bioController.dispose();
     _phoneController.dispose();
+    _capacityController.dispose();
     super.dispose();
   }
 
@@ -83,6 +85,7 @@ class _BakerProfileScreenState extends ConsumerState<BakerProfileScreen> {
       _locationController.text = user.location ?? '';
       _bioController.text = user.bio ?? '';
       _phoneController.text = user.contactPhone ?? '';
+      _capacityController.text = (user.dailyOrderCapacity).toString();
       _notificationsEnabled = user.notificationsEnabled;
       _newOrderNotif = user.newOrderNotif;
       _lowStockNotif = user.lowStockNotif;
@@ -102,6 +105,7 @@ class _BakerProfileScreenState extends ConsumerState<BakerProfileScreen> {
       'location': _locationController.text.trim(),
       'bio': _bioController.text.trim(),
       'contactPhone': _phoneController.text.trim(),
+      'dailyOrderCapacity': int.tryParse(_capacityController.text.trim()) ?? 10,
       'specialties': _selectedSpecialties,
     });
     if (mounted) {
@@ -442,6 +446,20 @@ class _BakerProfileScreenState extends ConsumerState<BakerProfileScreen> {
                 icon: Icons.phone_outlined,
                 keyboardType: TextInputType.phone,
                 validator: ValidationUtil.validatePhoneNumber,
+              ),
+              const SizedBox(height: 12),
+              _ProfileField(
+                label: 'Daily Order Capacity',
+                controller: _capacityController,
+                isEditing: _isEditing,
+                icon: Icons.event_available_rounded,
+                keyboardType: TextInputType.number,
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Capacity is required';
+                  final n = int.tryParse(v);
+                  if (n == null || n <= 0) return 'Must be greater than 0';
+                  return null;
+                },
               ),
               const SizedBox(height: 12),
               _ProfileField(
@@ -823,7 +841,9 @@ class _ProfileField extends StatelessWidget {
         validator: validator,
         inputFormatters: keyboardType == TextInputType.phone
             ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9+]'))]
-            : null,
+            : keyboardType == TextInputType.number
+                ? [FilteringTextInputFormatter.digitsOnly]
+                : null,
         style: const TextStyle(color: _T.ink, fontSize: 14, fontWeight: FontWeight.w700),
         decoration: InputDecoration(
           labelText: label,
