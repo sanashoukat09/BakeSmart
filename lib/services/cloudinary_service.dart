@@ -11,7 +11,7 @@ class CloudinaryService {
     String? folder,
     void Function(double progress)? onProgress,
   }) async {
-    final uri = Uri.parse(cloudinaryBaseUrl);
+    final uri = Uri.parse(cloudinaryBaseUrl());
 
     final request = http.MultipartRequest('POST', uri);
 

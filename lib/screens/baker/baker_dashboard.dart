@@ -208,6 +208,47 @@ class _DashboardBody extends ConsumerWidget {
               _StorefrontCard(user: user),
               const SizedBox(height: 28),
 
+              // ── Delivery Calendar ────────────────────────────────────────────
+              GestureDetector(
+                onTap: () => context.push('/baker/calendar'),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF8B5CF6), Color(0xFF6366F1)],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.calendar_month, color: Colors.white, size: 28),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Delivery Calendar',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              'View monthly schedule',
+                              style: TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 28),
+
               // ── Recent orders ────────────────────────────────────────────
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

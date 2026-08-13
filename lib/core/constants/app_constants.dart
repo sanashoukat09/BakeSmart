@@ -1,9 +1,11 @@
 // ============================================================
-// CLOUDINARY CONFIGURATION
+// CLOUDINARY CONFIGURATION (SECURE)
 // ============================================================
-const String cloudinaryCloudName = 'dkhfagiw6';
-const String cloudinaryUploadPreset = 'bakesmart_preset';
-const String cloudinaryBaseUrl =
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+String get cloudinaryCloudName => dotenv.env['CLOUDINARY_CLOUD_NAME']!;
+String get cloudinaryUploadPreset => dotenv.env['CLOUDINARY_UPLOAD_PRESET']!;
+String cloudinaryBaseUrl() =>
     'https://api.cloudinary.com/v1_1/$cloudinaryCloudName/image/upload';
 
 // ============================================================
@@ -79,6 +81,7 @@ class AppConstants {
     'Breads',
     'Macarons',
   ];
+
   // Product Constraints
   static const double minProductPrice = 20.0;
   static const double maxProductPrice = 250000.0;

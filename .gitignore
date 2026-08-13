@@ -94,3 +94,9 @@ node_modules/
 
 .env
 .env*
+
+# Audit Files
+audit_action_items
+code_audit_report
+AUDIT_ACTION_ITEMS.md
+CODE_AUDIT_REPORT.md

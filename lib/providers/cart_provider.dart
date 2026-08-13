@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/cart_item_model.dart';
 import '../models/product_model.dart';
+import '../models/order_model.dart';
 
 final cartProvider = StateNotifierProvider<CartNotifier, List<CartItemModel>>((ref) {
   return CartNotifier();
@@ -131,6 +132,29 @@ class CartNotifier extends StateNotifier<List<CartItemModel>> {
 
   void clearCart() {
     state = [];
+    _saveCart();
+  }
+
+  /// Reorder: Clear cart and add all items from a previous order
+  void reorderFromHistory(OrderModel order) {
+    // Clear current cart
+    state = [];
+
+    // Convert order items to cart items
+    final cartItems = order.items.map((orderItem) {
+      return CartItemModel(
+        productId: orderItem.productId,
+        bakerId: order.bakerId,
+        productName: orderItem.productName,
+        price: orderItem.price,
+        quantity: orderItem.quantity,
+        imageUrl: orderItem.imageUrl,
+        selectedAddOns: orderItem.selectedAddOns,
+        surplusId: orderItem.surplusId,
+      );
+    }).toList();
+
+    state = cartItems;
     _saveCart();
   }
 

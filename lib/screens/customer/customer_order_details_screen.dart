@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/customer_order_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/cart_provider.dart';
 import '../../models/order_model.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/router/app_router.dart';
@@ -149,6 +150,29 @@ class _OrderDetailsBodyState extends ConsumerState<_OrderDetailsBody> {
     } finally {
       if (mounted) setState(() => _isCancelling = false);
     }
+  }
+
+  void _handleReorder(BuildContext context, WidgetRef ref, OrderModel order) {
+    // Clear and populate cart with order items
+    ref.read(cartProvider.notifier).reorderFromHistory(order);
+
+    // Show confirmation
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${order.items.length} items added to cart'),
+        backgroundColor: const Color(0xFF10B981),
+        action: SnackBarAction(
+          label: 'CHECKOUT',
+          textColor: Colors.white,
+          onPressed: () {
+            context.push(AppRoutes.customerCheckout);
+          },
+        ),
+      ),
+    );
+
+    // Navigate to cart
+    context.push(AppRoutes.customerCart);
   }
 
   @override
@@ -327,6 +351,35 @@ class _OrderDetailsBodyState extends ConsumerState<_OrderDetailsBody> {
                     SizedBox(width: 8),
                     Text('Order Reviewed ✓', style: TextStyle(color: _T.statusGreen, fontWeight: FontWeight.w800, fontSize: 13.5)),
                   ],
+                ),
+              ),
+            ),
+          
+          if (widget.order.status == AppConstants.orderDelivered ||
+              widget.order.status == AppConstants.orderCancelled ||
+              widget.order.status == AppConstants.orderRejected)
+            Padding(
+              padding: const EdgeInsets.only(top: 16.0),
+              child: SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: () => _handleReorder(context, ref, widget.order),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFB05E27),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: const Icon(Icons.refresh, color: Colors.white),
+                  label: const Text(
+                    'Reorder',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
             ),

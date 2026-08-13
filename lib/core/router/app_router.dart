@@ -7,6 +7,7 @@ import '../../screens/auth/register_screen.dart';
 import '../../screens/auth/forgot_password_screen.dart';
 import '../../screens/baker/baker_onboarding_screen.dart';
 import '../../screens/baker/baker_dashboard.dart';
+import '../../screens/baker/baker_delivery_calendar_screen.dart';
 import '../../screens/baker/baker_profile_screen.dart';
 import '../../phototoinstruction/photo.dart';
 import '../../screens/baker/product_list_screen.dart';
@@ -131,6 +132,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               FadeTransition(opacity: animation, child: child),
           transitionDuration: const Duration(milliseconds: 600),
         ),
+      ),
+      GoRoute(
+        path: '/baker/calendar',
+        builder: (context, state) => const BakerDeliveryCalendarScreen(),
       ),
       GoRoute(
         path: AppRoutes.bakerProfile,
