@@ -80,17 +80,40 @@ class FirestoreService {
     return streamUser(bakerId);
   }
 
-  Future<void> updateNotificationPrefs(String uid,
-      {required bool enabled,
-      required bool newOrder,
-      required bool lowStock,
-      required bool surplus}) async {
-    await _db.collection(AppConstants.usersCollection).doc(uid).update({
-      'notificationsEnabled': enabled,
-      'newOrderNotif': newOrder,
-      'lowStockNotif': lowStock,
-      'surplusNotif': surplus,
-    });
+  Future<void> updateNotificationPrefs(
+    String uid, {
+    required bool enabled,
+    bool? newOrder,
+    bool? lowStock,
+    bool? surplus,
+    // NEW CUSTOMER PARAMETERS
+    bool? orderUpdates,
+    bool? orderReminders,
+    bool? newProducts,
+    bool? promotions,
+  }) async {
+    try {
+      final Map<String, dynamic> data = {
+        'notificationsEnabled': enabled,
+      };
+
+      // Baker notifications
+      if (newOrder != null) data['newOrderNotif'] = newOrder;
+      if (lowStock != null) data['lowStockNotif'] = lowStock;
+      if (surplus != null) data['surplusNotif'] = surplus;
+
+      // NEW: Customer notifications
+      if (orderUpdates != null) data['orderUpdatesNotif'] = orderUpdates;
+      if (orderReminders != null) data['orderRemindersNotif'] = orderReminders;
+      if (newProducts != null) data['newProductsNotif'] = newProducts;
+      if (promotions != null) data['promotionsNotif'] = promotions;
+
+      await _db.collection(AppConstants.usersCollection).doc(uid).update(data);
+      print('Notification preferences updated');
+    } catch (e) {
+      print('Error updating notification preferences: $e');
+      rethrow;
+    }
   }
 
   Future<void> addPortfolioImage(String uid, String imageUrl) async {

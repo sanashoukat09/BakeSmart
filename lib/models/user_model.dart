@@ -26,6 +26,12 @@ class UserModel {
   final bool lowStockNotif;
   final bool surplusNotif;
 
+  // NEW CUSTOMER NOTIFICATION FIELDS
+  final bool? orderUpdatesNotif;
+  final bool? orderRemindersNotif;
+  final bool? newProductsNotif;
+  final bool? promotionsNotif;
+
   // Customer-specific fields
   final List<String> dietaryPreferences;
   final List<String> allergens;
@@ -59,6 +65,11 @@ class UserModel {
     this.dietaryPreferences = const [],
     this.allergens = const [],
     this.savedAddresses = const [],
+    // NEW CUSTOMER NOTIFICATION FIELDS
+    this.orderUpdatesNotif = true,
+    this.orderRemindersNotif = true,
+    this.newProductsNotif = false,
+    this.promotionsNotif = false,
   });
 
   bool get isBaker => role == 'baker';
@@ -95,6 +106,11 @@ class UserModel {
       allergens: List<String>.from(data['allergens'] ?? []),
       savedAddresses:
           List<Map<String, dynamic>>.from(data['savedAddresses'] ?? []),
+      // NEW FIELDS
+      orderUpdatesNotif: data['orderUpdatesNotif'],
+      orderRemindersNotif: data['orderRemindersNotif'],
+      newProductsNotif: data['newProductsNotif'],
+      promotionsNotif: data['promotionsNotif'],
     );
   }
 
@@ -126,6 +142,11 @@ class UserModel {
       'dietaryPreferences': dietaryPreferences,
       'allergens': allergens,
       'savedAddresses': savedAddresses,
+      // NEW FIELDS
+      if (orderUpdatesNotif != null) 'orderUpdatesNotif': orderUpdatesNotif,
+      if (orderRemindersNotif != null) 'orderRemindersNotif': orderRemindersNotif,
+      if (newProductsNotif != null) 'newProductsNotif': newProductsNotif,
+      if (promotionsNotif != null) 'promotionsNotif': promotionsNotif,
     };
   }
 
@@ -151,6 +172,11 @@ class UserModel {
     List<String>? dietaryPreferences,
     List<String>? allergens,
     List<Map<String, dynamic>>? savedAddresses,
+    // NEW CUSTOMER NOTIFICATION PARAMETERS
+    bool? orderUpdatesNotif,
+    bool? orderRemindersNotif,
+    bool? newProductsNotif,
+    bool? promotionsNotif,
   }) {
     return UserModel(
       uid: uid,
@@ -178,6 +204,11 @@ class UserModel {
       dietaryPreferences: dietaryPreferences ?? this.dietaryPreferences,
       allergens: allergens ?? this.allergens,
       savedAddresses: savedAddresses ?? this.savedAddresses,
+      // NEW CUSTOMER FIELDS
+      orderUpdatesNotif: orderUpdatesNotif ?? this.orderUpdatesNotif,
+      orderRemindersNotif: orderRemindersNotif ?? this.orderRemindersNotif,
+      newProductsNotif: newProductsNotif ?? this.newProductsNotif,
+      promotionsNotif: promotionsNotif ?? this.promotionsNotif,
     );
   }
 }

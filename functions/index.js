@@ -4,13 +4,43 @@ const admin = require('firebase-admin');
 admin.initializeApp();
 const db = admin.firestore();
 
-async function sendToUser(userId, title, body, data = {}) {
+async function sendToUser(userId, title, body, data = {}, notificationType = 'general') {
   if (!userId) return;
   const userDoc = await db.collection('users').doc(userId).get();
   if (!userDoc.exists) return;
 
   const user = userDoc.data();
-  if (user.notificationsEnabled === false || !user.fcmToken) return;
+
+  // Check master toggle
+  if (user.notificationsEnabled === false) return;
+
+  // Check specific notification type preferences
+  switch (notificationType) {
+    case 'order_status':
+      if (user.orderUpdatesNotif === false) return;
+      break;
+    case 'order_reminder':
+      if (user.orderRemindersNotif === false) return;
+      break;
+    case 'surplus_deal':
+      if (user.surplusNotif === false) return;
+      break;
+    case 'new_product':
+      if (user.newProductsNotif === false) return;
+      break;
+    case 'promotion':
+      if (user.promotionsNotif === false) return;
+      break;
+    case 'new_order':
+      if (user.newOrderNotif === false) return;
+      break;
+    case 'low_stock':
+      if (user.lowStockNotif === false) return;
+      break;
+  }
+
+  // Check FCM token
+  if (!user.fcmToken) return;
 
   try {
     await admin.messaging().send({
@@ -38,7 +68,8 @@ exports.onOrderPlaced = functions.firestore
       order.bakerId,
       'New order received',
       `${order.customerName || 'A customer'} placed an order for Rs. ${order.totalAmount || 0}.`,
-      { type: 'new_order', orderId: context.params.orderId }
+      { type: 'new_order', orderId: context.params.orderId },
+      'new_order'
     );
     console.log(`Baker notified for order ${context.params.orderId}`);
   });
@@ -54,7 +85,8 @@ exports.onOrderStatusChanged = functions.firestore
       after.customerId,
       'Order status updated',
       `Your order is now ${after.status}.`,
-      { type: 'order_status', orderId: context.params.orderId, status: after.status }
+      { type: 'order_status', orderId: context.params.orderId, status: after.status },
+      'order_status'
     );
   });
 
@@ -74,7 +106,8 @@ exports.onIngredientUpdated = functions.firestore
         after.bakerId,
         'Low stock alert',
         `${after.name || 'An ingredient'} is running low.`,
-        { type: 'low_stock', ingredientId: context.params.ingredientId }
+        { type: 'low_stock', ingredientId: context.params.ingredientId },
+        'low_stock'
       );
     }
 

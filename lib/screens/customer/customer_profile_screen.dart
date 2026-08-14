@@ -119,10 +119,28 @@ class _CustomerProfileScreenState
     });
   }
 
-  Future<void> _updateNotifPref(String uid, String field, bool value) async {
-    await ref.read(firestoreServiceProvider).updateUser(uid, {
-      field: value,
-    });
+  Future<void> _updateNotifPref(String uid, String key, bool value) async {
+    try {
+      await ref.read(firestoreServiceProvider).updateUser(uid, {key: value});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Preference saved'),
+            backgroundColor: Color(0xFF52B788),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _saveProfile(String uid) async {
@@ -650,10 +668,48 @@ class _CustomerProfileScreenState
                     ),
                     const Divider(color: _T.rimLight),
                     _notifSwitch(
+                      'Order Updates',
+                      'When baker accepts, prepares, or delivers your order',
+                      user.orderUpdatesNotif ?? true,
+                      user.notificationsEnabled
+                          ? (v) => _updateNotifPref(user.uid, 'orderUpdatesNotif', v)
+                          : null,
+                    ),
+                    const Divider(color: _T.rimLight),
+                    _notifSwitch(
+                      'Order Reminders',
+                      'Delivery reminders and pickup notifications',
+                      user.orderRemindersNotif ?? true,
+                      user.notificationsEnabled
+                          ? (v) => _updateNotifPref(user.uid, 'orderRemindersNotif', v)
+                          : null,
+                    ),
+                    const Divider(color: _T.rimLight),
+                    _notifSwitch(
                       'Special Offers',
-                      'Get alerts for surplus deals and discounts',
+                      'Surplus deals and discount alerts',
                       user.surplusNotif,
-                      (v) => _updateNotifPref(user.uid, 'surplusNotif', v),
+                      user.notificationsEnabled
+                          ? (v) => _updateNotifPref(user.uid, 'surplusNotif', v)
+                          : null,
+                    ),
+                    const Divider(color: _T.rimLight),
+                    _notifSwitch(
+                      'New Products',
+                      'When your favorite bakers add new items',
+                      user.newProductsNotif ?? false,
+                      user.notificationsEnabled
+                          ? (v) => _updateNotifPref(user.uid, 'newProductsNotif', v)
+                          : null,
+                    ),
+                    const Divider(color: _T.rimLight),
+                    _notifSwitch(
+                      'Promotions',
+                      'Marketing messages and special campaigns',
+                      user.promotionsNotif ?? false,
+                      user.notificationsEnabled
+                          ? (v) => _updateNotifPref(user.uid, 'promotionsNotif', v)
+                          : null,
                     ),
                   ],
                 ),
@@ -757,7 +813,7 @@ class _CustomerProfileScreenState
     );
   }
 
-  Widget _notifSwitch(String title, String subtitle, bool value, ValueChanged<bool> onChanged) {
+  Widget _notifSwitch(String title, String subtitle, bool value, ValueChanged<bool>? onChanged) {
     return SwitchListTile(
       title: Text(title, style: const TextStyle(color: _T.ink, fontSize: 14, fontWeight: FontWeight.w700)),
       subtitle: Text(subtitle, style: const TextStyle(color: _T.inkMid, fontSize: 12, fontWeight: FontWeight.w500)),
