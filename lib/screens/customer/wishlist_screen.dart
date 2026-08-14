@@ -117,7 +117,7 @@ class WishlistScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator(color: _T.brown)),
         error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: _T.statusRed))),
       ),
-      bottomNavigationBar: const CustomerBottomNav(currentIndex: 1),
+      bottomNavigationBar: const CustomerBottomNav(currentIndex: 2),
     );
   }
 }

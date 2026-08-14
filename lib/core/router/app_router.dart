@@ -23,6 +23,7 @@ import '../../screens/splash_screen.dart';
 import '../../providers/splash_provider.dart';
 import '../../screens/customer/customer_onboarding_screen.dart';
 import '../../screens/customer/customer_home_screen.dart';
+import '../../screens/customer/baker_search_screen.dart';
 import '../../screens/customer/customer_profile_screen.dart';
 import '../../screens/customer/baker_storefront_screen.dart';
 import '../../screens/customer/customer_product_details_screen.dart';
@@ -65,6 +66,7 @@ class AppRoutes {
   // Customer routes
   static const customerOnboarding = '/customer/onboarding';
   static const customerHome = '/customer/home';
+  static const customerDiscover = '/customer/discover';
   static const customerProfile = '/customer/profile';
   static const customerStore = '/customer/store';
   static const customerProduct = '/customer/product';
@@ -207,6 +209,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.customerHome,
         builder: (context, state) => const CustomerHomeScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.customerDiscover,
+        builder: (context, state) => const BakerSearchScreen(),
       ),
       GoRoute(
         path: AppRoutes.customerProfile,

@@ -22,13 +22,16 @@ class CustomerBottomNav extends StatelessWidget {
         context.go(AppRoutes.customerHome);
         break;
       case 1:
-        context.go(AppRoutes.customerWishlist);
+        context.go('/customer/discover');
         break;
       case 2:
-        context.go(AppRoutes.customerProfile);
+        context.go(AppRoutes.customerWishlist);
         break;
       case 3:
         context.go(AppRoutes.customerCart);
+        break;
+      case 4:
+        context.go(AppRoutes.customerProfile);
         break;
     }
   }
@@ -61,19 +64,24 @@ class CustomerBottomNav extends StatelessWidget {
             label: 'Home',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.explore_outlined),
+            activeIcon: Icon(Icons.explore_rounded),
+            label: 'Discover',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.favorite_border_rounded),
             activeIcon: Icon(Icons.favorite_rounded),
             label: 'Wishlist',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline_rounded),
-            activeIcon: Icon(Icons.person_rounded),
-            label: 'Profile',
-          ),
-          BottomNavigationBarItem(
             icon: Icon(Icons.shopping_bag_outlined),
             activeIcon: Icon(Icons.shopping_bag_rounded),
             label: 'Cart',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline_rounded),
+            activeIcon: Icon(Icons.person_rounded),
+            label: 'Profile',
           ),
         ],
       ),

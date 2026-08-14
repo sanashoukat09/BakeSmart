@@ -691,7 +691,7 @@ class _CustomerProfileScreenState
           ],
         ),
       ),
-      bottomNavigationBar: const CustomerBottomNav(currentIndex: 2),
+      bottomNavigationBar: const CustomerBottomNav(currentIndex: 4),
     );
   }
 
