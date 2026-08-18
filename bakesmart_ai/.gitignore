@@ -17,3 +17,5 @@ data/processed/*
 !data/processed/v1/*.json
 models/*
 !models/.gitkeep
+!models/bootstrap_v1/
+!models/bootstrap_v1/*

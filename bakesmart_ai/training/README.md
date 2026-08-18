@@ -28,15 +28,41 @@ Preparation performs the following steps:
 6. writes checksums, feature order, label mappings, review status, and training
    gate decisions to JSON reports.
 
-Model training is intentionally not implemented yet. The current 2,400 labels
-are synthetic bootstrap labels and `data/manifest.json` keeps
-`training_approved` set to `false` until independent expert review is complete.
+Phase 5 implements deterministic local model training:
+
+```powershell
+python -m training.train_model --allow-synthetic-bootstrap --evaluate-locked-test
+```
+
+The trainer uses NumPy only. It initializes every model parameter from the
+configured random seed, trains four recommendation heads over shared hidden
+layers, selects the checkpoint using validation loss, and evaluates the locked
+test split only when `--evaluate-locked-test` is explicitly supplied. It does
+not download weights or call an inference API.
+
+The four heads recommend:
+
+- cake or baked-item style;
+- decoration bundle;
+- layout and placement strategy; and
+- normalized event theme.
+
+Together, those outputs form one scene specification: the cake/baked item,
+table, backdrop, decorations and placement must be rendered together in a
+single 3D result in a later integration phase. Phase 5 predicts the scene
+ingredients; it does not yet generate the 3D geometry or render it.
+
+The generated files in `models/bootstrap_v1/` include pickle-free model
+weights, model and data metadata, per-head validation/test metrics, and the
+training history. The current 2,400 labels are synthetic bootstrap labels and
+`data/manifest.json` keeps `training_approved` set to `false` until independent
+expert review is complete. Reported Phase 5 scores measure recovery of those
+synthetic rules, not real-world recommendation quality.
 
 A later approved phase will add:
 
-- preprocessing fitted only on the locked training split;
-- a recommendation model initialized from random weights;
-- deterministic training and checkpointing;
-- separate validation and untouched test evaluation;
-- metrics split by synthetic and human-labelled data; and
-- model artifact export for the local FastAPI service.
+- raw request preprocessing for local inference;
+- the FastAPI recommendation-service adapter;
+- budget-aware scene itemization and asset lookup;
+- one combined interactive 3D scene with cake and decorations; and
+- a 2D concept-preview fallback for unsupported devices.

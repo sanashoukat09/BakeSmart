@@ -1,0 +1,689 @@
+{
+  "evaluation_order": [
+    "validation",
+    "locked_test_after_model_selection"
+  ],
+  "limitations": [
+    "All current labels are synthetic rule-generated silver labels.",
+    "Metrics measure recovery of bootstrap rules, not customer satisfaction.",
+    "No real-world independently labelled test set is available yet.",
+    "Cake serving, pricing, safety, and placement require professional review."
+  ],
+  "model_name": "BakeSmartMultiTaskMLP",
+  "model_version": "bootstrap-v1",
+  "test": {
+    "mean_accuracy": 0.7277777777777779,
+    "records": 360,
+    "split": "test",
+    "targets": {
+      "target__cake": {
+        "accuracy": 0.6666666666666666,
+        "class_order": [
+          "single_tier_round",
+          "single_tier_square",
+          "three_tier_luxury",
+          "two_tier_floral",
+          "two_tier_round"
+        ],
+        "confusion_matrix": [
+          [
+            62,
+            10,
+            0,
+            0,
+            0
+          ],
+          [
+            17,
+            38,
+            0,
+            0,
+            3
+          ],
+          [
+            0,
+            0,
+            65,
+            8,
+            0
+          ],
+          [
+            0,
+            1,
+            15,
+            33,
+            28
+          ],
+          [
+            0,
+            9,
+            1,
+            28,
+            42
+          ]
+        ],
+        "macro_f1": 0.6643189426585531,
+        "macro_precision": 0.6592110022992986,
+        "macro_recall": 0.6720531824759505,
+        "per_class": {
+          "single_tier_round": {
+            "f1": 0.8211920529801324,
+            "precision": 0.7848101265822784,
+            "recall": 0.8611111111111112,
+            "support": 72
+          },
+          "single_tier_square": {
+            "f1": 0.6551724137931034,
+            "precision": 0.6551724137931034,
+            "recall": 0.6551724137931034,
+            "support": 58
+          },
+          "three_tier_luxury": {
+            "f1": 0.8441558441558442,
+            "precision": 0.8024691358024691,
+            "recall": 0.8904109589041096,
+            "support": 73
+          },
+          "two_tier_floral": {
+            "f1": 0.452054794520548,
+            "precision": 0.4782608695652174,
+            "recall": 0.42857142857142855,
+            "support": 77
+          },
+          "two_tier_round": {
+            "f1": 0.5490196078431373,
+            "precision": 0.5753424657534246,
+            "recall": 0.525,
+            "support": 80
+          }
+        }
+      },
+      "target__decor": {
+        "accuracy": 0.6083333333333333,
+        "class_order": [
+          "balloon_setup",
+          "flower_wall",
+          "luxury_stage",
+          "minimal_backdrop",
+          "rustic_wood_setup"
+        ],
+        "confusion_matrix": [
+          [
+            29,
+            4,
+            0,
+            20,
+            18
+          ],
+          [
+            4,
+            42,
+            2,
+            1,
+            21
+          ],
+          [
+            0,
+            1,
+            73,
+            0,
+            0
+          ],
+          [
+            30,
+            1,
+            0,
+            46,
+            6
+          ],
+          [
+            9,
+            22,
+            0,
+            2,
+            29
+          ]
+        ],
+        "macro_f1": 0.6034387847073034,
+        "macro_precision": 0.606933933933934,
+        "macro_recall": 0.6033791987331177,
+        "per_class": {
+          "balloon_setup": {
+            "f1": 0.4055944055944056,
+            "precision": 0.4027777777777778,
+            "recall": 0.4084507042253521,
+            "support": 71
+          },
+          "flower_wall": {
+            "f1": 0.6,
+            "precision": 0.6,
+            "recall": 0.6,
+            "support": 70
+          },
+          "luxury_stage": {
+            "f1": 0.9798657718120806,
+            "precision": 0.9733333333333334,
+            "recall": 0.9864864864864865,
+            "support": 74
+          },
+          "minimal_backdrop": {
+            "f1": 0.6052631578947367,
+            "precision": 0.6666666666666666,
+            "recall": 0.5542168674698795,
+            "support": 83
+          },
+          "rustic_wood_setup": {
+            "f1": 0.42647058823529405,
+            "precision": 0.3918918918918919,
+            "recall": 0.46774193548387094,
+            "support": 62
+          }
+        }
+      },
+      "target__layout": {
+        "accuracy": 0.9638888888888889,
+        "class_order": [
+          "cake_and_dessert_table",
+          "full_stage_setup",
+          "single_cake_table",
+          "two_side_tables"
+        ],
+        "confusion_matrix": [
+          [
+            56,
+            0,
+            2,
+            2
+          ],
+          [
+            1,
+            89,
+            0,
+            6
+          ],
+          [
+            0,
+            0,
+            87,
+            0
+          ],
+          [
+            1,
+            1,
+            0,
+            115
+          ]
+        ],
+        "macro_f1": 0.9632778716636017,
+        "macro_precision": 0.966723392437334,
+        "macro_recall": 0.9608306623931624,
+        "per_class": {
+          "cake_and_dessert_table": {
+            "f1": 0.9491525423728815,
+            "precision": 0.9655172413793104,
+            "recall": 0.9333333333333333,
+            "support": 60
+          },
+          "full_stage_setup": {
+            "f1": 0.9569892473118279,
+            "precision": 0.9888888888888889,
+            "recall": 0.9270833333333334,
+            "support": 96
+          },
+          "single_cake_table": {
+            "f1": 0.9886363636363636,
+            "precision": 0.9775280898876404,
+            "recall": 1.0,
+            "support": 87
+          },
+          "two_side_tables": {
+            "f1": 0.9583333333333333,
+            "precision": 0.9349593495934959,
+            "recall": 0.9829059829059829,
+            "support": 117
+          }
+        }
+      },
+      "target__theme": {
+        "accuracy": 0.6722222222222223,
+        "class_order": [
+          "colourful_cartoon",
+          "elegant_gold",
+          "modern_minimal",
+          "pastel_floral",
+          "rustic_natural",
+          "traditional_luxury"
+        ],
+        "confusion_matrix": [
+          [
+            45,
+            1,
+            6,
+            7,
+            0,
+            1
+          ],
+          [
+            0,
+            28,
+            7,
+            4,
+            0,
+            21
+          ],
+          [
+            1,
+            4,
+            49,
+            2,
+            3,
+            1
+          ],
+          [
+            10,
+            3,
+            6,
+            34,
+            4,
+            3
+          ],
+          [
+            3,
+            7,
+            6,
+            0,
+            43,
+            1
+          ],
+          [
+            0,
+            13,
+            0,
+            2,
+            2,
+            43
+          ]
+        ],
+        "macro_f1": 0.6706088734474878,
+        "macro_precision": 0.6766600614663568,
+        "macro_recall": 0.6722222222222222,
+        "per_class": {
+          "colourful_cartoon": {
+            "f1": 0.7563025210084034,
+            "precision": 0.7627118644067796,
+            "recall": 0.75,
+            "support": 60
+          },
+          "elegant_gold": {
+            "f1": 0.4827586206896552,
+            "precision": 0.5,
+            "recall": 0.4666666666666667,
+            "support": 60
+          },
+          "modern_minimal": {
+            "f1": 0.7313432835820896,
+            "precision": 0.6621621621621622,
+            "recall": 0.8166666666666667,
+            "support": 60
+          },
+          "pastel_floral": {
+            "f1": 0.6238532110091742,
+            "precision": 0.6938775510204082,
+            "recall": 0.5666666666666667,
+            "support": 60
+          },
+          "rustic_natural": {
+            "f1": 0.7678571428571429,
+            "precision": 0.8269230769230769,
+            "recall": 0.7166666666666667,
+            "support": 60
+          },
+          "traditional_luxury": {
+            "f1": 0.6615384615384615,
+            "precision": 0.6142857142857143,
+            "recall": 0.7166666666666667,
+            "support": 60
+          }
+        }
+      }
+    }
+  },
+  "validation": {
+    "mean_accuracy": 0.7430555555555556,
+    "records": 360,
+    "split": "validation",
+    "targets": {
+      "target__cake": {
+        "accuracy": 0.6777777777777778,
+        "class_order": [
+          "single_tier_round",
+          "single_tier_square",
+          "three_tier_luxury",
+          "two_tier_floral",
+          "two_tier_round"
+        ],
+        "confusion_matrix": [
+          [
+            49,
+            17,
+            0,
+            0,
+            0
+          ],
+          [
+            18,
+            56,
+            0,
+            0,
+            2
+          ],
+          [
+            0,
+            0,
+            58,
+            11,
+            0
+          ],
+          [
+            0,
+            0,
+            18,
+            42,
+            28
+          ],
+          [
+            0,
+            4,
+            0,
+            18,
+            39
+          ]
+        ],
+        "macro_f1": 0.6794340271692921,
+        "macro_precision": 0.6757081185341309,
+        "macro_recall": 0.6872926094800273,
+        "per_class": {
+          "single_tier_round": {
+            "f1": 0.736842105263158,
+            "precision": 0.7313432835820896,
+            "recall": 0.7424242424242424,
+            "support": 66
+          },
+          "single_tier_square": {
+            "f1": 0.7320261437908497,
+            "precision": 0.7272727272727273,
+            "recall": 0.7368421052631579,
+            "support": 76
+          },
+          "three_tier_luxury": {
+            "f1": 0.8,
+            "precision": 0.7631578947368421,
+            "recall": 0.8405797101449275,
+            "support": 69
+          },
+          "two_tier_floral": {
+            "f1": 0.5283018867924529,
+            "precision": 0.5915492957746479,
+            "recall": 0.4772727272727273,
+            "support": 88
+          },
+          "two_tier_round": {
+            "f1": 0.6000000000000001,
+            "precision": 0.5652173913043478,
+            "recall": 0.639344262295082,
+            "support": 61
+          }
+        }
+      },
+      "target__decor": {
+        "accuracy": 0.625,
+        "class_order": [
+          "balloon_setup",
+          "flower_wall",
+          "luxury_stage",
+          "minimal_backdrop",
+          "rustic_wood_setup"
+        ],
+        "confusion_matrix": [
+          [
+            31,
+            1,
+            0,
+            21,
+            12
+          ],
+          [
+            1,
+            43,
+            1,
+            2,
+            17
+          ],
+          [
+            0,
+            5,
+            74,
+            0,
+            0
+          ],
+          [
+            26,
+            0,
+            0,
+            39,
+            7
+          ],
+          [
+            10,
+            22,
+            0,
+            10,
+            38
+          ]
+        ],
+        "macro_f1": 0.6198829143565985,
+        "macro_precision": 0.6206726005209849,
+        "macro_recall": 0.6204347208698475,
+        "per_class": {
+          "balloon_setup": {
+            "f1": 0.46616541353383456,
+            "precision": 0.45588235294117646,
+            "recall": 0.47692307692307695,
+            "support": 65
+          },
+          "flower_wall": {
+            "f1": 0.637037037037037,
+            "precision": 0.6056338028169014,
+            "recall": 0.671875,
+            "support": 64
+          },
+          "luxury_stage": {
+            "f1": 0.961038961038961,
+            "precision": 0.9866666666666667,
+            "recall": 0.9367088607594937,
+            "support": 79
+          },
+          "minimal_backdrop": {
+            "f1": 0.5416666666666666,
+            "precision": 0.5416666666666666,
+            "recall": 0.5416666666666666,
+            "support": 72
+          },
+          "rustic_wood_setup": {
+            "f1": 0.4935064935064935,
+            "precision": 0.5135135135135135,
+            "recall": 0.475,
+            "support": 80
+          }
+        }
+      },
+      "target__layout": {
+        "accuracy": 0.9472222222222222,
+        "class_order": [
+          "cake_and_dessert_table",
+          "full_stage_setup",
+          "single_cake_table",
+          "two_side_tables"
+        ],
+        "confusion_matrix": [
+          [
+            67,
+            1,
+            5,
+            5
+          ],
+          [
+            3,
+            94,
+            0,
+            1
+          ],
+          [
+            0,
+            1,
+            80,
+            0
+          ],
+          [
+            1,
+            2,
+            0,
+            100
+          ]
+        ],
+        "macro_f1": 0.9448264383148999,
+        "macro_precision": 0.9468545855759258,
+        "macro_recall": 0.944171534959792,
+        "per_class": {
+          "cake_and_dessert_table": {
+            "f1": 0.8993288590604026,
+            "precision": 0.9436619718309859,
+            "recall": 0.8589743589743589,
+            "support": 78
+          },
+          "full_stage_setup": {
+            "f1": 0.9591836734693877,
+            "precision": 0.9591836734693877,
+            "recall": 0.9591836734693877,
+            "support": 98
+          },
+          "single_cake_table": {
+            "f1": 0.963855421686747,
+            "precision": 0.9411764705882353,
+            "recall": 0.9876543209876543,
+            "support": 81
+          },
+          "two_side_tables": {
+            "f1": 0.9569377990430622,
+            "precision": 0.9433962264150944,
+            "recall": 0.970873786407767,
+            "support": 103
+          }
+        }
+      },
+      "target__theme": {
+        "accuracy": 0.7222222222222222,
+        "class_order": [
+          "colourful_cartoon",
+          "elegant_gold",
+          "modern_minimal",
+          "pastel_floral",
+          "rustic_natural",
+          "traditional_luxury"
+        ],
+        "confusion_matrix": [
+          [
+            49,
+            0,
+            3,
+            5,
+            0,
+            3
+          ],
+          [
+            0,
+            35,
+            4,
+            4,
+            0,
+            17
+          ],
+          [
+            0,
+            5,
+            46,
+            5,
+            4,
+            0
+          ],
+          [
+            3,
+            6,
+            8,
+            35,
+            5,
+            3
+          ],
+          [
+            0,
+            3,
+            8,
+            1,
+            46,
+            2
+          ],
+          [
+            1,
+            8,
+            0,
+            2,
+            0,
+            49
+          ]
+        ],
+        "macro_f1": 0.7225114689357454,
+        "macro_precision": 0.7294721296459131,
+        "macro_recall": 0.7222222222222222,
+        "per_class": {
+          "colourful_cartoon": {
+            "f1": 0.8672566371681416,
+            "precision": 0.9245283018867925,
+            "recall": 0.8166666666666667,
+            "support": 60
+          },
+          "elegant_gold": {
+            "f1": 0.5982905982905983,
+            "precision": 0.6140350877192983,
+            "recall": 0.5833333333333334,
+            "support": 60
+          },
+          "modern_minimal": {
+            "f1": 0.7131782945736433,
+            "precision": 0.6666666666666666,
+            "recall": 0.7666666666666667,
+            "support": 60
+          },
+          "pastel_floral": {
+            "f1": 0.6250000000000001,
+            "precision": 0.6730769230769231,
+            "recall": 0.5833333333333334,
+            "support": 60
+          },
+          "rustic_natural": {
+            "f1": 0.8,
+            "precision": 0.8363636363636363,
+            "recall": 0.7666666666666667,
+            "support": 60
+          },
+          "traditional_luxury": {
+            "f1": 0.7313432835820896,
+            "precision": 0.6621621621621622,
+            "recall": 0.8166666666666667,
+            "support": 60
+          }
+        }
+      }
+    }
+  },
+  "weights_sha256": "8048bea688dbd063cb62106888a1cc316d2646e9d2aac05427e62b93698a89f1"
+}

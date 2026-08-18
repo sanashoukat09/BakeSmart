@@ -1,0 +1,166 @@
+{
+  "architecture": {
+    "activation": "relu",
+    "hidden_sizes": [
+      64,
+      32
+    ],
+    "input_size": 42,
+    "output_activation": "softmax_per_head",
+    "output_sizes": {
+      "target__cake": 5,
+      "target__decor": 5,
+      "target__layout": 4,
+      "target__theme": 6
+    },
+    "parameter_count": 5492
+  },
+  "artifact_status": "synthetic_bootstrap_only",
+  "artifacts": {
+    "history_file": "training_history.csv",
+    "history_sha256": "3524c00e144eb7ae404157de0baac8778fd57d2684221c0a3c1f18ab69d7ce08",
+    "weights_file": "model_weights.npz",
+    "weights_sha256": "8048bea688dbd063cb62106888a1cc316d2646e9d2aac05427e62b93698a89f1"
+  },
+  "data": {
+    "feature_columns": [
+      "num__guest_count",
+      "num__room_length_m",
+      "num__room_width_m",
+      "num__room_area_m2",
+      "num__budget_pkr",
+      "num__budget_per_guest_pkr",
+      "num__space_per_guest_m2",
+      "num__budget_per_area_pkr",
+      "cat__event_type__anniversary",
+      "cat__event_type__baby_shower",
+      "cat__event_type__birthday",
+      "cat__event_type__graduation",
+      "cat__event_type__wedding",
+      "cat__event_type__unknown",
+      "cat__venue_type__hall",
+      "cat__venue_type__home",
+      "cat__venue_type__outdoor",
+      "cat__venue_type__restaurant",
+      "cat__venue_type__unknown",
+      "cat__age_group__adult",
+      "cat__age_group__child",
+      "cat__age_group__mixed",
+      "cat__age_group__teenager",
+      "cat__age_group__unknown",
+      "cat__time_of_day__day",
+      "cat__time_of_day__night",
+      "cat__time_of_day__unknown",
+      "cat__preferred_color__blue",
+      "cat__preferred_color__gold",
+      "cat__preferred_color__green",
+      "cat__preferred_color__mixed",
+      "cat__preferred_color__pink",
+      "cat__preferred_color__purple",
+      "cat__preferred_color__red",
+      "cat__preferred_color__white",
+      "cat__preferred_color__unknown",
+      "cat__preferred_style__colourful",
+      "cat__preferred_style__elegant",
+      "cat__preferred_style__minimal",
+      "cat__preferred_style__rustic",
+      "cat__preferred_style__traditional",
+      "cat__preferred_style__unknown"
+    ],
+    "label_type": "synthetic_rule_based_silver",
+    "processed_split_sha256": {
+      "test": "17de0b733f5dca11dafdeffd2d572b0dea6d6953cdca3338e7a24ee39c73b50d",
+      "train": "f56c24decd137241e87db07c1c05c8bdd1f9f52d07832aa977f4a9e996df5d86",
+      "validation": "6642f63b6f0999c503f8e2a32dc6c1c7a1a8f322332863514c411e9f39d761fa"
+    },
+    "production_accuracy_training_ready": false,
+    "target_columns": [
+      "target__theme",
+      "target__cake",
+      "target__decor",
+      "target__layout"
+    ],
+    "target_label_to_id": {
+      "cake_label": {
+        "single_tier_round": 0,
+        "single_tier_square": 1,
+        "three_tier_luxury": 2,
+        "two_tier_floral": 3,
+        "two_tier_round": 4
+      },
+      "decor_label": {
+        "balloon_setup": 0,
+        "flower_wall": 1,
+        "luxury_stage": 2,
+        "minimal_backdrop": 3,
+        "rustic_wood_setup": 4
+      },
+      "layout_label": {
+        "cake_and_dessert_table": 0,
+        "full_stage_setup": 1,
+        "single_cake_table": 2,
+        "two_side_tables": 3
+      },
+      "theme_label": {
+        "colourful_cartoon": 0,
+        "elegant_gold": 1,
+        "modern_minimal": 2,
+        "pastel_floral": 3,
+        "rustic_natural": 4,
+        "traditional_luxury": 5
+      }
+    },
+    "test_rows": 360,
+    "training_rows": 1680,
+    "validation_rows": 360
+  },
+  "downstream_scene_contract": {
+    "combined_3d_scene_required": true,
+    "note": "Phase 6 maps predictions and budget rules to catalogue IDs; the 3D service must display selected baked items and decorations together.",
+    "predictions": [
+      "theme",
+      "cake",
+      "decor",
+      "layout"
+    ],
+    "scene_layers": [
+      "cake_and_baked_items",
+      "dessert_table",
+      "decorations",
+      "backdrop",
+      "lighting"
+    ]
+  },
+  "external_ai_api_used": false,
+  "implementation": "NumPy forward/backpropagation and Adam implemented locally",
+  "initialization": {
+    "initial_state_sha256": "4ecd38200f3a537a9705b306ad266cc9918e4b97db7cca8daf544761983b873d",
+    "pretrained_weights_used": false,
+    "seed": 20260818,
+    "type": "random_he_and_xavier"
+  },
+  "model_name": "BakeSmartMultiTaskMLP",
+  "model_version": "bootstrap-v1",
+  "production_approved": false,
+  "training": {
+    "best_epoch": 20,
+    "best_validation_loss": 0.5868581804387064,
+    "config": {
+      "batch_size": 64,
+      "gradient_clip_norm": 5.0,
+      "hidden_sizes": [
+        64,
+        32
+      ],
+      "l2_strength": 0.0001,
+      "learning_rate": 0.003,
+      "max_epochs": 300,
+      "minimum_improvement": 1e-05,
+      "patience": 35,
+      "seed": 20260818
+    },
+    "selection_split": "validation",
+    "stopped_epoch": 55,
+    "test_loaded_after_model_selection": true
+  }
+}

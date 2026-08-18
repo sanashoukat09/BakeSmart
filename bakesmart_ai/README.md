@@ -9,7 +9,10 @@ versioned design catalogues, a synthetic bootstrap dataset, an expert-review
 template, provenance metadata, and strict dataset validation. Phase 4 adds
 leakage-safe preprocessing, numeric training matrices, two-reviewer assignments,
 agreement auditing, and an explicit training gate. It still does not contain a
-trained model or return fabricated recommendations.
+trained production model. Phase 5 adds a small multi-task neural network written
+directly with NumPy, deterministic training from random weights, locked-split
+evaluation, and a versioned synthetic-bootstrap checkpoint. The checkpoint is
+not yet connected to the HTTP recommendation endpoint.
 
 ## Project rules
 
@@ -23,7 +26,7 @@ trained model or return fabricated recommendations.
 
 - Python 3.11 or newer
 - A terminal or PowerShell
-- No GPU is required for Phase 2
+- No GPU is required for the current local bootstrap model
 
 ## Windows setup
 
@@ -72,6 +75,16 @@ python -m training.prepare_dataset
 python -m training.review_dataset
 ```
 
+Train and evaluate the Phase 5 synthetic-bootstrap model:
+
+```powershell
+python -m training.train_model --allow-synthetic-bootstrap --evaluate-locked-test
+```
+
+Use `--evaluate-locked-test` only for a final evaluation run. Omit it while
+changing training settings so the locked test split cannot influence model
+selection.
+
 The current recommendation labels are synthetic and pending expert review. See
 [`data/README.md`](data/README.md) before using them.
 
@@ -84,8 +97,9 @@ The current recommendation labels are synthetic and pending expert review. See
 | `POST` | `/api/v1/designs/validate` | Validate and normalize a design request |
 | `POST` | `/api/v1/recommendations` | Reserved for the trained model |
 
-Until the model is created in a later approved phase, the recommendation
-endpoint returns HTTP `503` with `model_not_trained`.
+The Phase 5 checkpoint is intentionally isolated from the application runtime.
+Until the inference adapter is implemented in Phase 6, the recommendation
+endpoint continues to return HTTP `503` with `model_not_trained`.
 
 ## Structure
 
@@ -106,7 +120,7 @@ bakesmart_ai/
 │   ├── README.md     # Dataset card, limitations and change control
 │   ├── raw/          # Local source workbooks; ignored by Git
 │   └── processed/    # Future generated model inputs; ignored by Git
-├── models/           # Trained model artifacts (later phase)
-├── training/         # Dataset preparation and training code
+├── models/           # Versioned local bootstrap model artifacts
+├── training/         # Dataset preparation, training, metrics and local runtime
 └── tests/            # Automated API and schema tests
 ```
