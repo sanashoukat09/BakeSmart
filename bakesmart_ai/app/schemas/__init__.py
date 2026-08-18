@@ -1,0 +1,1 @@
+"""Validated BakeSmart API schemas."""

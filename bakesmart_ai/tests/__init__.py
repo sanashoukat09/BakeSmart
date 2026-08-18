@@ -1,0 +1,1 @@
+"""BakeSmart AI automated tests."""
