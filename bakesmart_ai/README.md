@@ -12,7 +12,10 @@ agreement auditing, and an explicit training gate. It still does not contain a
 trained production model. Phase 5 adds a small multi-task neural network written
 directly with NumPy, deterministic training from random weights, locked-split
 evaluation, and a versioned synthetic-bootstrap checkpoint. The checkpoint is
-not yet connected to the HTTP recommendation endpoint.
+connected to the HTTP recommendation endpoint in Phase 6. Phase 6 also freezes
+the raw-request feature adapter, maps predictions to theme/cake/decor catalogue
+IDs, applies an explicitly synthetic decorations-only planning budget, checks a
+basic obstacle/clearance layout, and returns one combined scene specification.
 
 ## Project rules
 
@@ -95,11 +98,18 @@ The current recommendation labels are synthetic and pending expert review. See
 | `GET` | `/health` | Service and model readiness |
 | `GET` | `/api/v1/capabilities` | Supported input values |
 | `POST` | `/api/v1/designs/validate` | Validate and normalize a design request |
-| `POST` | `/api/v1/recommendations` | Reserved for the trained model |
+| `POST` | `/api/v1/recommendations` | Run local inference and return one budget-aware scene specification |
 
-The Phase 5 checkpoint is intentionally isolated from the application runtime.
-Until the inference adapter is implemented in Phase 6, the recommendation
-endpoint continues to return HTTP `503` with `model_not_trained`.
+The recommendation endpoint now loads the verified local Phase 5 checkpoint and
+returns the cake, cake table, decorations, backdrop, lighting and coordinates in
+one response. The catalogue currently contains required-to-create asset paths,
+not finished 3D files, so the response truthfully reports
+`interactive_3d_ready=false`, provides no fake viewer/AR URL, and labels the
+fallback `Concept preview—not to scale`.
+
+The returned PKR values are synthetic planning estimates rather than current
+vendor or bakery prices. The supplied budget applies to decorations only; cake
+cost is shown separately and requires a bakery quote.
 
 ## Structure
 

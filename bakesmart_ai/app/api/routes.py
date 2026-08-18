@@ -56,18 +56,23 @@ async def validate_design(request: DesignRequest) -> ValidationResponse:
     response_model=RecommendationResponse,
     responses={
         status.HTTP_503_SERVICE_UNAVAILABLE: {
-            "description": "The BakeSmart recommendation model has not been trained yet."
+            "description": "The local BakeSmart model checkpoint is unavailable."
         }
     },
     tags=["recommendations"],
 )
 async def create_recommendation(request: DesignRequest) -> RecommendationResponse:
     if not recommendation_service.is_ready:
+        error_code = (
+            "model_not_trained"
+            if recommendation_service.status == "not_trained"
+            else "model_load_error"
+        )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={
-                "code": "model_not_trained",
-                "message": "The recommendation endpoint will be enabled after model training.",
+                "code": error_code,
+                "message": "The local recommendation checkpoint is not available.",
             },
         )
     return recommendation_service.recommend(request)

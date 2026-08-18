@@ -81,6 +81,8 @@ class BootstrapModelRuntime:
             raise ValueError(
                 f"expected a two-dimensional matrix with {len(self.feature_columns)} features"
             )
+        if not np.isfinite(features).all():
+            raise ValueError("model features must contain only finite values")
         probabilities = self.model.predict_proba(features)
         results: list[dict[str, dict[str, float | str]]] = []
         for row_index in range(features.shape[0]):

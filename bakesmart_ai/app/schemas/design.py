@@ -147,9 +147,19 @@ class Rotation3D(StrictModel):
 
 class ObjectPlacement(StrictModel):
     asset_id: str
+    role: Literal[
+        "cake",
+        "cake_table",
+        "backdrop",
+        "decoration",
+        "lighting",
+        "signage",
+    ]
+    catalog_id: str | None = None
     position: Position3D
     rotation: Rotation3D = Field(default_factory=Rotation3D)
     scale: float = Field(default=1, gt=0, le=20)
+    dimensions: Dimensions | None = None
 
 
 class DecorRecommendation(StrictModel):
@@ -163,6 +173,7 @@ class DecorRecommendation(StrictModel):
 
 class CakePlacement(StrictModel):
     catalog_id: str | None = None
+    source_image_reference: str
     placement: ObjectPlacement
     servings: int = Field(ge=1)
     estimated_cost_pkr: int = Field(ge=0)
@@ -174,6 +185,23 @@ class CostBreakdown(StrictModel):
     total_cost_pkr: int = Field(ge=0)
     budget_pkr: int = Field(gt=0)
     remaining_budget_pkr: int = Field(ge=0)
+    budget_scope: Literal["decorations_only"] = "decorations_only"
+    pricing_basis: Literal["synthetic_planning_estimate_not_vendor_quote"]
+
+
+class ModelSignal(StrictModel):
+    label: str
+    confidence: float = Field(ge=0, le=1)
+
+
+class PreviewAvailability(StrictModel):
+    interactive_3d_ready: bool
+    viewer_3d_url: str | None = None
+    ar_supported: bool | None = None
+    ar_url: str | None = None
+    fallback_label: Literal["Concept preview—not to scale"] = (
+        "Concept preview—not to scale"
+    )
 
 
 class SceneSpecification(StrictModel):
@@ -182,17 +210,32 @@ class SceneSpecification(StrictModel):
     objects: list[ObjectPlacement]
     minimum_clearance_m: float = Field(ge=0.9)
     concept_not_to_scale: bool
+    layout_strategy: str
+    asset_status: Literal["catalog_references_require_3d_asset_creation"]
+    layers: list[
+        Literal[
+            "cake_and_baked_items",
+            "dessert_table",
+            "decorations",
+            "backdrop",
+            "lighting",
+        ]
+    ]
 
 
 class RecommendationResponse(StrictModel):
     design_id: str
     created_at: datetime
     model_version: str
+    model_signals: dict[
+        Literal["theme", "cake", "decor", "layout"], ModelSignal
+    ]
     selected_theme_id: str
     decorations: list[DecorRecommendation]
     cake: CakePlacement
     costs: CostBreakdown
     scene: SceneSpecification
+    preview: PreviewAvailability
     warnings: list[str] = Field(default_factory=list)
 
 

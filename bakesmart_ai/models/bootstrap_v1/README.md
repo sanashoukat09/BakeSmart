@@ -6,8 +6,8 @@ the forward pass, backpropagation, Adam optimizer, early stopping, metrics, and
 deterministic checkpoint format are implemented in BakeSmart's training code.
 
 The four prediction heads are theme, cake, decoration package, and layout. Phase
-6 will map those predictions to catalogue items and a coordinated scene contract
-so cakes, additional baked items, tables, backdrops, and decorations can later be
+6 maps those predictions to catalogue items and a coordinated scene contract so
+cakes, additional baked items, tables, backdrops, and decorations can later be
 displayed together in one 3D scene.
 
 This is a **synthetic bootstrap artifact**, not a production model. Its metrics

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from training import train_model as train_model_module
@@ -83,3 +84,12 @@ def test_validation_only_training_does_not_open_locked_test(
 
     assert loaded_splits == ["train", "validation"]
     assert result["evaluation"]["test"] is None
+
+
+def test_runtime_rejects_nonfinite_features() -> None:
+    runtime = BootstrapModelRuntime.load()
+    features = np.zeros((1, len(runtime.feature_columns)))
+    features[0, 0] = np.nan
+
+    with pytest.raises(ValueError, match="finite"):
+        runtime.predict(features)

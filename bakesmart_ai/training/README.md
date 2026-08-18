@@ -47,10 +47,12 @@ The four heads recommend:
 - layout and placement strategy; and
 - normalized event theme.
 
-Together, those outputs form one scene specification: the cake/baked item,
-table, backdrop, decorations and placement must be rendered together in a
-single 3D result in a later integration phase. Phase 5 predicts the scene
-ingredients; it does not yet generate the 3D geometry or render it.
+Together, those outputs form one scene specification. Phase 6 now maps a
+validated API request to the locked 42-feature order, runs the local checkpoint,
+selects compatible catalogue records within a decorations-only planning budget,
+and returns the cake/baked item, table, backdrop, decorations, lighting and
+placement coordinates together. It still does not generate 3D geometry or
+claim a working viewer before the referenced assets exist.
 
 The generated files in `models/bootstrap_v1/` include pickle-free model
 weights, model and data metadata, per-head validation/test metrics, and the
@@ -61,8 +63,8 @@ synthetic rules, not real-world recommendation quality.
 
 A later approved phase will add:
 
-- raw request preprocessing for local inference;
-- the FastAPI recommendation-service adapter;
-- budget-aware scene itemization and asset lookup;
-- one combined interactive 3D scene with cake and decorations; and
-- a 2D concept-preview fallback for unsupported devices.
+- original or redistribution-safe `.glb` scene assets;
+- the interactive 3D viewer that consumes the combined scene specification;
+- client-side AR capability detection and an AR link only on supported devices;
+- a generated 2D concept-preview fallback on unsupported devices; and
+- persistent save/share records after customer authentication is connected.
