@@ -1,0 +1,86 @@
+{
+  "dataset_name": "BakeSmart local recommendation bootstrap",
+  "dataset_version": "1.0.0",
+  "schema_version": "1.0",
+  "phase": 3,
+  "prepared_on": "2026-08-18",
+  "label_type": "synthetic_rule_based_silver",
+  "review_status": "pending_expert_review",
+  "training_approved": false,
+  "source_files": [
+    {
+      "name": "BakeSmart_Module6_Dataset.xlsx",
+      "sha256": "6b089e1bde18d26b6f90353dc846bb6ec321adf9d46691430c50a53d95404b81",
+      "committed": false,
+      "reason": "The reviewed source workbook is retained outside Git; deterministic CSV extracts are versioned here."
+    },
+    {
+      "name": "BakeSmart_AR_Recommendation_Dataset_v1.xlsx",
+      "sha256": "81403aafdcb05f01fb16dcfa30cecc1b6cef74fc3d1ca7e3db9e20d9cbde9d09",
+      "committed": false,
+      "reason": "The reviewed source workbook is retained outside Git; deterministic CSV extracts are versioned here."
+    }
+  ],
+  "files": [
+    {
+      "path": "catalogs/themes.csv",
+      "source_sheet": "Themes",
+      "records": 26,
+      "sha256": "f8edc453dde252cfc6df2c1ec7980fc890530c6fda4bece57605e06bc859704e"
+    },
+    {
+      "path": "catalogs/decorations.csv",
+      "source_sheet": "Decorations",
+      "records": 130,
+      "sha256": "30d19cd850cb016cd116ec1219a7e88cad5bcb07a807740780236280860e199a"
+    },
+    {
+      "path": "catalogs/cake_designs.csv",
+      "source_sheet": "Cake Designs",
+      "records": 78,
+      "sha256": "6138f576e1114c9a06ea5e89b42ccf19fc216da463d4f4ef025f919d778508ed"
+    },
+    {
+      "path": "catalogs/cake_size_rules.csv",
+      "source_sheet": "Size Rules",
+      "records": 12,
+      "sha256": "61958c68fcf451f5149f2138c2e89fd41294a2a01da4658abff81234a4beda4f"
+    },
+    {
+      "path": "catalogs/event_profiles.csv",
+      "source_sheet": "Event Profiles",
+      "records": 12,
+      "sha256": "6dcff254a3014b24659730c36c0b54034fe4e20f8d382e23053426081f741dcf"
+    },
+    {
+      "path": "catalogs/placement_rules.csv",
+      "source_sheet": "Placement Rules",
+      "records": 12,
+      "sha256": "a5bc96b29f0c5435a154395cd77a4a084705507f0a30854ce0512626114050d6"
+    },
+    {
+      "path": "catalogs/ar_assets.csv",
+      "source_sheet": "AR Assets",
+      "records": 52,
+      "sha256": "c82c751a8db14de13c9d54f0b2b547bec5fa6f2a6846dacc2cc463e7a1fee7f7"
+    },
+    {
+      "path": "training/evaluation_cases.csv",
+      "source_sheet": "Eval Cases",
+      "records": 20,
+      "sha256": "46c0eee8c85227f3c8e3d4fc8a61add6060da920188300cbf16c529434f1ce64"
+    },
+    {
+      "path": "training/recommendation_samples_v1.csv",
+      "source_sheet": "Dataset",
+      "records": 2400,
+      "sha256": "5f38de265944df30496cd4daa55e96a383b225670e640c54473f7d1b08db9a31"
+    },
+    {
+      "path": "training/expert_review_template_v1.csv",
+      "source_sheet": "Expert Review Template",
+      "records": 120,
+      "sha256": "7a6254eb1fd805bb0f438576802acb915054795b39814e61a6b002aed9b7bbac"
+    }
+  ]
+}

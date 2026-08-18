@@ -1,13 +1,23 @@
 # Training workspace
 
-Training code will be implemented in a later approved phase. The model will be
-initialized from random weights and trained with BakeSmart's reviewed dataset.
+Phase 3 adds a deterministic dataset validator. Run it before using any data:
 
-This directory will eventually contain:
+```powershell
+python -m training.validate_datasets
+```
 
-- deterministic dataset preparation
-- train, validation and test splitting
-- preprocessing fitted only on the training split
-- model definition and training loop
-- evaluation metrics and saved reports
-- model artifact export for the local FastAPI service
+The validator uses only the Python standard library. It checks the versioned
+manifest and all catalogue, training, review, and evaluation CSV files.
+
+Model training is intentionally not implemented yet. The current 2,400 labels
+are synthetic bootstrap labels and `data/manifest.json` keeps
+`training_approved` set to `false` until independent expert review is complete.
+
+A later approved phase will add:
+
+- preprocessing fitted only on the locked training split;
+- a recommendation model initialized from random weights;
+- deterministic training and checkpointing;
+- separate validation and untouched test evaluation;
+- metrics split by synthetic and human-labelled data; and
+- model artifact export for the local FastAPI service.

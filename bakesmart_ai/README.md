@@ -4,7 +4,9 @@ This directory contains the local Python service for BakeSmart's event-design
 recommendation module. It is intentionally separate from the existing Flutter
 application and Firebase Cloud Functions.
 
-Phase 2 provides the validated API contract and project structure. It does not
+Phase 2 provides the validated API contract and project structure. Phase 3 adds
+versioned design catalogues, a synthetic bootstrap dataset, an expert-review
+template, provenance metadata, and strict dataset validation. It still does not
 contain a trained model or return fabricated recommendations.
 
 ## Project rules
@@ -55,6 +57,15 @@ laptop's local IPv4 address.
 pytest
 ```
 
+Validate the Phase 3 data independently:
+
+```powershell
+python -m training.validate_datasets
+```
+
+The current recommendation labels are synthetic and pending expert review. See
+[`data/README.md`](data/README.md) before using them.
+
 ## Endpoints
 
 | Method | Path | Purpose |
@@ -78,9 +89,12 @@ bakesmart_ai/
 │   ├── services/     # Recommendation service boundary
 │   └── main.py       # FastAPI application
 ├── data/
-│   ├── raw/          # Original reviewed datasets
-│   ├── processed/    # Training-ready datasets
-│   └── catalogs/     # Cake, decor and placement catalogs
+│   ├── catalogs/     # Versioned cake, decor, theme, placement and AR catalogues
+│   ├── training/     # Bootstrap samples, expert-review template and eval cases
+│   ├── manifest.json # Source hashes, file hashes, counts and review status
+│   ├── README.md     # Dataset card, limitations and change control
+│   ├── raw/          # Local source workbooks; ignored by Git
+│   └── processed/    # Future generated model inputs; ignored by Git
 ├── models/           # Trained model artifacts (later phase)
 ├── training/         # Dataset preparation and training code
 └── tests/            # Automated API and schema tests
