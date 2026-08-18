@@ -16,6 +16,10 @@ class AppConstants {
   static const String appName = 'BakeSmart';
   static const String appVersion = '1.0.0';
   static const String baseStorefrontUrl = 'bakesmart.com/store';
+  static const String bakeSmartAiBaseUrl = String.fromEnvironment(
+    'BAKESMART_AI_BASE_URL',
+    defaultValue: 'http://10.0.2.2:8000',
+  );
 
   // Theme Colors (Cream & Brown Template)
   static const int backgroundColor = 0xFFFDFCF9;
@@ -35,6 +39,7 @@ class AppConstants {
   static const String surplusItemsCollection = 'surplusItems';
   static const String wishlistsCollection = 'wishlists';
   static const String deliverySchedulesCollection = 'deliverySchedules';
+  static const String eventDesignsCollection = 'eventDesigns';
 
   // User Roles
   static const String roleBaker = 'baker';

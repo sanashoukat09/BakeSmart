@@ -10,6 +10,47 @@ All files for Module 1 are ready. Follow the steps below to get the app running.
 
 ---
 
+## Module 6 — Local 3D Event Designer
+
+Phase 8 connects the customer Flutter app to the self-hosted service in
+`bakesmart_ai/`. Signed-in customers can enter their space, location, event,
+theme, cake picture reference and decoration budget; open the combined
+interactive 3D scene; and save, reopen, regenerate, share or delete the result.
+
+The recommendation request uses BakeSmart's own locally trained checkpoint. It
+does not call Gemini, OpenAI or another external inference service. The cake
+picture is selected on the phone but is currently retained only as a reference
+name—the procedural renderer does not upload or reconstruct the photograph.
+
+Start the Python service before running the Flutter app:
+
+```powershell
+cd bakesmart_ai
+.venv\Scripts\Activate.ps1
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+The default Android-emulator URL is `http://10.0.2.2:8000`. For a physical
+phone, use the laptop's IPv4 address while both devices are on the same Wi-Fi:
+
+```powershell
+flutter run --dart-define=BAKESMART_AI_BASE_URL=http://192.168.1.10:8000
+```
+
+Deploy the updated Firestore rules before using saved designs. The rules keep
+each `eventDesigns` record private to its authenticated owner. Sharing uses the
+real interactive viewer URL and never makes the Firestore input record public.
+Because the no-cost setup is self-hosted, a shared viewer link works only while
+the BakeSmart Python service is running and reachable from the recipient's
+device. A private Wi-Fi address is not an internet-wide public link.
+
+Validate the Flutter integration on a machine with the Flutter SDK installed:
+
+```powershell
+flutter analyze
+flutter test test/models/event_design_model_test.dart
+```
+
 ## 🚀 Step-by-Step Setup
 
 ### Step 1 — Create the Flutter project shell
@@ -161,7 +202,7 @@ D:\Bake Smart\
 | 3 | 🔜 Pending | Cost, Pricing & Surplus |
 | 4 | 🔜 Pending | Order Management & Scheduling |
 | 5 | 🔜 Pending | Customer Storefront & Cart |
-| 6 | 🔜 Pending | Order Tracking & Ratings |
+| 6 | ✅ **Phase 8 complete** | AR-based suggestions with interactive 3D fallback, private save and real-link sharing |
 | 10 | 🔜 Pending | Storefront Discovery & Sharing |
 
 ---

@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:share_plus/share_plus.dart';
 import '../constants/app_constants.dart';
 
@@ -30,5 +32,23 @@ class ShareUtil {
     const String message = 'Join me on BakeSmart! The best place to find home-baked treats and manage your bakery. 🧁\n\nDownload now: $_baseUrl';
     
     Share.share(message);
+  }
+
+  static Future<bool> shareEventDesign({
+    required String themeName,
+    required String designId,
+    required String viewerUrl,
+    Rect? sharePositionOrigin,
+  }) {
+    final message = 'See my $themeName event concept from BakeSmart. '
+        'The cake and decorations are shown together in an interactive 3D view.\n\n'
+        'Open Interactive 3D View: $viewerUrl\n\n'
+        'Design: $designId\n'
+        'Procedural concept preview—not to scale.';
+    final result = await Share.share(
+      message,
+      sharePositionOrigin: sharePositionOrigin,
+    );
+    return result.status == ShareResultStatus.success;
   }
 }

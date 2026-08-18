@@ -109,6 +109,19 @@ service cloud.firestore {
       allow update, delete: if canWrite() && request.auth.uid == resource.data.customerId;
     }
 
+    // Event designs: private, authenticated customer-owned save/share records.
+    // Sharing sends the generated viewer URL; it never makes this Firestore
+    // record or its customer inputs public.
+    match /eventDesigns/{designId} {
+      allow create: if isAuthenticated()
+        && request.auth.uid == request.resource.data.ownerId;
+      allow read, delete: if isAuthenticated()
+        && request.auth.uid == resource.data.ownerId;
+      allow update: if isAuthenticated()
+        && request.auth.uid == resource.data.ownerId
+        && request.resource.data.ownerId == resource.data.ownerId;
+    }
+
     // Delivery schedules: baker can manage own
     match /deliverySchedules/{scheduleId} {
       allow read, write: if canWrite() && request.auth.uid == resource.data.bakerId;

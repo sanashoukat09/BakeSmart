@@ -37,6 +37,10 @@ import '../../screens/customer/surplus_deals_screen.dart';
 import '../../screens/customer/customer_notifications_screen.dart';
 import '../../screens/customer/wishlist_screen.dart';
 import '../../screens/customer/category_products_screen.dart';
+import '../../screens/customer/event_designer_screen.dart';
+import '../../screens/customer/event_design_result_screen.dart';
+import '../../screens/customer/saved_event_designs_screen.dart';
+import '../../models/event_design_model.dart';
 
 // Route names
 class AppRoutes {
@@ -80,6 +84,9 @@ class AppRoutes {
   static const customerNotifications = '/customer/notifications';
   static const customerWishlist = '/customer/wishlist';
   static const customerCategoryProducts = '/customer/category-products';
+  static const customerEventDesigner = '/customer/event-designer';
+  static const customerEventDesignResult = '/customer/event-design-result';
+  static const customerSavedEventDesigns = '/customer/event-designs';
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -275,6 +282,24 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.customerNotifications,
         builder: (context, state) => const CustomerNotificationsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.customerEventDesigner,
+        builder: (context, state) => const EventDesignerScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.customerEventDesignResult,
+        builder: (context, state) {
+          final args = state.extra;
+          if (args is EventDesignResultArgs) {
+            return EventDesignResultScreen(args: args);
+          }
+          return const EventDesignerScreen();
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.customerSavedEventDesigns,
+        builder: (context, state) => const SavedEventDesignsScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

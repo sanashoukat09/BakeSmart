@@ -18,6 +18,8 @@ IDs, applies an explicitly synthetic decorations-only planning budget, checks a
 basic obstacle/clearance layout, and returns one combined scene specification.
 Phase 7 turns that specification into a real procedural GLB file and serves a
 self-contained WebGL viewer with mouse, touch, zoom, reset and GLB download.
+Phase 8 connects those endpoints to BakeSmart's authenticated customer Flutter
+flow and adds private Firestore save records plus real viewer-link sharing.
 
 ## Project rules
 
@@ -25,7 +27,7 @@ self-contained WebGL viewer with mouse, touch, zoom, reset and GLB download.
 - No Gemini, OpenAI, Claude, Ollama, or other external inference API is used.
 - Online models may be studied as technical references, but their APIs and
   trained weights are not dependencies of this service.
-- The service runs locally and will later be called by the Flutter app.
+- The service runs locally and is called by the Phase 8 Flutter event designer.
 
 ## Requirements
 

@@ -146,13 +146,23 @@ class CustomerHomeScreen extends ConsumerWidget {
                 ),
               ),
 
-              // 3. Featured Promo Banner
+              // 3. Local 3D event designer
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                child: _EventDesignerBanner(
+                  onCreate: () => context.push(AppRoutes.customerEventDesigner),
+                  onSaved: () =>
+                      context.push(AppRoutes.customerSavedEventDesigns),
+                ),
+              ),
+
+              // 4. Featured Promo Banner
               const Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 child: _PromoBanner(),
               ),
 
-              // 4. Best Selling section
+              // 5. Best Selling section
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 26, 20, 12),
                 child: Row(
@@ -281,6 +291,112 @@ class CustomerHomeScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _EventDesignerBanner extends StatelessWidget {
+  final VoidCallback onCreate;
+  final VoidCallback onSaved;
+
+  const _EventDesignerBanner({
+    required this.onCreate,
+    required this.onSaved,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF4A2B20), Color(0xFFB05E27)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: _T.brown.withOpacity(0.18),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.14),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.threed_rotation,
+                  color: Colors.white,
+                  size: 25,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Design your event in 3D',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'Cake and decorations together • No AR required',
+                      style: TextStyle(
+                        color: Color(0xFFFFE8D5),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: onCreate,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: _T.ink,
+                  ),
+                  icon: const Icon(Icons.auto_awesome_outlined),
+                  label: const Text(
+                    'Create design',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              IconButton.filledTonal(
+                tooltip: 'Saved 3D designs',
+                onPressed: onSaved,
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white.withOpacity(0.14),
+                  foregroundColor: Colors.white,
+                ),
+                icon: const Icon(Icons.bookmarks_outlined),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -705,4 +821,3 @@ class _PromoBanner extends ConsumerWidget {
     );
   }
 }
-
