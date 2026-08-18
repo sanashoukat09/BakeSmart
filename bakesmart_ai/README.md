@@ -22,7 +22,10 @@ Phase 8 connects those endpoints to BakeSmart's authenticated customer Flutter
 flow and adds private Firestore save records plus real viewer-link sharing.
 Phase 9 adds client-side Android AR-hardware detection and an enforced preview
 policy: a real AR URL may be shown only when the device and response both support
-it; otherwise the existing interactive 3D or concept fallback is used.
+it; otherwise the existing interactive 3D or concept fallback is used. Phase 10
+adds in-memory venue-photo quality analysis plus customer-confirmed obstacle and
+measurement evidence. The scene planner now returns focal-position, clearance,
+blocking-item, confidence, observed-fact and assumption results.
 
 ## Project rules
 
@@ -37,6 +40,7 @@ it; otherwise the existing interactive 3D or concept fallback is used.
 - Python 3.11 or newer
 - A terminal or PowerShell
 - No GPU is required for the current local bootstrap model
+- Venue-photo analysis uses free local Pillow/NumPy processing and no external API
 
 ## Windows setup
 
@@ -104,6 +108,7 @@ The current recommendation labels are synthetic and pending expert review. See
 |---|---|---|
 | `GET` | `/health` | Service and model readiness |
 | `GET` | `/api/v1/capabilities` | Supported input values |
+| `POST` | `/api/v1/venue-photos/analyze` | Analyse one JPEG/PNG in memory and return non-scale photo evidence |
 | `POST` | `/api/v1/designs/validate` | Validate and normalize a design request |
 | `POST` | `/api/v1/recommendations` | Run local inference and return one budget-aware scene specification |
 | `GET` | `/viewer/{design_id}` | Open the local interactive 3D viewer |
@@ -124,6 +129,13 @@ capability detection. If GLB generation fails, the API keeps the honest
 Phase 9 does not change this truth contract: the current response leaves
 `ar_supported` and `ar_url` unset, so the customer app never offers AR for the
 procedural scene.
+
+Phase 10 photo analysis is intentionally not an object detector. It reports
+pixel-derived photo facts and a possible horizontal structural cue, but never
+confirms walls, floors, doors, windows, furniture, outlets or physical scale.
+The raw JPEG/PNG is decoded in memory and discarded. Placement safety uses only
+customer-confirmed dimensions and obstacle coordinates, keeps a minimum 0.90 m
+front circulation target, and exposes unknowns in `venue_assessment.assumptions`.
 
 The returned PKR values are synthetic planning estimates rather than current
 vendor or bakery prices. The supplied budget applies to decorations only; cake

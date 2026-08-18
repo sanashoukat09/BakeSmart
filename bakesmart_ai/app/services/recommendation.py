@@ -96,9 +96,7 @@ class RecommendationService:
         scene = result.scene
         preview = result.preview
         try:
-            palette = self.catalog_store.themes[result.selected_theme_id][
-                "palette_hex"
-            ]
+            palette = self.catalog_store.themes[result.selected_theme_id]["palette_hex"]
             generated = self.glb_builder.build(
                 request,
                 scene,
@@ -137,6 +135,7 @@ class RecommendationService:
             decorations=result.decorations,
             cake=result.cake,
             costs=result.costs,
+            venue_assessment=result.venue_assessment,
             scene=scene,
             preview=preview,
             warnings=list(dict.fromkeys(warnings)),

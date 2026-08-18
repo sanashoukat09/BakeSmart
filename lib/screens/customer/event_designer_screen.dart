@@ -35,6 +35,7 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
   final _cakeDepth = TextEditingController(text: '0.30');
   final _cakeHeight = TextEditingController(text: '0.35');
   final _colors = TextEditingController(text: 'blush pink, cream, muted gold');
+  final _knownReference = TextEditingController();
 
   String _areaType = 'room';
   String _venueType = 'living_room';
@@ -44,6 +45,14 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
   String _cakeShape = 'round';
   XFile? _cakeImage;
   Uint8List? _cakeImageBytes;
+  Uint8List? _wideVenueImageBytes;
+  VenuePhotoAnalysis? _wideVenueAnalysis;
+  Uint8List? _secondVenueImageBytes;
+  VenuePhotoAnalysis? _secondVenueAnalysis;
+  bool _analysingWidePhoto = false;
+  bool _analysingSecondPhoto = false;
+  bool _obstacleMapConfirmed = false;
+  final List<_ObstacleDraft> _obstacles = [];
 
   bool get _requiresDepth => _areaType != 'wall';
 
@@ -61,8 +70,12 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
       _cakeDepth,
       _cakeHeight,
       _colors,
+      _knownReference,
     ]) {
       controller.dispose();
+    }
+    for (final obstacle in _obstacles) {
+      obstacle.dispose();
     }
     super.dispose();
   }
@@ -82,10 +95,88 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
     });
   }
 
+  Future<void> _pickVenueImage(String angle) async {
+    final image = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 88,
+      maxWidth: 2200,
+    );
+    if (image == null) return;
+    final bytes = await image.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      if (angle == 'wide') {
+        _wideVenueImageBytes = bytes;
+        _wideVenueAnalysis = null;
+        _analysingWidePhoto = true;
+      } else {
+        _secondVenueImageBytes = bytes;
+        _secondVenueAnalysis = null;
+        _analysingSecondPhoto = true;
+      }
+    });
+    try {
+      final analysis = await ref.read(eventDesignServiceProvider).analyzeVenuePhoto(
+            bytes: bytes,
+            fileName: image.name,
+            angle: angle,
+          );
+      if (!mounted) return;
+      setState(() {
+        if (angle == 'wide') {
+          _wideVenueAnalysis = analysis;
+        } else {
+          _secondVenueAnalysis = analysis;
+        }
+      });
+    } catch (error) {
+      if (!mounted) return;
+      _showMessage('Could not analyse the venue photo: $error');
+    } finally {
+      if (mounted) {
+        setState(() {
+          if (angle == 'wide') {
+            _analysingWidePhoto = false;
+          } else {
+            _analysingSecondPhoto = false;
+          }
+        });
+      }
+    }
+  }
+
+  void _addObstacle() {
+    if (_obstacles.length >= 10) {
+      _showMessage('You can add up to 10 major obstacles in this form.');
+      return;
+    }
+    setState(() {
+      _obstacles.add(_ObstacleDraft());
+      _obstacleMapConfirmed = false;
+    });
+  }
+
+  void _removeObstacle(int index) {
+    setState(() {
+      _obstacles.removeAt(index).dispose();
+      _obstacleMapConfirmed = false;
+    });
+  }
+
   Future<void> _generate() async {
     if (!_formKey.currentState!.validate()) return;
     if (_cakeImage == null) {
       _showMessage('Select a cake picture before generating the design.');
+      return;
+    }
+    if (_wideVenueAnalysis == null) {
+      _showMessage('Select and analyse a wide venue photo first.');
+      return;
+    }
+    if (!_obstacleMapConfirmed) {
+      _showMessage(
+        'Confirm that all visible obstacles are listed, including doors and walkways.',
+      );
       return;
     }
     final user = ref.read(currentUserProvider).valueOrNull;
@@ -102,6 +193,14 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
       widthM: double.parse(_width.text.trim()),
       depthM: _requiresDepth ? double.parse(_depth.text.trim()) : null,
       heightM: double.parse(_height.text.trim()),
+      venuePhotos: [
+        _wideVenueAnalysis!,
+        if (_secondVenueAnalysis != null) _secondVenueAnalysis!,
+      ],
+      obstacles: _obstacles.map((draft) => draft.toModel()).toList(),
+      obstacleMapConfirmed: _obstacleMapConfirmed,
+      knownReferenceM: _optionalDouble(_knownReference.text),
+      minimumClearanceM: 0.9,
       eventType: _eventType,
       guestCount: int.parse(_guestCount.text.trim()),
       themeId: _themeId,
@@ -145,6 +244,11 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
         .toList(growable: false);
   }
 
+  static double? _optionalDouble(String input) {
+    final normalized = input.trim();
+    return normalized.isEmpty ? null : double.parse(normalized);
+  }
+
   static String _safeImageReference(String fileName) {
     final cleaned = fileName
         .toLowerCase()
@@ -186,6 +290,73 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
             const SizedBox(height: 18),
             _section(
               icon: Icons.photo_camera_back_outlined,
+              title: 'Venue photos and safety map',
+              subtitle: 'Photos are analysed locally and are not retained.',
+              children: [
+                _venuePhotoPicker(
+                  title: 'Wide venue photo (required)',
+                  subtitle: 'Show the main wall, floor, doors and nearby furniture.',
+                  bytes: _wideVenueImageBytes,
+                  analysis: _wideVenueAnalysis,
+                  analysing: _analysingWidePhoto,
+                  onTap: () => _pickVenueImage('wide'),
+                ),
+                _venuePhotoPicker(
+                  title: 'Second angle (recommended)',
+                  subtitle: 'Reduces blind spots outside the first photo.',
+                  bytes: _secondVenueImageBytes,
+                  analysis: _secondVenueAnalysis,
+                  analysing: _analysingSecondPhoto,
+                  onTap: () => _pickVenueImage('second_angle'),
+                ),
+                _optionalDecimalField(
+                  'Known reference length (m)',
+                  _knownReference,
+                  0.01,
+                  20,
+                  hint: 'Example: measured table width 1.5',
+                ),
+                const Text(
+                  'Obstacle coordinates use the left side of the setup as x = 0 '
+                  'and the focal wall as y = 0.',
+                  style: TextStyle(color: Color(0xFF8C6D5F), fontSize: 12),
+                ),
+                ...List.generate(
+                  _obstacles.length,
+                  (index) => _obstacleEditor(index, _obstacles[index]),
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    onPressed: _addObstacle,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add door, furniture or obstacle'),
+                  ),
+                ),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: _obstacleMapConfirmed,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: const Text(
+                    'I listed all visible obstacles and required walkways',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  subtitle: const Text(
+                    'Tick this even when the measured setup area has no obstacles.',
+                  ),
+                  onChanged: (value) => setState(
+                    () => _obstacleMapConfirmed = value ?? false,
+                  ),
+                ),
+                const Text(
+                  'BakeSmart will preserve at least 0.90 m of front circulation. '
+                  'The photo alone is never used to claim exact scale.',
+                  style: TextStyle(color: Color(0xFF8C6D5F), height: 1.4),
+                ),
+              ],
+            ),
+            _section(
+              icon: Icons.cake_outlined,
               title: 'Cake picture',
               subtitle: 'Used as a design reference for the procedural cake.',
               children: [_imagePicker()],
@@ -423,6 +594,217 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
     );
   }
 
+  Widget _venuePhotoPicker({
+    required String title,
+    required String subtitle,
+    required Uint8List? bytes,
+    required VenuePhotoAnalysis? analysis,
+    required bool analysing,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: analysing ? null : onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF7FBF7),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFCFE5D5)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 88,
+              height: 78,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE7F2EA),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: bytes == null
+                  ? const Icon(Icons.add_a_photo_outlined, color: _brown)
+                  : Image.memory(bytes, fit: BoxFit.cover),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: _ink,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    analysing
+                        ? 'Analysing pixels locally…'
+                        : analysis == null
+                            ? subtitle
+                            : '${analysis.pixelWidth} × ${analysis.pixelHeight} • '
+                                '${analysis.quality} quality',
+                    style: const TextStyle(
+                      color: Color(0xFF8C6D5F),
+                      fontSize: 12,
+                      height: 1.35,
+                    ),
+                  ),
+                  if (analysing) ...[
+                    const SizedBox(height: 8),
+                    const LinearProgressIndicator(minHeight: 3),
+                  ] else if (analysis != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      analysis.observations.take(2).join(' '),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF287A50),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              analysis == null ? Icons.chevron_right : Icons.check_circle,
+              color: analysis == null ? _brown : const Color(0xFF287A50),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _obstacleEditor(int index, _ObstacleDraft draft) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF9F2),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFF2E0CC)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Obstacle ${index + 1}',
+                  style: const TextStyle(
+                    color: _ink,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Remove obstacle',
+                onPressed: () => _removeObstacle(index),
+                icon: const Icon(Icons.delete_outline),
+              ),
+            ],
+          ),
+          _dropdown(
+            'Type',
+            draft.type,
+            EventDesignOptions.obstacleTypes,
+            (value) => setState(() {
+              draft.type = value;
+              _obstacleMapConfirmed = false;
+            }),
+          ),
+          _textField(
+            'Label',
+            draft.label,
+            hint: 'Example: main door',
+            onChanged: (_) => setState(() => _obstacleMapConfirmed = false),
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _decimalField(
+                  'X',
+                  draft.x,
+                  0,
+                  100,
+                  onChanged: (_) =>
+                      setState(() => _obstacleMapConfirmed = false),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _decimalField(
+                  'Y',
+                  draft.y,
+                  0,
+                  100,
+                  onChanged: (_) =>
+                      setState(() => _obstacleMapConfirmed = false),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _decimalField(
+                  'Z',
+                  draft.z,
+                  0,
+                  30,
+                  onChanged: (_) =>
+                      setState(() => _obstacleMapConfirmed = false),
+                ),
+              ),
+            ],
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _decimalField(
+                  'Width',
+                  draft.width,
+                  0.01,
+                  100,
+                  onChanged: (_) =>
+                      setState(() => _obstacleMapConfirmed = false),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _decimalField(
+                  'Depth',
+                  draft.depth,
+                  0.01,
+                  100,
+                  onChanged: (_) =>
+                      setState(() => _obstacleMapConfirmed = false),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _decimalField(
+                  'Height',
+                  draft.height,
+                  0.01,
+                  30,
+                  onChanged: (_) =>
+                      setState(() => _obstacleMapConfirmed = false),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _imagePicker() {
     return InkWell(
       onTap: _pickCakeImage,
@@ -512,10 +894,12 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
     String label,
     TextEditingController controller, {
     String? hint,
+    ValueChanged<String>? onChanged,
   }) {
     return TextFormField(
       controller: controller,
       decoration: _decoration(label, hint: hint),
+      onChanged: onChanged,
     );
   }
 
@@ -523,14 +907,39 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
     String label,
     TextEditingController controller,
     double minimum,
-    double maximum,
-  ) {
+    double maximum, {
+    ValueChanged<String>? onChanged,
+  }) {
     return TextFormField(
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       decoration: _decoration('$label (m)'),
+      onChanged: onChanged,
       validator: (value) {
         final number = double.tryParse(value?.trim() ?? '');
+        if (number == null || number < minimum || number > maximum) {
+          return '$minimum–$maximum';
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _optionalDecimalField(
+    String label,
+    TextEditingController controller,
+    double minimum,
+    double maximum, {
+    String? hint,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      decoration: _decoration(label, hint: hint),
+      validator: (value) {
+        final text = value?.trim() ?? '';
+        if (text.isEmpty) return null;
+        final number = double.tryParse(text);
         if (number == null || number < minimum || number > maximum) {
           return '$minimum–$maximum';
         }
@@ -578,5 +987,39 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
         borderSide: const BorderSide(color: _brown, width: 1.5),
       ),
     );
+  }
+}
+
+class _ObstacleDraft {
+  String type = 'door';
+  final label = TextEditingController();
+  final x = TextEditingController(text: '0.0');
+  final y = TextEditingController(text: '0.0');
+  final z = TextEditingController(text: '0.0');
+  final width = TextEditingController(text: '0.9');
+  final depth = TextEditingController(text: '0.2');
+  final height = TextEditingController(text: '2.1');
+
+  VenueObstacle toModel() {
+    return VenueObstacle(
+      type: type,
+      label: label.text.trim(),
+      xM: double.parse(x.text.trim()),
+      yM: double.parse(y.text.trim()),
+      zM: double.parse(z.text.trim()),
+      widthM: double.parse(width.text.trim()),
+      depthM: double.parse(depth.text.trim()),
+      heightM: double.parse(height.text.trim()),
+    );
+  }
+
+  void dispose() {
+    label.dispose();
+    x.dispose();
+    y.dispose();
+    z.dispose();
+    width.dispose();
+    depth.dispose();
+    height.dispose();
   }
 }

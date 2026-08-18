@@ -53,6 +53,17 @@ class ObstacleType(str, Enum):
     OTHER = "other"
 
 
+class PhotoAngle(str, Enum):
+    WIDE = "wide"
+    SECOND_ANGLE = "second_angle"
+
+
+class PhotoQuality(str, Enum):
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
 class CakeShape(str, Enum):
     ROUND = "round"
     SQUARE = "square"
@@ -80,14 +91,32 @@ class ObstacleInput(StrictModel):
     dimensions: Dimensions
 
 
+class VenuePhotoEvidence(StrictModel):
+    photo_id: str = Field(pattern=r"^venue-photo-[a-f0-9]{20}$")
+    angle: PhotoAngle
+    pixel_width: int = Field(ge=1, le=20_000)
+    pixel_height: int = Field(ge=1, le=20_000)
+    file_size_bytes: int = Field(ge=1, le=8_000_000)
+    quality: PhotoQuality
+    brightness_score: float = Field(ge=0, le=1)
+    contrast_score: float = Field(ge=0, le=1)
+    sharpness_score: float = Field(ge=0, le=1)
+    observations: list[str] = Field(default_factory=list, max_length=12)
+
+
 class SpaceInput(StrictModel):
     area_type: AreaType
     venue_type: VenueType
     environment: EnvironmentType
     dimensions: Dimensions
     obstacles: list[ObstacleInput] = Field(default_factory=list, max_length=50)
+    obstacle_map_confirmed: bool = False
     known_reference_m: float | None = Field(default=None, gt=0, le=20)
     photo_references: list[str] = Field(default_factory=list, max_length=6)
+    photo_evidence: list[VenuePhotoEvidence] = Field(
+        default_factory=list,
+        max_length=2,
+    )
 
     @model_validator(mode="after")
     def require_depth_for_area(self) -> "SpaceInput":
@@ -97,7 +126,30 @@ class SpaceInput(StrictModel):
             AreaType.OUTDOOR_AREA,
         }
         if self.area_type in depth_required and self.dimensions.depth_m is None:
-            raise ValueError(f"depth_m is required for area_type '{self.area_type.value}'")
+            raise ValueError(
+                f"depth_m is required for area_type '{self.area_type.value}'"
+            )
+        angles = [photo.angle for photo in self.photo_evidence]
+        if len(angles) != len(set(angles)):
+            raise ValueError("photo_evidence may contain only one photo per angle")
+        for obstacle in self.obstacles:
+            label = obstacle.label or obstacle.obstacle_type.value
+            if (
+                obstacle.position.x_m + obstacle.dimensions.width_m
+                > self.dimensions.width_m
+            ):
+                raise ValueError(f"obstacle '{label}' exceeds the measured width")
+            obstacle_depth = obstacle.dimensions.depth_m or 0.0
+            if (
+                self.dimensions.depth_m is not None
+                and obstacle.position.y_m + obstacle_depth > self.dimensions.depth_m
+            ):
+                raise ValueError(f"obstacle '{label}' exceeds the measured depth")
+            if (
+                obstacle.position.z_m + obstacle.dimensions.height_m
+                > self.dimensions.height_m
+            ):
+                raise ValueError(f"obstacle '{label}' exceeds the measured height")
         return self
 
 
@@ -115,7 +167,9 @@ class CakeInput(StrictModel):
     def require_shape_dimensions(self) -> "CakeInput":
         if self.shape == CakeShape.ROUND and self.diameter_m is None:
             raise ValueError("diameter_m is required for a round cake")
-        if self.shape != CakeShape.ROUND and (self.width_m is None or self.depth_m is None):
+        if self.shape != CakeShape.ROUND and (
+            self.width_m is None or self.depth_m is None
+        ):
             raise ValueError("width_m and depth_m are required for a non-round cake")
         return self
 
@@ -196,6 +250,49 @@ class ModelSignal(StrictModel):
     confidence: float = Field(ge=0, le=1)
 
 
+class VenuePhotoAnalysisRequest(StrictModel):
+    file_name: str = Field(min_length=1, max_length=180)
+    media_type: Literal["image/jpeg", "image/png"]
+    image_base64: str = Field(min_length=4, max_length=11_000_000)
+    angle: PhotoAngle
+
+
+class VenuePhotoAnalysis(StrictModel):
+    photo_id: str = Field(pattern=r"^venue-photo-[a-f0-9]{20}$")
+    angle: PhotoAngle
+    pixel_width: int = Field(ge=1, le=20_000)
+    pixel_height: int = Field(ge=1, le=20_000)
+    file_size_bytes: int = Field(ge=1, le=8_000_000)
+    orientation: Literal["landscape", "portrait", "square"]
+    quality: PhotoQuality
+    brightness_score: float = Field(ge=0, le=1)
+    contrast_score: float = Field(ge=0, le=1)
+    sharpness_score: float = Field(ge=0, le=1)
+    horizontal_structure_score: float = Field(ge=0, le=1)
+    observations: list[str]
+    limitations: list[str]
+    exact_scale_available: Literal[False] = False
+    persisted: Literal[False] = False
+
+
+class VenueAssessment(StrictModel):
+    photo_count: int = Field(ge=0, le=2)
+    evidence_confidence: Literal["high", "medium", "low"]
+    placement_status: Literal["clearance_verified", "manual_review_required"]
+    scale_source: Literal[
+        "user_confirmed_measurements",
+        "unverified",
+    ]
+    selected_focal_center_x_m: float = Field(ge=0, le=100)
+    available_front_clearance_m: float = Field(ge=0, le=100)
+    minimum_clearance_m: float = Field(ge=0.9, le=5)
+    obstacle_count: int = Field(ge=0, le=50)
+    obstacle_map_confirmed: bool
+    blocking_obstacles: list[str]
+    observed_facts: list[str]
+    assumptions: list[str]
+
+
 class PreviewAvailability(StrictModel):
     interactive_3d_ready: bool
     viewer_3d_url: str | None = None
@@ -232,13 +329,12 @@ class RecommendationResponse(StrictModel):
     design_id: str
     created_at: datetime
     model_version: str
-    model_signals: dict[
-        Literal["theme", "cake", "decor", "layout"], ModelSignal
-    ]
+    model_signals: dict[Literal["theme", "cake", "decor", "layout"], ModelSignal]
     selected_theme_id: str
     decorations: list[DecorRecommendation]
     cake: CakePlacement
     costs: CostBreakdown
+    venue_assessment: VenueAssessment
     scene: SceneSpecification
     preview: PreviewAvailability
     warnings: list[str] = Field(default_factory=list)

@@ -187,6 +187,10 @@ class _EventDesignResultScreenState
           const SizedBox(height: 18),
           _deviceCompatibilityCard(capabilities),
           const SizedBox(height: 12),
+          if (_recommendation.venueAssessment != null) ...[
+            _venueAssessmentCard(_recommendation.venueAssessment!),
+            const SizedBox(height: 12),
+          ],
           _actionButtons(capabilities),
           const SizedBox(height: 22),
           _detailsCard(
@@ -231,10 +235,16 @@ class _EventDesignResultScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'This is a procedural concept preview—not to scale. The cake '
-                  'picture is a reference and is not reconstructed into 3D.',
-                  style: TextStyle(color: _muted, height: 1.45),
+                Text(
+                  _recommendation.venueAssessment?.clearanceVerified == true &&
+                          _recommendation.venueAssessment?.scaleSource ==
+                              'user_confirmed_measurements'
+                      ? 'This procedural layout uses customer-confirmed measurements '
+                          'and the confirmed obstacle map. Verify the physical setup '
+                          'again before installation; the cake photo is still a reference.'
+                      : 'This is a procedural Concept preview—not to scale. The cake '
+                          'picture is a reference and is not reconstructed into 3D.',
+                  style: const TextStyle(color: _muted, height: 1.45),
                 ),
                 if (_recommendation.warnings.isNotEmpty) ...[
                   const SizedBox(height: 12),
@@ -481,6 +491,113 @@ class _EventDesignResultScreenState
           color: const Color(0xFF5B6472),
         );
     }
+  }
+
+  Widget _venueAssessmentCard(VenueAssessment assessment) {
+    final verified = assessment.clearanceVerified;
+    final color = verified
+        ? const Color(0xFF287A50)
+        : const Color(0xFF9A5A14);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.24)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                verified ? Icons.verified_outlined : Icons.rule_outlined,
+                color: color,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  verified
+                      ? 'Venue clearance verified from supplied measurements'
+                      : 'Manual venue review required',
+                  style: TextStyle(color: color, fontWeight: FontWeight.w900),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 9),
+          Text(
+            '${assessment.photoCount} photo angle(s) • '
+            '${assessment.evidenceConfidence} evidence confidence • '
+            '${assessment.availableFrontClearanceM.toStringAsFixed(2)} m front '
+            'clearance (minimum ${assessment.minimumClearanceM.toStringAsFixed(2)} m)',
+            style: const TextStyle(color: _muted, height: 1.4),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            'Suggested focal centre: '
+            '${assessment.selectedFocalCenterXM.toStringAsFixed(2)} m from the left edge.',
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          if (assessment.blockingObstacles.isNotEmpty) ...[
+            const SizedBox(height: 7),
+            Text(
+              'Blocking items: ${assessment.blockingObstacles.join(', ')}',
+              style: const TextStyle(color: _muted, fontSize: 12),
+            ),
+          ],
+          const SizedBox(height: 10),
+          const Text(
+            'Confirmed evidence',
+            style: TextStyle(color: _ink, fontWeight: FontWeight.w900),
+          ),
+          ...assessment.observedFacts.map(
+            (fact) => _venueEvidenceLine(fact, Icons.check, color),
+          ),
+          if (assessment.assumptions.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'Still assumed or unknown',
+              style: TextStyle(color: _ink, fontWeight: FontWeight.w900),
+            ),
+            ...assessment.assumptions.map(
+              (item) => _venueEvidenceLine(
+                item,
+                Icons.help_outline,
+                const Color(0xFF9A5A14),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _venueEvidenceLine(String text, IconData icon, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(icon, size: 15, color: color),
+          ),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(color: _muted, fontSize: 12, height: 1.35),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _compatibilitySurface({

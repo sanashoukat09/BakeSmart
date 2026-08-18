@@ -24,8 +24,23 @@ def valid_design_request() -> dict:
                 "height_m": 2.7,
             },
             "obstacles": [],
+            "obstacle_map_confirmed": True,
             "known_reference_m": 1.5,
-            "photo_references": ["venue-photo-001"],
+            "photo_references": ["venue-photo-0123456789abcdef0123"],
+            "photo_evidence": [
+                {
+                    "photo_id": "venue-photo-0123456789abcdef0123",
+                    "angle": "wide",
+                    "pixel_width": 1600,
+                    "pixel_height": 900,
+                    "file_size_bytes": 250000,
+                    "quality": "high",
+                    "brightness_score": 0.55,
+                    "contrast_score": 0.42,
+                    "sharpness_score": 0.38,
+                    "observations": ["Landscape venue photo supplied."],
+                }
+            ],
         },
         "event": {
             "event_type": "birthday",

@@ -53,6 +53,8 @@ def test_blocking_obstacle_requires_manual_review(client, valid_design_request):
     assert response.status_code == 200
     body = response.json()
     assert body["scene"]["concept_not_to_scale"] is True
+    assert body["venue_assessment"]["placement_status"] == "manual_review_required"
+    assert "main door" in body["venue_assessment"]["blocking_obstacles"]
     assert any("No obstacle-free focal position" in item for item in body["warnings"])
 
 
@@ -71,6 +73,28 @@ def test_measured_clear_scene_can_be_scale_planned(client, valid_design_request)
 
     assert response.status_code == 200
     assert response.json()["scene"]["concept_not_to_scale"] is False
+
+
+def test_two_good_photo_angles_raise_evidence_confidence(
+    client,
+    valid_design_request,
+):
+    request = deepcopy(valid_design_request)
+    second = deepcopy(request["space"]["photo_evidence"][0])
+    second["photo_id"] = "venue-photo-fedcba9876543210fedc"
+    second["angle"] = "second_angle"
+    request["space"]["photo_evidence"].append(second)
+    request["space"]["photo_references"].append(second["photo_id"])
+
+    response = client.post("/api/v1/recommendations", json=request)
+
+    assert response.status_code == 200
+    assessment = response.json()["venue_assessment"]
+    assert assessment["photo_count"] == 2
+    assert assessment["evidence_confidence"] == "high"
+    assert assessment["assumptions"] == [
+        "Photo analysis does not automatically identify safety-critical objects."
+    ]
 
 
 def test_unknown_theme_uses_model_guided_catalog_fallback(client, valid_design_request):

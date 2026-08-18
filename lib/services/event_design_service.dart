@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
@@ -77,6 +78,60 @@ class EventDesignService {
       throw EventDesignServiceException(
         'Could not reach the local BakeSmart model at $baseUrl. Start the '
         'Python service or update BAKESMART_AI_BASE_URL.',
+      );
+    }
+  }
+
+  Future<VenuePhotoAnalysis> analyzeVenuePhoto({
+    required Uint8List bytes,
+    required String fileName,
+    required String angle,
+  }) async {
+    if (bytes.isEmpty || bytes.length > 8000000) {
+      throw const EventDesignServiceException(
+        'Venue photos must be non-empty and no larger than 8 MB.',
+      );
+    }
+    final mediaType = _photoMediaType(bytes);
+    if (mediaType == null) {
+      throw const EventDesignServiceException(
+        'Select a JPEG or PNG venue photo.',
+      );
+    }
+    final uri = absoluteResourceUri('/api/v1/venue-photos/analyze');
+    try {
+      final response = await _client
+          .post(
+            uri,
+            headers: const {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'file_name': fileName,
+              'media_type': mediaType,
+              'image_base64': base64Encode(bytes),
+              'angle': angle,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+      final decoded = _decodeObject(response.body);
+      if (response.statusCode != 200) {
+        throw EventDesignServiceException(
+          _errorMessage(decoded, response.statusCode),
+        );
+      }
+      return VenuePhotoAnalysis.fromJson(decoded);
+    } on TimeoutException {
+      throw const EventDesignServiceException(
+        'Venue photo analysis took too long. Check the local Python service.',
+      );
+    } on EventDesignServiceException {
+      rethrow;
+    } on FormatException {
+      throw const EventDesignServiceException(
+        'The venue photo analyser returned an unreadable response.',
+      );
+    } on http.ClientException {
+      throw EventDesignServiceException(
+        'Could not reach the local BakeSmart model at $baseUrl.',
       );
     }
   }
@@ -165,6 +220,23 @@ class EventDesignService {
   static String _recordId(String ownerId, String designId) {
     final ownerKey = base64Url.encode(utf8.encode(ownerId)).replaceAll('=', '');
     return '${ownerKey}_$designId';
+  }
+
+  static String? _photoMediaType(Uint8List bytes) {
+    if (bytes.length >= 8 &&
+        bytes[0] == 0x89 &&
+        bytes[1] == 0x50 &&
+        bytes[2] == 0x4E &&
+        bytes[3] == 0x47) {
+      return 'image/png';
+    }
+    if (bytes.length >= 3 &&
+        bytes[0] == 0xFF &&
+        bytes[1] == 0xD8 &&
+        bytes[2] == 0xFF) {
+      return 'image/jpeg';
+    }
+    return null;
   }
 
   static Map<String, dynamic> _decodeObject(String body) {

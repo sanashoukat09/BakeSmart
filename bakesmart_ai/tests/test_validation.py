@@ -31,3 +31,32 @@ def test_clearance_cannot_be_less_than_ninety_centimetres(
     response = client.post("/api/v1/designs/validate", json=request)
 
     assert response.status_code == 422
+
+
+def test_obstacle_must_fit_inside_confirmed_space(client, valid_design_request):
+    request = deepcopy(valid_design_request)
+    request["space"]["obstacles"] = [
+        {
+            "obstacle_type": "door",
+            "label": "outside door",
+            "position": {"x_m": 2.8, "y_m": 0, "z_m": 0},
+            "dimensions": {"width_m": 0.9, "depth_m": 0.2, "height_m": 2.1},
+        }
+    ]
+
+    response = client.post("/api/v1/designs/validate", json=request)
+
+    assert response.status_code == 422
+    assert "exceeds the measured width" in response.text
+
+
+def test_duplicate_photo_angles_are_rejected(client, valid_design_request):
+    request = deepcopy(valid_design_request)
+    duplicate = deepcopy(request["space"]["photo_evidence"][0])
+    duplicate["photo_id"] = "venue-photo-fedcba9876543210fedc"
+    request["space"]["photo_evidence"].append(duplicate)
+
+    response = client.post("/api/v1/designs/validate", json=request)
+
+    assert response.status_code == 422
+    assert "only one photo per angle" in response.text

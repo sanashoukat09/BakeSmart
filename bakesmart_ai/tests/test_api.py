@@ -5,7 +5,7 @@ def test_health_reports_ready_local_model(client):
     assert response.json() == {
         "status": "ok",
         "service": "BakeSmart AI",
-        "version": "0.3.0",
+        "version": "0.4.0",
         "model_status": "ready",
     }
 
@@ -72,9 +72,12 @@ def test_recommendation_returns_one_budget_aware_scene(client, valid_design_requ
         "fallback_label": None,
     }
     assert body["scene"]["asset_status"] == "generated_procedural_glb"
-    assert body["scene"]["concept_not_to_scale"] is True
+    assert body["scene"]["concept_not_to_scale"] is False
     assert any("synthetic labels" in warning for warning in body["warnings"])
-    assert any("No obstacle map" in warning for warning in body["warnings"])
+    assert body["venue_assessment"]["placement_status"] == "clearance_verified"
+    assert body["venue_assessment"]["evidence_confidence"] == "medium"
+    assert body["venue_assessment"]["available_front_clearance_m"] == 1.575
+    assert body["venue_assessment"]["obstacle_map_confirmed"] is True
 
 
 def test_recommendation_id_is_deterministic(client, valid_design_request):
@@ -111,9 +114,7 @@ def test_viewer_and_glb_urls_are_real_local_resources(client, valid_design_reque
 
 def test_unknown_viewer_scene_returns_not_found(client):
     viewer = client.get("/viewer/design-00000000000000000000")
-    glb = client.get(
-        "/api/v1/designs/design-00000000000000000000/scene.glb"
-    )
+    glb = client.get("/api/v1/designs/design-00000000000000000000/scene.glb")
     invalid = client.get("/viewer/not-a-design")
 
     assert viewer.status_code == 404

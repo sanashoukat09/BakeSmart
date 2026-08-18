@@ -72,6 +72,30 @@ Hardware detection uses Android's documented
 [`FEATURE_CAMERA_AR`](https://developer.android.com/reference/android/content/pm/PackageManager#FEATURE_CAMERA_AR)
 flag, available from API level 28.
 
+### Phase 10 — Venue evidence and clearance-aware placement
+
+Customers now select a required wide venue photo and may add a second angle.
+The photos are sent only to the self-hosted BakeSmart service, analysed in
+memory, and discarded. A free local Pillow/NumPy analyser reports resolution,
+orientation, lighting, contrast, sharpness and horizontal structural cues. It
+uses no external model, pretrained weights or inference API.
+
+The analyser deliberately does **not** claim that it has identified doors,
+windows, furniture, outlets or exact dimensions. Customers enter measured room
+dimensions, an optional known reference length, and the coordinates and sizes
+of visible obstacles, then confirm the obstacle map. BakeSmart evaluates three
+focal positions, preserves at least 0.90 m of circulation in front of the
+setup, and returns:
+
+- the suggested focal centre measured from the left edge;
+- available front clearance and any blocking obstacle labels;
+- high, medium or low evidence confidence;
+- separate confirmed facts and remaining assumptions.
+
+When evidence is incomplete, the result stays labelled
+`Concept preview—not to scale` and requires manual venue review. No uploaded
+venue photo is added to the training dataset or persisted by Phase 10.
+
 ## 🚀 Step-by-Step Setup
 
 ### Step 1 — Create the Flutter project shell
@@ -223,7 +247,7 @@ D:\Bake Smart\
 | 3 | 🔜 Pending | Cost, Pricing & Surplus |
 | 4 | 🔜 Pending | Order Management & Scheduling |
 | 5 | 🔜 Pending | Customer Storefront & Cart |
-| 6 | ✅ **Phase 9 complete** | AR-aware suggestions, automatic 3D fallback, private save and real-link sharing |
+| 6 | ✅ **Phase 10 complete** | Local venue-photo evidence, measured obstacle-aware placement, 3D fallback, save and sharing |
 | 10 | 🔜 Pending | Storefront Discovery & Sharing |
 
 ---

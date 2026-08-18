@@ -15,6 +15,7 @@ from app.schemas.design import (
     Position3D,
     PreviewAvailability,
     SceneSpecification,
+    VenueAssessment,
 )
 from app.services.catalog import CatalogStore
 
@@ -88,9 +89,19 @@ class SceneBuildResult:
     decorations: list[DecorRecommendation]
     cake: CakePlacement
     costs: CostBreakdown
+    venue_assessment: VenueAssessment
     scene: SceneSpecification
     preview: PreviewAvailability
     warnings: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class FocalPlacement:
+    center_x_m: float
+    candidate_available: bool
+    walkway_clear: bool
+    available_front_clearance_m: float
+    blocking_obstacles: tuple[str, ...]
 
 
 class SceneBuilder:
@@ -140,22 +151,27 @@ class SceneBuilder:
                 f"Cake allergens: {cake_row['allergen_notes']}",
             ]
         )
-        if not request.space.obstacles:
+        if not request.space.obstacle_map_confirmed:
             warnings.append(
-                "No obstacle map was supplied, so doors, windows and circulation "
-                "still require visual confirmation."
+                "The obstacle map was not customer-confirmed, so doors, windows "
+                "and circulation still require visual confirmation."
             )
         if request.space.known_reference_m is None:
             warnings.append(
                 "No known reference measurement was supplied; preview scale cannot "
                 "be visually verified."
             )
+        if not request.space.photo_evidence:
+            warnings.append(
+                "No locally analysed venue photo evidence was supplied; placement "
+                "uses measurements only."
+            )
 
         table_dimensions = self._table_dimensions(request)
         geometry_verified = self._geometry_is_plausible(
             request, table_dimensions, warnings
         )
-        focal_center, placement_verified = self._focal_center(
+        focal = self._focal_placement(
             request,
             table_dimensions,
             any(row["category"] == "backdrop" for row, _, _ in selected_decor),
@@ -164,20 +180,23 @@ class SceneBuilder:
         decorations, decor_objects, decoration_cost = self._place_decor(
             request,
             selected_decor,
-            focal_center,
+            focal.center_x_m,
             table_dimensions,
         )
         cake, cake_objects, cake_cost = self._place_cake(
             request,
             cake_row,
-            focal_center,
+            focal.center_x_m,
             table_dimensions,
         )
         all_objects = [*cake_objects, *decor_objects]
+        venue_assessment = self._venue_assessment(request, focal)
         concept_not_to_scale = (
             request.space.known_reference_m is None
-            or not request.space.obstacles
-            or not placement_verified
+            or not request.space.photo_evidence
+            or not request.space.obstacle_map_confirmed
+            or not focal.candidate_available
+            or not focal.walkway_clear
             or not geometry_verified
             or request.space.dimensions.depth_m is None
         )
@@ -226,6 +245,7 @@ class SceneBuilder:
             decorations,
             cake,
             costs,
+            venue_assessment,
             scene,
             preview,
             tuple(dict.fromkeys(warnings)),
@@ -264,9 +284,7 @@ class SceneBuilder:
             CATEGORY_ALIASES.get(value, value)
             for value in request.event.excluded_decor_categories
         }
-        order = list(
-            dict.fromkeys([*required, *DECOR_PRIORITY.get(decor_label, ())])
-        )
+        order = list(dict.fromkeys([*required, *DECOR_PRIORITY.get(decor_label, ())]))
         selected: list[tuple[dict[str, str], int, int]] = []
         spent = 0
         for category in order:
@@ -285,7 +303,10 @@ class SceneBuilder:
                 continue
             quantity = self._quantity_for(category, request)
             unit_cost = PLANNING_UNIT_COST_PKR[category]
-            while quantity > 1 and spent + quantity * unit_cost > request.decoration_budget_pkr:
+            while (
+                quantity > 1
+                and spent + quantity * unit_cost > request.decoration_budget_pkr
+            ):
                 quantity -= 1
             item_cost = quantity * unit_cost
             if spent + item_cost > request.decoration_budget_pkr:
@@ -316,7 +337,9 @@ class SceneBuilder:
     ) -> dict[str, str]:
         candidates = self.catalog.cakes_for(theme_id, request.event.event_type.value)
         if not candidates:
-            candidates = [row for row in self.catalog.cakes if row["theme_id"] == theme_id]
+            candidates = [
+                row for row in self.catalog.cakes if row["theme_id"] == theme_id
+            ]
             warnings.append(
                 "No cake design matched both theme and event; the closest theme cake was used."
             )
@@ -335,7 +358,9 @@ class SceneBuilder:
             if serving_min <= servings <= serving_max:
                 value += 4
             else:
-                value -= min(abs(servings - serving_min), abs(servings - serving_max)) / 100
+                value -= (
+                    min(abs(servings - serving_min), abs(servings - serving_max)) / 100
+                )
             if cake_label.startswith("three"):
                 expected_tier = 3
             elif cake_label.startswith("two"):
@@ -382,13 +407,13 @@ class SceneBuilder:
             )
         return fits
 
-    def _focal_center(
+    def _focal_placement(
         self,
         request: DesignRequest,
         table_dimensions: Dimensions,
         has_backdrop: bool,
         warnings: list[str],
-    ) -> tuple[float, bool]:
+    ) -> FocalPlacement:
         width = request.space.dimensions.width_m
         available_width = max(0.01, width - 0.01)
         desired_width = max(
@@ -397,11 +422,14 @@ class SceneBuilder:
         )
         setup_width = min(available_width, desired_width)
         candidates = [width * 0.5, width * 0.35, width * 0.65]
+        blocking: list[str] = []
         for center in candidates:
             if center - setup_width / 2 < 0 or center + setup_width / 2 > width:
                 continue
-            if not any(
-                self._intersects_setup(
+            intersections = [
+                obstacle
+                for obstacle in request.space.obstacles
+                if self._intersects_setup(
                     center,
                     setup_width,
                     obstacle.position.x_m,
@@ -410,20 +438,37 @@ class SceneBuilder:
                     obstacle.dimensions.depth_m or 0.2,
                     request.minimum_clearance_m,
                 )
-                for obstacle in request.space.obstacles
-            ):
-                walkway_clear = self._walkway_is_clear(request)
+            ]
+            if not intersections:
+                available_clearance = self._available_front_clearance(request)
+                walkway_clear = available_clearance >= request.minimum_clearance_m
                 if not walkway_clear:
                     warnings.append(
                         "The measured depth does not verify the requested clear "
                         "circulation in front of the setup."
                     )
-                return center, walkway_clear
+                return FocalPlacement(
+                    center_x_m=center,
+                    candidate_available=True,
+                    walkway_clear=walkway_clear,
+                    available_front_clearance_m=available_clearance,
+                    blocking_obstacles=(),
+                )
+            blocking.extend(
+                obstacle.label or obstacle.obstacle_type.value
+                for obstacle in intersections
+            )
         warnings.append(
             "No obstacle-free focal position could be verified; manual placement "
             "review is required."
         )
-        return width * 0.5, False
+        return FocalPlacement(
+            center_x_m=width * 0.5,
+            candidate_available=False,
+            walkway_clear=False,
+            available_front_clearance_m=self._available_front_clearance(request),
+            blocking_obstacles=tuple(dict.fromkeys(blocking)),
+        )
 
     @staticmethod
     def _intersects_setup(
@@ -451,11 +496,97 @@ class SceneBuilder:
         )
 
     @staticmethod
-    def _walkway_is_clear(request: DesignRequest) -> bool:
+    def _available_front_clearance(request: DesignRequest) -> float:
         depth = request.space.dimensions.depth_m
         if depth is None:
-            return False
-        return depth - (0.45 + 0.75 / 2) >= request.minimum_clearance_m
+            return 0.0
+        return max(0.0, depth - (0.45 + 0.75 / 2))
+
+    @staticmethod
+    def _venue_assessment(
+        request: DesignRequest,
+        focal: FocalPlacement,
+    ) -> VenueAssessment:
+        photos = request.space.photo_evidence
+        verified = (
+            request.space.obstacle_map_confirmed
+            and focal.candidate_available
+            and focal.walkway_clear
+        )
+        has_second_angle = any(photo.angle.value == "second_angle" for photo in photos)
+        photo_quality_ok = bool(photos) and all(
+            photo.quality.value != "low" for photo in photos
+        )
+        if (
+            verified
+            and len(photos) == 2
+            and has_second_angle
+            and photo_quality_ok
+            and request.space.known_reference_m is not None
+        ):
+            confidence = "high"
+        elif verified and photos and request.space.known_reference_m is not None:
+            confidence = "medium"
+        else:
+            confidence = "low"
+
+        observed_facts = [
+            f"{len(photos)} venue photo angle(s) were analysed locally.",
+            (
+                f"The customer confirmed {len(request.space.obstacles)} obstacle(s)."
+                if request.space.obstacle_map_confirmed
+                else "The customer has not confirmed the obstacle map."
+            ),
+            (
+                "The measured depth leaves "
+                f"{focal.available_front_clearance_m:.2f} m in front of the setup."
+            ),
+        ]
+        for photo in photos:
+            angle_label = photo.angle.value.replace("_", " ")
+            observed_facts.extend(
+                f"{angle_label.title()}: {observation}"
+                for observation in photo.observations
+            )
+        assumptions: list[str] = []
+        if not photos:
+            assumptions.append("The venue appearance was not checked from a photo.")
+        if photos and not has_second_angle:
+            assumptions.append("Areas outside the single photo angle remain unknown.")
+        if not request.space.obstacle_map_confirmed:
+            assumptions.append(
+                "Unlisted doors, furniture, outlets, or walkways may exist."
+            )
+        if request.space.known_reference_m is None:
+            assumptions.append(
+                "Photo scale is unverified because no known reference was supplied."
+            )
+        assumptions.append(
+            "Photo analysis does not automatically identify safety-critical objects."
+        )
+        return VenueAssessment(
+            photo_count=len(photos),
+            evidence_confidence=confidence,
+            placement_status=(
+                "clearance_verified" if verified else "manual_review_required"
+            ),
+            scale_source=(
+                "user_confirmed_measurements"
+                if request.space.known_reference_m is not None
+                else "unverified"
+            ),
+            selected_focal_center_x_m=round(focal.center_x_m, 3),
+            available_front_clearance_m=round(
+                focal.available_front_clearance_m,
+                3,
+            ),
+            minimum_clearance_m=request.minimum_clearance_m,
+            obstacle_count=len(request.space.obstacles),
+            obstacle_map_confirmed=request.space.obstacle_map_confirmed,
+            blocking_obstacles=list(focal.blocking_obstacles),
+            observed_facts=observed_facts,
+            assumptions=assumptions,
+        )
 
     def _place_cake(
         self,
@@ -487,8 +618,7 @@ class SceneBuilder:
         )
         per_serving = 450 if "premium" in cake_row["price_tier"] else 350
         estimated_cost = (
-            request.cake.servings_required * per_serving
-            + request.cake.tiers * 1_500
+            request.cake.servings_required * per_serving + request.cake.tiers * 1_500
         )
         cake = CakePlacement(
             catalog_id=cake_row["cake_design_id"],

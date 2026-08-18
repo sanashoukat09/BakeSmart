@@ -16,6 +16,11 @@ void main() {
       expect(cake.containsKey('width_m'), isFalse);
       expect(event['theme_id'], 'floral-romantic');
       expect(event['required_decor_categories'], contains('table-setting'));
+      expect(json['minimum_clearance_m'], 0.9);
+      final space = json['space'] as Map<String, dynamic>;
+      expect(space['obstacle_map_confirmed'], isTrue);
+      expect((space['photo_evidence'] as List).length, 1);
+      expect((space['obstacles'] as List).length, 1);
     });
 
     test('round trips through the persisted request map', () {
@@ -29,6 +34,10 @@ void main() {
       expect(restored.cakeShape, original.cakeShape);
       expect(restored.cakeWidthM, original.cakeWidthM);
       expect(restored.decorationBudgetPkr, original.decorationBudgetPkr);
+      expect(restored.venuePhotos.single.quality, 'high');
+      expect(restored.obstacles.single.label, 'main door');
+      expect(restored.obstacleMapConfirmed, isTrue);
+      expect(restored.knownReferenceM, 1.5);
     });
 
     test('omits room depth for a wall design', () {
@@ -81,6 +90,8 @@ void main() {
     );
     expect(recommendation.decorations.single.name, 'Blush chiffon arch');
     expect(recommendation.remainingBudgetPkr, 8000);
+    expect(recommendation.venueAssessment?.clearanceVerified, isTrue);
+    expect(recommendation.venueAssessment?.availableFrontClearanceM, 1.575);
   });
 
   test('resolves a relative viewer path against the configured service', () {
@@ -105,6 +116,38 @@ EventDesignRequest _request() {
     widthM: 3,
     depthM: 2.4,
     heightM: 2.7,
+    venuePhotos: [
+      VenuePhotoAnalysis(
+        photoId: 'venue-photo-0123456789abcdef0123',
+        angle: 'wide',
+        pixelWidth: 1600,
+        pixelHeight: 900,
+        fileSizeBytes: 250000,
+        orientation: 'landscape',
+        quality: 'high',
+        brightnessScore: 0.55,
+        contrastScore: 0.42,
+        sharpnessScore: 0.38,
+        horizontalStructureScore: 0.4,
+        observations: ['Landscape venue photo supplied.'],
+        limitations: ['No automatic object confirmation.'],
+      ),
+    ],
+    obstacles: [
+      VenueObstacle(
+        type: 'door',
+        label: 'main door',
+        xM: 2.6,
+        yM: 0,
+        zM: 0,
+        widthM: 0.3,
+        depthM: 0.2,
+        heightM: 2.1,
+      ),
+    ],
+    obstacleMapConfirmed: true,
+    knownReferenceM: 1.5,
+    minimumClearanceM: 0.9,
     eventType: 'birthday',
     guestCount: 35,
     themeId: 'floral-romantic',
@@ -140,6 +183,20 @@ Map<String, dynamic> _recommendationJson() {
       'total_cost_pkr': 60000,
       'budget_pkr': 50000,
       'remaining_budget_pkr': 8000,
+    },
+    'venue_assessment': {
+      'photo_count': 1,
+      'evidence_confidence': 'medium',
+      'placement_status': 'clearance_verified',
+      'scale_source': 'user_confirmed_measurements',
+      'selected_focal_center_x_m': 1.5,
+      'available_front_clearance_m': 1.575,
+      'minimum_clearance_m': 0.9,
+      'obstacle_count': 1,
+      'obstacle_map_confirmed': true,
+      'blocking_obstacles': <String>[],
+      'observed_facts': ['One photo analysed.'],
+      'assumptions': ['Second angle not supplied.'],
     },
     'preview': {
       'interactive_3d_ready': true,

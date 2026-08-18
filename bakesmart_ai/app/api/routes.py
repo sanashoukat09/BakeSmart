@@ -8,9 +8,12 @@ from app.schemas.design import (
     EventType,
     RecommendationResponse,
     ValidationResponse,
+    VenuePhotoAnalysis,
+    VenuePhotoAnalysisRequest,
     VenueType,
 )
 from app.services.recommendation import recommendation_service
+from app.services.venue_photo_analyzer import venue_photo_analyzer
 
 router = APIRouter()
 
@@ -39,16 +42,45 @@ async def capabilities() -> CapabilitiesResponse:
 )
 async def validate_design(request: DesignRequest) -> ValidationResponse:
     warnings: list[str] = []
-    if not request.space.obstacles:
+    if not request.space.obstacle_map_confirmed:
         warnings.append(
-            "No doors, windows, furniture, outlets, stairs, or other obstacles were supplied."
+            "The obstacle map is not customer-confirmed; doors, windows, furniture, outlets, stairs, and walkways require review."
         )
     if request.space.known_reference_m is None:
         warnings.append(
             "No known visual reference measurement was supplied; photo-based scale cannot be verified."
         )
+    if not request.space.photo_evidence:
+        warnings.append("No locally analysed venue photo evidence was supplied.")
+    elif not any(
+        evidence.angle.value == "second_angle"
+        for evidence in request.space.photo_evidence
+    ):
+        warnings.append(
+            "Only one venue angle was supplied; objects outside the frame remain unknown."
+        )
 
     return ValidationResponse(valid=True, normalized_request=request, warnings=warnings)
+
+
+@router.post(
+    "/venue-photos/analyze",
+    response_model=VenuePhotoAnalysis,
+    tags=["venue evidence"],
+)
+async def analyze_venue_photo(
+    request: VenuePhotoAnalysisRequest,
+) -> VenuePhotoAnalysis:
+    try:
+        return venue_photo_analyzer.analyze(request)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "invalid_venue_photo",
+                "message": str(exc),
+            },
+        ) from exc
 
 
 @router.post(
