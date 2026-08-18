@@ -6,8 +6,10 @@ application and Firebase Cloud Functions.
 
 Phase 2 provides the validated API contract and project structure. Phase 3 adds
 versioned design catalogues, a synthetic bootstrap dataset, an expert-review
-template, provenance metadata, and strict dataset validation. It still does not
-contain a trained model or return fabricated recommendations.
+template, provenance metadata, and strict dataset validation. Phase 4 adds
+leakage-safe preprocessing, numeric training matrices, two-reviewer assignments,
+agreement auditing, and an explicit training gate. It still does not contain a
+trained model or return fabricated recommendations.
 
 ## Project rules
 
@@ -63,6 +65,13 @@ Validate the Phase 3 data independently:
 python -m training.validate_datasets
 ```
 
+Prepare the Phase 4 training inputs and review assignments:
+
+```powershell
+python -m training.prepare_dataset
+python -m training.review_dataset
+```
+
 The current recommendation labels are synthetic and pending expert review. See
 [`data/README.md`](data/README.md) before using them.
 
@@ -91,6 +100,8 @@ bakesmart_ai/
 ├── data/
 │   ├── catalogs/     # Versioned cake, decor, theme, placement and AR catalogues
 │   ├── training/     # Bootstrap samples, expert-review template and eval cases
+│   ├── processed/v1/ # Numeric split matrices and frozen preprocessing metadata
+│   ├── review/       # Two-reviewer assignments, instructions and status report
 │   ├── manifest.json # Source hashes, file hashes, counts and review status
 │   ├── README.md     # Dataset card, limitations and change control
 │   ├── raw/          # Local source workbooks; ignored by Git

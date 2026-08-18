@@ -11,5 +11,9 @@ data/raw/*
 !data/raw/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
+!data/processed/README.md
+!data/processed/v1/
+!data/processed/v1/*.csv
+!data/processed/v1/*.json
 models/*
 !models/.gitkeep

@@ -48,6 +48,23 @@ The command checks file checksums, schemas, counts, required values, unique IDs,
 catalogue relationships, numeric derivations, class balance, split isolation,
 synthetic-label disclosure, and the expert-review sample.
 
+## Phase 4 preparation
+
+Run the deterministic preprocessing pipeline from `bakesmart_ai`:
+
+```powershell
+python -m training.prepare_dataset
+```
+
+The pipeline keeps the locked 1,680/360/360 split, audits leakage, fits numeric
+scaling and categorical vocabularies only on training rows, writes numeric model
+inputs under `processed/v1/`, and prepares two independent human-review
+assignments for each selected scenario under `review/`.
+
+The preparation report distinguishes a usable synthetic bootstrap pipeline from
+production-accuracy training. Production training remains blocked until both
+independent reviews and a locked real-world test set exist.
+
 ## Change control
 
 - Do not edit a generated CSV by hand.

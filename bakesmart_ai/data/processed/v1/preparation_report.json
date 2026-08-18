@@ -1,0 +1,153 @@
+{
+  "dataset_version": "1.0.0",
+  "leakage_audit": {
+    "duplicate_features_within_split": {
+      "test": 0,
+      "train": 0,
+      "validation": 0
+    },
+    "feature_signature_overlap": {
+      "train_vs_test": 0,
+      "train_vs_validation": 0,
+      "validation_vs_test": 0
+    },
+    "passed": true,
+    "scenario_id_overlap": {
+      "train_vs_test": 0,
+      "train_vs_validation": 0,
+      "validation_vs_test": 0
+    }
+  },
+  "outputs": {
+    "review_assignments_sha256": "066451cdc655cc51f6d2e85dfbc5b9b0b7a5666039355d2e6f5014c37d0154e1",
+    "split_sha256": {
+      "test": "17de0b733f5dca11dafdeffd2d572b0dea6d6953cdca3338e7a24ee39c73b50d",
+      "train": "f56c24decd137241e87db07c1c05c8bdd1f9f52d07832aa977f4a9e996df5d86",
+      "validation": "6642f63b6f0999c503f8e2a32dc6c1c7a1a8f322332863514c411e9f39d761fa"
+    }
+  },
+  "phase": 4,
+  "preprocessing": {
+    "categorical_source_feature_count": 6,
+    "encoded_feature_count": 42,
+    "fitted_rows": 1680,
+    "fitted_split": "train",
+    "numeric_feature_count": 8,
+    "target_count": 4,
+    "unknown_category_counts": {
+      "test": {
+        "age_group": 0,
+        "event_type": 0,
+        "preferred_color": 0,
+        "preferred_style": 0,
+        "time_of_day": 0,
+        "venue_type": 0
+      },
+      "train": {
+        "age_group": 0,
+        "event_type": 0,
+        "preferred_color": 0,
+        "preferred_style": 0,
+        "time_of_day": 0,
+        "venue_type": 0
+      },
+      "validation": {
+        "age_group": 0,
+        "event_type": 0,
+        "preferred_color": 0,
+        "preferred_style": 0,
+        "time_of_day": 0,
+        "venue_type": 0
+      }
+    }
+  },
+  "review": {
+    "agreement": {
+      "cake_label": {
+        "kappa": null,
+        "observed_agreement": null,
+        "paired_scenarios": 0
+      },
+      "decor_label": {
+        "kappa": null,
+        "observed_agreement": null,
+        "paired_scenarios": 0
+      },
+      "layout_label": {
+        "kappa": null,
+        "observed_agreement": null,
+        "paired_scenarios": 0
+      },
+      "theme_label": {
+        "kappa": null,
+        "observed_agreement": null,
+        "paired_scenarios": 0
+      }
+    },
+    "complete": false,
+    "completed_assignments": 0,
+    "completed_by_role": {},
+    "invalid_assignments": 0,
+    "issues": [],
+    "pending_assignments": 240,
+    "real_world_test_set_present": false,
+    "required_review_scenarios": 120,
+    "required_reviews_per_scenario": 2,
+    "scenarios_with_two_completed_reviews": 0,
+    "total_assignments": 240,
+    "valid": true
+  },
+  "source": {
+    "label_type": "synthetic_rule_based_silver",
+    "path": "training/recommendation_samples_v1.csv",
+    "records": 2400,
+    "sha256": "5f38de265944df30496cd4daa55e96a383b225670e640c54473f7d1b08db9a31"
+  },
+  "source_validation": {
+    "checks_run": 125430,
+    "files_checked": 10,
+    "records_checked": 2862,
+    "valid": true
+  },
+  "splits": {
+    "test": 360,
+    "train": 1680,
+    "validation": 360
+  },
+  "theme_counts_by_split": {
+    "test": {
+      "colourful_cartoon": 60,
+      "elegant_gold": 60,
+      "modern_minimal": 60,
+      "pastel_floral": 60,
+      "rustic_natural": 60,
+      "traditional_luxury": 60
+    },
+    "train": {
+      "colourful_cartoon": 280,
+      "elegant_gold": 280,
+      "modern_minimal": 280,
+      "pastel_floral": 280,
+      "rustic_natural": 280,
+      "traditional_luxury": 280
+    },
+    "validation": {
+      "colourful_cartoon": 60,
+      "elegant_gold": 60,
+      "modern_minimal": 60,
+      "pastel_floral": 60,
+      "rustic_natural": 60,
+      "traditional_luxury": 60
+    }
+  },
+  "training_gate": {
+    "blocking_reasons": [
+      "independent expert review assignments are incomplete",
+      "two independent completed reviews are required per scenario",
+      "paired expert labels are incomplete for: cake_label, decor_label, layout_label, theme_label",
+      "a locked, independently labelled real-world test set is absent"
+    ],
+    "production_accuracy_training_ready": false,
+    "synthetic_bootstrap_pipeline_ready": true
+  }
+}

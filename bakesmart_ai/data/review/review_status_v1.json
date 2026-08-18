@@ -1,0 +1,36 @@
+{
+  "agreement": {
+    "cake_label": {
+      "kappa": null,
+      "observed_agreement": null,
+      "paired_scenarios": 0
+    },
+    "decor_label": {
+      "kappa": null,
+      "observed_agreement": null,
+      "paired_scenarios": 0
+    },
+    "layout_label": {
+      "kappa": null,
+      "observed_agreement": null,
+      "paired_scenarios": 0
+    },
+    "theme_label": {
+      "kappa": null,
+      "observed_agreement": null,
+      "paired_scenarios": 0
+    }
+  },
+  "complete": false,
+  "completed_assignments": 0,
+  "completed_by_role": {},
+  "invalid_assignments": 0,
+  "issues": [],
+  "pending_assignments": 240,
+  "real_world_test_set_present": false,
+  "required_review_scenarios": 120,
+  "required_reviews_per_scenario": 2,
+  "scenarios_with_two_completed_reviews": 0,
+  "total_assignments": 240,
+  "valid": true
+}

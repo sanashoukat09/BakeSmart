@@ -1,0 +1,265 @@
+{
+  "categorical_features": [
+    "event_type",
+    "venue_type",
+    "age_group",
+    "time_of_day",
+    "preferred_color",
+    "preferred_style"
+  ],
+  "categorical_vocabularies": {
+    "age_group": [
+      "adult",
+      "child",
+      "mixed",
+      "teenager",
+      "__unknown__"
+    ],
+    "event_type": [
+      "anniversary",
+      "baby_shower",
+      "birthday",
+      "graduation",
+      "wedding",
+      "__unknown__"
+    ],
+    "preferred_color": [
+      "blue",
+      "gold",
+      "green",
+      "mixed",
+      "pink",
+      "purple",
+      "red",
+      "white",
+      "__unknown__"
+    ],
+    "preferred_style": [
+      "colourful",
+      "elegant",
+      "minimal",
+      "rustic",
+      "traditional",
+      "__unknown__"
+    ],
+    "time_of_day": [
+      "day",
+      "night",
+      "__unknown__"
+    ],
+    "venue_type": [
+      "hall",
+      "home",
+      "outdoor",
+      "restaurant",
+      "__unknown__"
+    ]
+  },
+  "feature_columns": [
+    "num__guest_count",
+    "num__room_length_m",
+    "num__room_width_m",
+    "num__room_area_m2",
+    "num__budget_pkr",
+    "num__budget_per_guest_pkr",
+    "num__space_per_guest_m2",
+    "num__budget_per_area_pkr",
+    "cat__event_type__anniversary",
+    "cat__event_type__baby_shower",
+    "cat__event_type__birthday",
+    "cat__event_type__graduation",
+    "cat__event_type__wedding",
+    "cat__event_type__unknown",
+    "cat__venue_type__hall",
+    "cat__venue_type__home",
+    "cat__venue_type__outdoor",
+    "cat__venue_type__restaurant",
+    "cat__venue_type__unknown",
+    "cat__age_group__adult",
+    "cat__age_group__child",
+    "cat__age_group__mixed",
+    "cat__age_group__teenager",
+    "cat__age_group__unknown",
+    "cat__time_of_day__day",
+    "cat__time_of_day__night",
+    "cat__time_of_day__unknown",
+    "cat__preferred_color__blue",
+    "cat__preferred_color__gold",
+    "cat__preferred_color__green",
+    "cat__preferred_color__mixed",
+    "cat__preferred_color__pink",
+    "cat__preferred_color__purple",
+    "cat__preferred_color__red",
+    "cat__preferred_color__white",
+    "cat__preferred_color__unknown",
+    "cat__preferred_style__colourful",
+    "cat__preferred_style__elegant",
+    "cat__preferred_style__minimal",
+    "cat__preferred_style__rustic",
+    "cat__preferred_style__traditional",
+    "cat__preferred_style__unknown"
+  ],
+  "fitted_row_count": 1680,
+  "fitted_split": "train",
+  "numeric_features": [
+    "guest_count",
+    "room_length_m",
+    "room_width_m",
+    "room_area_m2",
+    "budget_pkr",
+    "budget_per_guest_pkr",
+    "space_per_guest_m2",
+    "budget_per_area_pkr"
+  ],
+  "numeric_statistics": {
+    "budget_per_area_pkr": {
+      "maximum": 12401.74672489083,
+      "mean": 2982.90437500916,
+      "minimum": 631.9702602230484,
+      "standard_deviation": 1869.7813151500757
+    },
+    "budget_per_guest_pkr": {
+      "maximum": 29250.0,
+      "mean": 4853.980952380953,
+      "minimum": 1330.0,
+      "standard_deviation": 3539.121216201915
+    },
+    "budget_pkr": {
+      "maximum": 2179000.0,
+      "mean": 305386.3095238095,
+      "minimum": 27000.0,
+      "standard_deviation": 306373.17764327466
+    },
+    "guest_count": {
+      "maximum": 250.0,
+      "mean": 72.37797619047619,
+      "minimum": 8.0,
+      "standard_deviation": 60.64671793184026
+    },
+    "room_area_m2": {
+      "maximum": 562.3,
+      "mean": 107.21654761904762,
+      "minimum": 9.9,
+      "standard_deviation": 86.0454250878991
+    },
+    "room_length_m": {
+      "maximum": 28.9,
+      "mean": 11.723452380952383,
+      "minimum": 3.7,
+      "standard_deviation": 4.702531991245228
+    },
+    "room_width_m": {
+      "maximum": 21.3,
+      "mean": 7.965833333333333,
+      "minimum": 2.3,
+      "standard_deviation": 3.220189179718267
+    },
+    "space_per_guest_m2": {
+      "maximum": 3.9375,
+      "mean": 1.656493844070552,
+      "minimum": 0.7704545454545455,
+      "standard_deviation": 0.4878517135037846
+    }
+  },
+  "output_columns": [
+    "scenario_id",
+    "num__guest_count",
+    "num__room_length_m",
+    "num__room_width_m",
+    "num__room_area_m2",
+    "num__budget_pkr",
+    "num__budget_per_guest_pkr",
+    "num__space_per_guest_m2",
+    "num__budget_per_area_pkr",
+    "cat__event_type__anniversary",
+    "cat__event_type__baby_shower",
+    "cat__event_type__birthday",
+    "cat__event_type__graduation",
+    "cat__event_type__wedding",
+    "cat__event_type__unknown",
+    "cat__venue_type__hall",
+    "cat__venue_type__home",
+    "cat__venue_type__outdoor",
+    "cat__venue_type__restaurant",
+    "cat__venue_type__unknown",
+    "cat__age_group__adult",
+    "cat__age_group__child",
+    "cat__age_group__mixed",
+    "cat__age_group__teenager",
+    "cat__age_group__unknown",
+    "cat__time_of_day__day",
+    "cat__time_of_day__night",
+    "cat__time_of_day__unknown",
+    "cat__preferred_color__blue",
+    "cat__preferred_color__gold",
+    "cat__preferred_color__green",
+    "cat__preferred_color__mixed",
+    "cat__preferred_color__pink",
+    "cat__preferred_color__purple",
+    "cat__preferred_color__red",
+    "cat__preferred_color__white",
+    "cat__preferred_color__unknown",
+    "cat__preferred_style__colourful",
+    "cat__preferred_style__elegant",
+    "cat__preferred_style__minimal",
+    "cat__preferred_style__rustic",
+    "cat__preferred_style__traditional",
+    "cat__preferred_style__unknown",
+    "target__theme",
+    "target__cake",
+    "target__decor",
+    "target__layout"
+  ],
+  "preprocessor_version": "1.0.0",
+  "processed_split_sha256": {
+    "test": "17de0b733f5dca11dafdeffd2d572b0dea6d6953cdca3338e7a24ee39c73b50d",
+    "train": "f56c24decd137241e87db07c1c05c8bdd1f9f52d07832aa977f4a9e996df5d86",
+    "validation": "6642f63b6f0999c503f8e2a32dc6c1c7a1a8f322332863514c411e9f39d761fa"
+  },
+  "source_dataset": "training/recommendation_samples_v1.csv",
+  "source_label_type": "synthetic_rule_based_silver",
+  "source_review_status": "pending_expert_review",
+  "source_sha256": "5f38de265944df30496cd4daa55e96a383b225670e640c54473f7d1b08db9a31",
+  "split_counts": {
+    "test": 360,
+    "train": 1680,
+    "validation": 360
+  },
+  "target_columns": [
+    "target__theme",
+    "target__cake",
+    "target__decor",
+    "target__layout"
+  ],
+  "target_label_to_id": {
+    "cake_label": {
+      "single_tier_round": 0,
+      "single_tier_square": 1,
+      "three_tier_luxury": 2,
+      "two_tier_floral": 3,
+      "two_tier_round": 4
+    },
+    "decor_label": {
+      "balloon_setup": 0,
+      "flower_wall": 1,
+      "luxury_stage": 2,
+      "minimal_backdrop": 3,
+      "rustic_wood_setup": 4
+    },
+    "layout_label": {
+      "cake_and_dessert_table": 0,
+      "full_stage_setup": 1,
+      "single_cake_table": 2,
+      "two_side_tables": 3
+    },
+    "theme_label": {
+      "colourful_cartoon": 0,
+      "elegant_gold": 1,
+      "modern_minimal": 2,
+      "pastel_floral": 3,
+      "rustic_natural": 4,
+      "traditional_luxury": 5
+    }
+  },
+  "unknown_category": "__unknown__"
+}
