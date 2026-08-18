@@ -7,8 +7,8 @@ deterministic checkpoint format are implemented in BakeSmart's training code.
 
 The four prediction heads are theme, cake, decoration package, and layout. Phase
 6 maps those predictions to catalogue items and a coordinated scene contract so
-cakes, additional baked items, tables, backdrops, and decorations can later be
-displayed together in one 3D scene.
+cakes, additional baked items, tables, backdrops, and decorations are displayed
+together by Phase 7's procedural GLB renderer and local interactive viewer.
 
 This is a **synthetic bootstrap artifact**, not a production model. Its metrics
 measure how well it learned the rule-generated silver labels. They do not measure

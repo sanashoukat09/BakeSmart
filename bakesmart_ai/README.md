@@ -16,6 +16,8 @@ connected to the HTTP recommendation endpoint in Phase 6. Phase 6 also freezes
 the raw-request feature adapter, maps predictions to theme/cake/decor catalogue
 IDs, applies an explicitly synthetic decorations-only planning budget, checks a
 basic obstacle/clearance layout, and returns one combined scene specification.
+Phase 7 turns that specification into a real procedural GLB file and serves a
+self-contained WebGL viewer with mouse, touch, zoom, reset and GLB download.
 
 ## Project rules
 
@@ -99,13 +101,21 @@ The current recommendation labels are synthetic and pending expert review. See
 | `GET` | `/api/v1/capabilities` | Supported input values |
 | `POST` | `/api/v1/designs/validate` | Validate and normalize a design request |
 | `POST` | `/api/v1/recommendations` | Run local inference and return one budget-aware scene specification |
+| `GET` | `/viewer/{design_id}` | Open the local interactive 3D viewer |
+| `GET` | `/api/v1/designs/{design_id}/scene.glb` | Download the generated combined GLB scene |
 
 The recommendation endpoint now loads the verified local Phase 5 checkpoint and
 returns the cake, cake table, decorations, backdrop, lighting and coordinates in
-one response. The catalogue currently contains required-to-create asset paths,
-not finished 3D files, so the response truthfully reports
-`interactive_3d_ready=false`, provides no fake viewer/AR URL, and labels the
-fallback `Concept preview—not to scale`.
+one response. Phase 7 procedurally builds those layers into one glTF 2.0 binary
+scene, stores it under the ignored runtime directory, and returns a real local
+`Open Interactive 3D View` link plus a direct GLB link. The viewer uses no CDN or
+external service.
+
+The current geometry is a colored procedural representation, not a reconstruction
+of the uploaded cake photograph or a replacement for detailed artist-created
+catalogue assets. AR remains unset until a supported client performs device
+capability detection. If GLB generation fails, the API keeps the honest
+`Concept preview—not to scale` fallback and does not create a fake button.
 
 The returned PKR values are synthetic planning estimates rather than current
 vendor or bakery prices. The supplied budget applies to decorations only; cake
@@ -120,6 +130,7 @@ bakesmart_ai/
 │   ├── core/         # Settings and logging
 │   ├── schemas/      # Validated request and response contracts
 │   ├── services/     # Recommendation service boundary
+│   ├── static/       # Dependency-free WebGL viewer, styles and page
 │   └── main.py       # FastAPI application
 ├── data/
 │   ├── catalogs/     # Versioned cake, decor, theme, placement and AR catalogues
@@ -131,6 +142,10 @@ bakesmart_ai/
 │   ├── raw/          # Local source workbooks; ignored by Git
 │   └── processed/    # Future generated model inputs; ignored by Git
 ├── models/           # Versioned local bootstrap model artifacts
+├── runtime/scenes/   # Generated customer GLB scenes; ignored by Git
 ├── training/         # Dataset preparation, training, metrics and local runtime
 └── tests/            # Automated API and schema tests
 ```
+
+The exporter follows the official
+[Khronos glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html).

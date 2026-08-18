@@ -52,7 +52,10 @@ validated API request to the locked 42-feature order, runs the local checkpoint,
 selects compatible catalogue records within a decorations-only planning budget,
 and returns the cake/baked item, table, backdrop, decorations, lighting and
 placement coordinates together. It still does not generate 3D geometry or
-claim a working viewer before the referenced assets exist.
+claim a working viewer before the referenced assets exist. Phase 7 adds a
+separate deterministic procedural renderer: it converts that combined scene
+specification into a colored GLB and serves it in a local interactive WebGL
+viewer. This does not change or retrain the Phase 5 weights.
 
 The generated files in `models/bootstrap_v1/` include pickle-free model
 weights, model and data metadata, per-head validation/test metrics, and the
@@ -63,8 +66,9 @@ synthetic rules, not real-world recommendation quality.
 
 A later approved phase will add:
 
-- original or redistribution-safe `.glb` scene assets;
-- the interactive 3D viewer that consumes the combined scene specification;
+- original or redistribution-safe artist-created assets to replace procedural
+  placeholder geometry;
+- cake-photo reconstruction only after a suitable owned training dataset exists;
 - client-side AR capability detection and an AR link only on supported devices;
 - a generated 2D concept-preview fallback on unsupported devices; and
 - persistent save/share records after customer authentication is connected.

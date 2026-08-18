@@ -5,7 +5,7 @@ def test_health_reports_ready_local_model(client):
     assert response.json() == {
         "status": "ok",
         "service": "BakeSmart AI",
-        "version": "0.2.0",
+        "version": "0.3.0",
         "model_status": "ready",
     }
 
@@ -41,6 +41,8 @@ def test_recommendation_returns_one_budget_aware_scene(client, valid_design_requ
     assert body["model_version"] == "bootstrap-v1"
     assert body["selected_theme_id"] == "floral-romantic"
     assert body["cake"]["source_image_reference"] == "cake-photo-001"
+    assert body["cake"]["shape"] == "round"
+    assert body["cake"]["tiers"] == 2
     assert set(body["model_signals"]) == {"theme", "cake", "decor", "layout"}
     assert body["costs"]["decoration_cost_pkr"] <= 50_000
     assert body["costs"]["remaining_budget_pkr"] == (
@@ -61,12 +63,15 @@ def test_recommendation_returns_one_budget_aware_scene(client, valid_design_requ
         "lighting",
     ]
     assert body["preview"] == {
-        "interactive_3d_ready": False,
-        "viewer_3d_url": None,
+        "interactive_3d_ready": True,
+        "viewer_3d_url": f"/viewer/{body['design_id']}",
+        "viewer_label": "Open Interactive 3D View",
+        "scene_glb_url": f"/api/v1/designs/{body['design_id']}/scene.glb",
         "ar_supported": None,
         "ar_url": None,
-        "fallback_label": "Concept preview—not to scale",
+        "fallback_label": None,
     }
+    assert body["scene"]["asset_status"] == "generated_procedural_glb"
     assert body["scene"]["concept_not_to_scale"] is True
     assert any("synthetic labels" in warning for warning in body["warnings"])
     assert any("No obstacle map" in warning for warning in body["warnings"])
@@ -78,3 +83,39 @@ def test_recommendation_id_is_deterministic(client, valid_design_request):
 
     assert first.status_code == second.status_code == 200
     assert first.json()["design_id"] == second.json()["design_id"]
+
+
+def test_viewer_and_glb_urls_are_real_local_resources(client, valid_design_request):
+    recommendation = client.post(
+        "/api/v1/recommendations", json=valid_design_request
+    ).json()
+
+    viewer = client.get(recommendation["preview"]["viewer_3d_url"])
+    glb = client.get(recommendation["preview"]["scene_glb_url"])
+    viewer_script = client.get("/static/viewer.js")
+
+    assert viewer.status_code == 200
+    assert viewer.headers["content-type"].startswith("text/html")
+    assert "default-src 'self'" in viewer.headers["content-security-policy"]
+    assert b'id="scene-canvas"' in viewer.content
+    assert b"https://" not in viewer.content
+    assert glb.status_code == 200
+    assert glb.headers["content-type"] == "model/gltf-binary"
+    assert glb.headers["cache-control"] == "private, no-cache"
+    assert glb.content[:4] == b"glTF"
+    assert viewer_script.status_code == 200
+    assert b"pointermove" in viewer_script.content
+    assert b"wheel" in viewer_script.content
+    assert b"distanceBetweenPointers" in viewer_script.content
+
+
+def test_unknown_viewer_scene_returns_not_found(client):
+    viewer = client.get("/viewer/design-00000000000000000000")
+    glb = client.get(
+        "/api/v1/designs/design-00000000000000000000/scene.glb"
+    )
+    invalid = client.get("/viewer/not-a-design")
+
+    assert viewer.status_code == 404
+    assert glb.status_code == 404
+    assert invalid.status_code == 404

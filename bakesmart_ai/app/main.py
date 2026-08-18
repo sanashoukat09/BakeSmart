@@ -2,9 +2,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app import __version__
 from app.api.routes import router as api_router
+from app.api.viewer import STATIC_DIR, router as viewer_router
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.schemas.design import HealthResponse
@@ -36,6 +38,8 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix="/api/v1")
+app.include_router(viewer_router)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 @app.get("/health", response_model=HealthResponse, tags=["system"])

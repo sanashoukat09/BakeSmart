@@ -174,6 +174,8 @@ class DecorRecommendation(StrictModel):
 class CakePlacement(StrictModel):
     catalog_id: str | None = None
     source_image_reference: str
+    shape: CakeShape
+    tiers: int = Field(ge=1, le=10)
     placement: ObjectPlacement
     servings: int = Field(ge=1)
     estimated_cost_pkr: int = Field(ge=0)
@@ -197,11 +199,11 @@ class ModelSignal(StrictModel):
 class PreviewAvailability(StrictModel):
     interactive_3d_ready: bool
     viewer_3d_url: str | None = None
+    viewer_label: Literal["Open Interactive 3D View"] | None = None
+    scene_glb_url: str | None = None
     ar_supported: bool | None = None
     ar_url: str | None = None
-    fallback_label: Literal["Concept preview—not to scale"] = (
-        "Concept preview—not to scale"
-    )
+    fallback_label: Literal["Concept preview—not to scale"] | None = None
 
 
 class SceneSpecification(StrictModel):
@@ -211,7 +213,10 @@ class SceneSpecification(StrictModel):
     minimum_clearance_m: float = Field(ge=0.9)
     concept_not_to_scale: bool
     layout_strategy: str
-    asset_status: Literal["catalog_references_require_3d_asset_creation"]
+    asset_status: Literal[
+        "catalog_references_require_3d_asset_creation",
+        "generated_procedural_glb",
+    ]
     layers: list[
         Literal[
             "cake_and_baked_items",

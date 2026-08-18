@@ -106,12 +106,12 @@ class SceneBuilder:
             "The bootstrap model was trained on synthetic labels and is not production-approved.",
             "All prices are synthetic planning estimates, not vendor or bakery quotes.",
             (
-                "Catalogue asset paths are references only; finished 3D files and "
-                "viewer links are not available yet."
+                "The interactive scene uses procedural placeholder geometry; detailed "
+                "catalogue art assets are not available yet."
             ),
             (
-                "The supplied cake image is retained as a design reference; Phase 6 "
-                "does not convert the photo into 3D geometry."
+                "The supplied cake image is retained as a design reference; the "
+                "procedural renderer does not reconstruct it as 3D geometry."
             ),
         ]
         selected_theme = self._select_theme(request, model_signals, warnings)
@@ -211,8 +211,11 @@ class SceneBuilder:
         preview = PreviewAvailability(
             interactive_3d_ready=False,
             viewer_3d_url=None,
+            viewer_label=None,
+            scene_glb_url=None,
             ar_supported=None,
             ar_url=None,
+            fallback_label="Concept preview—not to scale",
         )
         if not decorations:
             warnings.append(
@@ -490,6 +493,8 @@ class SceneBuilder:
         cake = CakePlacement(
             catalog_id=cake_row["cake_design_id"],
             source_image_reference=request.cake.cake_image_reference,
+            shape=request.cake.shape,
+            tiers=request.cake.tiers,
             placement=cake_object,
             servings=request.cake.servings_required,
             estimated_cost_pkr=estimated_cost,
