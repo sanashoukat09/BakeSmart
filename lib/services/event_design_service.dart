@@ -88,15 +88,19 @@ class EventDesignService {
         recommendation.fallbackLabel ?? 'Concept preview—not to scale',
       );
     }
-    final opened = await launchUrl(
-      absoluteResourceUri(path),
-      mode: LaunchMode.externalApplication,
-    );
+    final opened = await openResource(path);
     if (!opened) {
       throw const EventDesignServiceException(
         'The interactive 3D viewer could not be opened on this device.',
       );
     }
+  }
+
+  Future<bool> openResource(String resourcePath) {
+    return launchUrl(
+      absoluteResourceUri(resourcePath),
+      mode: LaunchMode.externalApplication,
+    );
   }
 
   Future<SavedEventDesign> saveDesign({

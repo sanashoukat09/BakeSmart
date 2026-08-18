@@ -257,6 +257,8 @@ class EventDesignRecommendation {
   final bool interactive3dReady;
   final String? viewerPath;
   final String? sceneGlbPath;
+  final bool? backendArSupported;
+  final String? arPath;
   final String? fallbackLabel;
   final List<String> warnings;
   final Map<String, dynamic> rawJson;
@@ -275,6 +277,8 @@ class EventDesignRecommendation {
     required this.interactive3dReady,
     required this.viewerPath,
     required this.sceneGlbPath,
+    required this.backendArSupported,
+    required this.arPath,
     required this.fallbackLabel,
     required this.warnings,
     required this.rawJson,
@@ -307,6 +311,8 @@ class EventDesignRecommendation {
           preview['interactive_3d_ready'] as bool? ?? false,
       viewerPath: preview['viewer_3d_url'] as String?,
       sceneGlbPath: preview['scene_glb_url'] as String?,
+      backendArSupported: preview['ar_supported'] as bool?,
+      arPath: preview['ar_url'] as String?,
       fallbackLabel: preview['fallback_label'] as String?,
       warnings: List<String>.from(json['warnings'] as List? ?? const []),
       rawJson: Map<String, dynamic>.from(json),

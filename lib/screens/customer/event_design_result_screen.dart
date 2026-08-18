@@ -5,7 +5,9 @@ import 'package:intl/intl.dart';
 
 import '../../core/router/app_router.dart';
 import '../../core/utils/share_util.dart';
+import '../../models/device_capability_model.dart';
 import '../../models/event_design_model.dart';
+import '../../providers/device_capability_provider.dart';
 import '../../providers/event_design_provider.dart';
 
 class EventDesignResultScreen extends ConsumerStatefulWidget {
@@ -40,6 +42,23 @@ class _EventDesignResultScreenState
       await ref
           .read(eventDesignServiceProvider)
           .openViewer(_recommendation);
+    } catch (error) {
+      if (mounted) _message(error.toString());
+    }
+  }
+
+  Future<void> _openPreview(EventPreviewDecision decision) async {
+    final path = decision.resourcePath;
+    if (path == null) {
+      _message(decision.label);
+      return;
+    }
+    try {
+      final opened =
+          await ref.read(eventDesignServiceProvider).openResource(path);
+      if (!opened && mounted) {
+        _message('${decision.label} could not be opened on this device.');
+      }
     } catch (error) {
       if (mounted) _message(error.toString());
     }
@@ -119,6 +138,7 @@ class _EventDesignResultScreenState
   @override
   Widget build(BuildContext context) {
     final money = NumberFormat.decimalPattern();
+    final capabilities = ref.watch(deviceCapabilitiesProvider);
     return Scaffold(
       backgroundColor: _canvas,
       appBar: AppBar(
@@ -165,7 +185,9 @@ class _EventDesignResultScreenState
             Icons.cake_outlined,
           ),
           const SizedBox(height: 18),
-          _actionButtons(),
+          _deviceCompatibilityCard(capabilities),
+          const SizedBox(height: 12),
+          _actionButtons(capabilities),
           const SizedBox(height: 22),
           _detailsCard(
             title: 'Recommended decorations',
@@ -300,22 +322,37 @@ class _EventDesignResultScreenState
     );
   }
 
-  Widget _actionButtons() {
-    final interactive =
-        _recommendation.interactive3dReady && _recommendation.viewerPath != null;
+  Widget _actionButtons(
+    AsyncValue<DeviceCapabilities> capabilities,
+  ) {
+    final detected = capabilities.valueOrNull ??
+        DeviceCapabilities.unavailable(
+          platform: 'unknown',
+          diagnostic: 'Capability detection is still loading.',
+        );
+    final decision = EventPreviewPolicy.decide(
+      recommendation: _recommendation,
+      capabilities: detected,
+    );
     return Column(
       children: [
-        if (interactive)
+        if (decision.mode != EventPreviewMode.conceptFallback)
           SizedBox(
             width: double.infinity,
             height: 52,
             child: FilledButton.icon(
-              onPressed: _openViewer,
+              onPressed: decision.mode == EventPreviewMode.interactive3d
+                  ? _openViewer
+                  : () => _openPreview(decision),
               style: FilledButton.styleFrom(backgroundColor: _brown),
-              icon: const Icon(Icons.threed_rotation),
-              label: const Text(
-                'Open Interactive 3D View',
-                style: TextStyle(fontWeight: FontWeight.w800),
+              icon: Icon(
+                decision.mode == EventPreviewMode.augmentedReality
+                    ? Icons.view_in_ar_outlined
+                    : Icons.threed_rotation,
+              ),
+              label: Text(
+                decision.label,
+                style: const TextStyle(fontWeight: FontWeight.w800),
               ),
             ),
           )
@@ -328,7 +365,7 @@ class _EventDesignResultScreenState
               borderRadius: BorderRadius.circular(14),
             ),
             child: Text(
-              _recommendation.fallbackLabel ?? 'Concept preview—not to scale',
+              decision.label,
               textAlign: TextAlign.center,
               style: const TextStyle(color: _ink, fontWeight: FontWeight.w800),
             ),
@@ -374,6 +411,132 @@ class _EventDesignResultScreenState
           ),
         ],
       ],
+    );
+  }
+
+  Widget _deviceCompatibilityCard(
+    AsyncValue<DeviceCapabilities> capabilities,
+  ) {
+    if (capabilities.isLoading) {
+      return _compatibilitySurface(
+        icon: Icons.phonelink_setup_outlined,
+        title: 'Checking device preview support',
+        message: 'Interactive 3D remains available during this local check.',
+        color: const Color(0xFF5B6472),
+        trailing: const SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+
+    final detected = capabilities.valueOrNull;
+    if (detected == null) {
+      return _compatibilitySurface(
+        icon: Icons.threed_rotation,
+        title: 'Interactive 3D fallback active',
+        message: 'AR support could not be verified. No AR installation is '
+            'required to rotate and zoom this design.',
+        color: const Color(0xFF8A5A16),
+      );
+    }
+
+    switch (detected.arState) {
+      case ArCapabilityState.supported:
+        final sceneHasAr = _recommendation.backendArSupported == true &&
+            _recommendation.arPath != null;
+        return _compatibilitySurface(
+          icon: sceneHasAr ? Icons.view_in_ar_outlined : Icons.threed_rotation,
+          title: sceneHasAr ? 'AR preview available' : 'Interactive 3D shown',
+          message: sceneHasAr
+              ? 'Compatible AR camera hardware and a real BakeSmart AR scene '
+                  'were both detected.'
+              : 'This device reports AR camera hardware, but this result has no '
+                  'real AR scene. BakeSmart will not show a fake AR button.',
+          color: sceneHasAr
+              ? const Color(0xFF287A50)
+              : const Color(0xFF8A5A16),
+          detail: detected.apiLevel == null
+              ? null
+              : 'Android API ${detected.apiLevel}',
+        );
+      case ArCapabilityState.unsupported:
+        return _compatibilitySurface(
+          icon: Icons.threed_rotation,
+          title: 'Interactive 3D fallback active',
+          message: 'Live-camera AR is not supported by this device. Rotate and '
+              'zoom the design without installing Google Play Services for AR.',
+          color: const Color(0xFF8A5A16),
+          detail: detected.apiLevel == null
+              ? null
+              : 'Android API ${detected.apiLevel}',
+        );
+      case ArCapabilityState.unavailable:
+        return _compatibilitySurface(
+          icon: Icons.threed_rotation,
+          title: 'Interactive 3D fallback active',
+          message: 'AR hardware support could not be verified. No AR service is '
+              'required for the 3D viewer.',
+          color: const Color(0xFF5B6472),
+        );
+    }
+  }
+
+  Widget _compatibilitySurface({
+    required IconData icon,
+    required String title,
+    required String message,
+    required Color color,
+    String? detail,
+    Widget? trailing,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.24)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(color: color, fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  message,
+                  style: const TextStyle(color: _muted, height: 1.35),
+                ),
+                if (detail != null) ...[
+                  const SizedBox(height: 5),
+                  Text(
+                    detail,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (trailing != null) ...[
+            const SizedBox(width: 10),
+            trailing,
+          ],
+        ],
+      ),
     );
   }
 

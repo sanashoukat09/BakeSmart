@@ -73,6 +73,8 @@ void main() {
     expect(recommendation.designId, 'design-1234567890abcdef1234');
     expect(recommendation.themeLabel, 'Floral Romantic');
     expect(recommendation.interactive3dReady, isTrue);
+    expect(recommendation.backendArSupported, isFalse);
+    expect(recommendation.arPath, isNull);
     expect(
       recommendation.viewerPath,
       '/viewer/design-1234567890abcdef1234',
@@ -144,6 +146,8 @@ Map<String, dynamic> _recommendationJson() {
       'viewer_3d_url': '/viewer/design-1234567890abcdef1234',
       'scene_glb_url':
           '/api/v1/designs/design-1234567890abcdef1234/scene.glb',
+      'ar_supported': false,
+      'ar_url': null,
       'fallback_label': null,
     },
     'warnings': ['Procedural concept preview.'],

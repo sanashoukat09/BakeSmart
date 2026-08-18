@@ -7,6 +7,15 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
+    <!-- Camera and AR remain optional so unsupported devices can install and
+         use BakeSmart's interactive 3D fallback. -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.camera.ar"
+        android:required="false" />
+
     <application
         android:label="BakeSmart"
         android:name="${applicationName}"

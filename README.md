@@ -51,6 +51,27 @@ flutter analyze
 flutter test test/models/event_design_model_test.dart
 ```
 
+### Phase 9 — AR compatibility and device fallback
+
+Phase 9 checks Android's motion-tracking camera feature locally through
+`PackageManager` as a conservative AR-hardware signal.
+Camera and AR features are optional in the manifest, so phones without AR can
+still install BakeSmart. The check does not install, query or require Google Play
+Services for AR.
+
+The result screen follows this fixed order:
+
+1. Show `Open in AR` only when the phone reports AR camera hardware **and** the
+   BakeSmart response contains `ar_supported=true` with a real `ar_url`.
+2. Otherwise show `Open Interactive 3D View` when `viewer_3d_url` exists.
+3. Otherwise show `Concept preview—not to scale` with no fake button.
+
+The current procedural backend intentionally returns no AR URL, so Phase 9 uses
+the interactive 3D viewer on both unsupported devices and AR-capable devices.
+Hardware detection uses Android's documented
+[`FEATURE_CAMERA_AR`](https://developer.android.com/reference/android/content/pm/PackageManager#FEATURE_CAMERA_AR)
+flag, available from API level 28.
+
 ## 🚀 Step-by-Step Setup
 
 ### Step 1 — Create the Flutter project shell
@@ -202,7 +223,7 @@ D:\Bake Smart\
 | 3 | 🔜 Pending | Cost, Pricing & Surplus |
 | 4 | 🔜 Pending | Order Management & Scheduling |
 | 5 | 🔜 Pending | Customer Storefront & Cart |
-| 6 | ✅ **Phase 8 complete** | AR-based suggestions with interactive 3D fallback, private save and real-link sharing |
+| 6 | ✅ **Phase 9 complete** | AR-aware suggestions, automatic 3D fallback, private save and real-link sharing |
 | 10 | 🔜 Pending | Storefront Discovery & Sharing |
 
 ---

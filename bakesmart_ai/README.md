@@ -20,6 +20,9 @@ Phase 7 turns that specification into a real procedural GLB file and serves a
 self-contained WebGL viewer with mouse, touch, zoom, reset and GLB download.
 Phase 8 connects those endpoints to BakeSmart's authenticated customer Flutter
 flow and adds private Firestore save records plus real viewer-link sharing.
+Phase 9 adds client-side Android AR-hardware detection and an enforced preview
+policy: a real AR URL may be shown only when the device and response both support
+it; otherwise the existing interactive 3D or concept fallback is used.
 
 ## Project rules
 
@@ -118,6 +121,9 @@ of the uploaded cake photograph or a replacement for detailed artist-created
 catalogue assets. AR remains unset until a supported client performs device
 capability detection. If GLB generation fails, the API keeps the honest
 `Concept preview—not to scale` fallback and does not create a fake button.
+Phase 9 does not change this truth contract: the current response leaves
+`ar_supported` and `ar_url` unset, so the customer app never offers AR for the
+procedural scene.
 
 The returned PKR values are synthetic planning estimates rather than current
 vendor or bakery prices. The supplied budget applies to decorations only; cake
