@@ -19,5 +19,9 @@ models/*
 !models/.gitkeep
 !models/bootstrap_v1/
 !models/bootstrap_v1/*
+!models/venue_vision_bootstrap_v1/
+!models/venue_vision_bootstrap_v1/*
+
+data/venue_vision/raw/
 
 runtime/

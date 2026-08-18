@@ -36,6 +36,14 @@ def test_venue_photo_is_analysed_locally_without_scale_claim(client):
     assert body["orientation"] == "landscape"
     assert body["quality"] in {"high", "medium"}
     assert body["horizontal_structure_score"] > 0
+    assert body["vision_model_version"] == "venue-vision-bootstrap-v1"
+    assert body["unconfirmed_candidates"]
+    assert all(
+        candidate["confirmed"] is False
+        and candidate["confidence"] < 0.5
+        and candidate["source"] == "synthetic_bootstrap_model"
+        for candidate in body["unconfirmed_candidates"]
+    )
     assert body["exact_scale_available"] is False
     assert body["persisted"] is False
     assert "image_base64" not in body

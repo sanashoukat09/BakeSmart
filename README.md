@@ -96,6 +96,33 @@ When evidence is incomplete, the result stays labelled
 `Concept preview—not to scale` and requires manual venue review. No uploaded
 venue photo is added to the training dataset or persisted by Phase 10.
 
+### Phase 11 — From-scratch venue segmentation bootstrap
+
+Phase 11 adds BakeSmart's first venue-image segmentation checkpoint. A
+deterministic generator creates 240 labelled synthetic scenes with exact masks
+for wall, floor, door, window, furniture, outlet and walkway. Whole scenes—not
+individual pixels—are locked into 168 train, 36 validation and 36 test scenes.
+A separate real-photo manifest requires source rights or consent, annotator and
+independent reviewer fields; it currently contains zero real-photo rows.
+
+The 2,791-parameter pixel model uses a 3×3 RGB patch plus x/y coordinates and is
+trained with BakeSmart's NumPy forward propagation, backpropagation and Adam
+implementation from random weights. It uses no external inference API,
+pretrained checkpoint or machine-learning framework. The locked synthetic test
+achieved 0.9470 pixel accuracy and 0.7901 macro IoU. These are synthetic
+bootstrap scores, **not accuracy on real venue photos**.
+
+Venue-photo analysis now returns possible semantic regions from this checkpoint.
+Every candidate is marked unconfirmed, capped below 0.50 confidence, and shown
+only to help the customer review the photo. Candidates never become obstacle
+coordinates, clearance claims or scale automatically. Phase 10 measurements
+and obstacle confirmation remain authoritative.
+
+The segmentation design was informed by the localisation objective in the
+original [U-Net paper](https://arxiv.org/abs/1505.04597), and the label scope was
+compared with MIT's official [ADE20K dataset](https://ade20k.csail.mit.edu/).
+No code or trained weights were copied from either source.
+
 ## 🚀 Step-by-Step Setup
 
 ### Step 1 — Create the Flutter project shell
@@ -247,7 +274,7 @@ D:\Bake Smart\
 | 3 | 🔜 Pending | Cost, Pricing & Surplus |
 | 4 | 🔜 Pending | Order Management & Scheduling |
 | 5 | 🔜 Pending | Customer Storefront & Cart |
-| 6 | ✅ **Phase 10 complete** | Local venue-photo evidence, measured obstacle-aware placement, 3D fallback, save and sharing |
+| 6 | ✅ **Phase 11 complete** | From-scratch venue segmentation bootstrap, measured placement, 3D fallback, save and sharing |
 | 10 | 🔜 Pending | Storefront Discovery & Sharing |
 
 ---

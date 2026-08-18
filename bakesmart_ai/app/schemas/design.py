@@ -64,6 +64,32 @@ class PhotoQuality(str, Enum):
     LOW = "low"
 
 
+class VenueVisionCandidate(StrictModel):
+    label: Literal[
+        "wall",
+        "floor",
+        "door",
+        "window",
+        "furniture",
+        "outlet",
+        "walkway",
+    ]
+    confidence: float = Field(ge=0, lt=0.5)
+    bounding_box: tuple[float, float, float, float]
+    area_fraction: float = Field(gt=0, le=1)
+    confirmed: Literal[False] = False
+    source: Literal["synthetic_bootstrap_model"] = "synthetic_bootstrap_model"
+
+    @model_validator(mode="after")
+    def validate_normalized_box(self) -> "VenueVisionCandidate":
+        left, top, width, height = self.bounding_box
+        if min(left, top, width, height) < 0:
+            raise ValueError("candidate bounding_box values must be non-negative")
+        if left + width > 1 or top + height > 1 or width == 0 or height == 0:
+            raise ValueError("candidate bounding_box must fit normalized image bounds")
+        return self
+
+
 class CakeShape(str, Enum):
     ROUND = "round"
     SQUARE = "square"
@@ -102,6 +128,11 @@ class VenuePhotoEvidence(StrictModel):
     contrast_score: float = Field(ge=0, le=1)
     sharpness_score: float = Field(ge=0, le=1)
     observations: list[str] = Field(default_factory=list, max_length=12)
+    vision_model_version: str | None = Field(default=None, max_length=80)
+    unconfirmed_candidates: list[VenueVisionCandidate] = Field(
+        default_factory=list,
+        max_length=10,
+    )
 
 
 class SpaceInput(StrictModel):
@@ -269,6 +300,8 @@ class VenuePhotoAnalysis(StrictModel):
     contrast_score: float = Field(ge=0, le=1)
     sharpness_score: float = Field(ge=0, le=1)
     horizontal_structure_score: float = Field(ge=0, le=1)
+    vision_model_version: str | None = None
+    unconfirmed_candidates: list[VenueVisionCandidate] = Field(default_factory=list)
     observations: list[str]
     limitations: list[str]
     exact_scale_available: Literal[False] = False

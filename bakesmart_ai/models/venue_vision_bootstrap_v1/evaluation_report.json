@@ -1,0 +1,265 @@
+{
+  "evaluation_order": [
+    "validation",
+    "locked_test_after_model_selection"
+  ],
+  "limitations": [
+    "All training masks are deterministic synthetic bootstrap labels.",
+    "Metrics measure synthetic scene recovery, not accuracy on customer photos.",
+    "No independently labelled real-photo test set exists yet.",
+    "Runtime detections are unconfirmed candidates and never create obstacles automatically."
+  ],
+  "model_name": "BakeSmartVenuePixelMLP",
+  "model_version": "venue-vision-bootstrap-v1",
+  "test": {
+    "class_order": [
+      "wall",
+      "floor",
+      "door",
+      "window",
+      "furniture",
+      "outlet",
+      "walkway"
+    ],
+    "confusion_matrix": [
+      [
+        42906,
+        0,
+        2,
+        2,
+        0,
+        0,
+        145
+      ],
+      [
+        0,
+        20710,
+        137,
+        0,
+        1018,
+        0,
+        1583
+      ],
+      [
+        0,
+        100,
+        4026,
+        0,
+        624,
+        0,
+        11
+      ],
+      [
+        4,
+        0,
+        11,
+        1966,
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        133,
+        378,
+        0,
+        1863,
+        67,
+        33
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        144,
+        0
+      ],
+      [
+        0,
+        102,
+        31,
+        5,
+        5,
+        0,
+        6937
+      ]
+    ],
+    "macro_iou": 0.7900793566393107,
+    "per_class": {
+      "door": {
+        "iou": 0.7567669172932331,
+        "precision": 0.8780806979280261,
+        "recall": 0.8456206679269062,
+        "support_pixels": 4761
+      },
+      "floor": {
+        "iou": 0.8707900601269815,
+        "precision": 0.9840817296269898,
+        "recall": 0.8832309791879904,
+        "support_pixels": 23448
+      },
+      "furniture": {
+        "iou": 0.45207473914098517,
+        "precision": 0.5307692307692308,
+        "recall": 0.7530315278900566,
+        "support_pixels": 2474
+      },
+      "outlet": {
+        "iou": 0.6824644549763034,
+        "precision": 0.6824644549763034,
+        "recall": 1.0,
+        "support_pixels": 144
+      },
+      "walkway": {
+        "iou": 0.7835761888625324,
+        "precision": 0.7964408725602755,
+        "recall": 0.9798022598870056,
+        "support_pixels": 7080
+      },
+      "wall": {
+        "iou": 0.9964467358740333,
+        "precision": 0.9999067816359822,
+        "recall": 0.9965393101846476,
+        "support_pixels": 43055
+      },
+      "window": {
+        "iou": 0.9884364002011061,
+        "precision": 0.9964521033958439,
+        "recall": 0.9919273461150353,
+        "support_pixels": 1982
+      }
+    },
+    "pixel_accuracy": 0.9470486111111112,
+    "pixels": 82944,
+    "scenes": 36,
+    "split": "test"
+  },
+  "validation": {
+    "class_order": [
+      "wall",
+      "floor",
+      "door",
+      "window",
+      "furniture",
+      "outlet",
+      "walkway"
+    ],
+    "confusion_matrix": [
+      [
+        42507,
+        0,
+        5,
+        46,
+        0,
+        0,
+        23
+      ],
+      [
+        0,
+        21139,
+        21,
+        0,
+        1638,
+        0,
+        1566
+      ],
+      [
+        0,
+        23,
+        3716,
+        0,
+        662,
+        0,
+        13
+      ],
+      [
+        0,
+        0,
+        5,
+        1979,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        42,
+        282,
+        0,
+        2063,
+        82,
+        8
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        4,
+        140,
+        0
+      ],
+      [
+        3,
+        298,
+        107,
+        0,
+        77,
+        0,
+        6495
+      ]
+    ],
+    "macro_iou": 0.7709895441337045,
+    "per_class": {
+      "door": {
+        "iou": 0.7687215556474969,
+        "precision": 0.8984526112185687,
+        "recall": 0.8418667874943362,
+        "support_pixels": 4414
+      },
+      "floor": {
+        "iou": 0.8548954584057913,
+        "precision": 0.9831178495023719,
+        "recall": 0.8676325726481694,
+        "support_pixels": 24364
+      },
+      "furniture": {
+        "iou": 0.4246603540551667,
+        "precision": 0.46422142214221424,
+        "recall": 0.8328623334679047,
+        "support_pixels": 2477
+      },
+      "outlet": {
+        "iou": 0.6194690265486725,
+        "precision": 0.6306306306306306,
+        "recall": 0.9722222222222222,
+        "support_pixels": 144
+      },
+      "walkway": {
+        "iou": 0.7561117578579744,
+        "precision": 0.8013571869216533,
+        "recall": 0.9305157593123209,
+        "support_pixels": 6980
+      },
+      "wall": {
+        "iou": 0.9981918091301898,
+        "precision": 0.9999294283697954,
+        "recall": 0.9982621356943238,
+        "support_pixels": 42581
+      },
+      "window": {
+        "iou": 0.9748768472906404,
+        "precision": 0.9772839506172839,
+        "recall": 0.9974798387096774,
+        "support_pixels": 1984
+      }
+    },
+    "pixel_accuracy": 0.9408637152777778,
+    "pixels": 82944,
+    "scenes": 36,
+    "split": "validation"
+  },
+  "weights_sha256": "18789218173f4a61f70e94e58c33cd8858cca28bdbbffa46e481370bad044b43"
+}

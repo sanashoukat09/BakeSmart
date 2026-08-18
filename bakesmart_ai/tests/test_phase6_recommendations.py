@@ -97,6 +97,36 @@ def test_two_good_photo_angles_raise_evidence_confidence(
     ]
 
 
+def test_vision_candidate_is_reported_but_not_used_as_obstacle(
+    client,
+    valid_design_request,
+):
+    request = deepcopy(valid_design_request)
+    evidence = request["space"]["photo_evidence"][0]
+    evidence["vision_model_version"] = "venue-vision-bootstrap-v1"
+    evidence["unconfirmed_candidates"] = [
+        {
+            "label": "door",
+            "confidence": 0.49,
+            "bounding_box": [0.1, 0.2, 0.2, 0.6],
+            "area_fraction": 0.12,
+            "confirmed": False,
+            "source": "synthetic_bootstrap_model",
+        }
+    ]
+
+    response = client.post("/api/v1/recommendations", json=request)
+
+    assert response.status_code == 200
+    assessment = response.json()["venue_assessment"]
+    assert assessment["obstacle_count"] == 0
+    assert assessment["placement_status"] == "clearance_verified"
+    assert any(
+        "possible door" in assumption and "none were used" in assumption
+        for assumption in assessment["assumptions"]
+    )
+
+
 def test_unknown_theme_uses_model_guided_catalog_fallback(client, valid_design_request):
     request = deepcopy(valid_design_request)
     request["event"]["theme_id"] = "not-in-catalog"

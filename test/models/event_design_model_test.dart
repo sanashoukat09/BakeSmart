@@ -21,6 +21,11 @@ void main() {
       expect(space['obstacle_map_confirmed'], isTrue);
       expect((space['photo_evidence'] as List).length, 1);
       expect((space['obstacles'] as List).length, 1);
+      final evidence =
+          (space['photo_evidence'] as List).single as Map<String, dynamic>;
+      expect(evidence['vision_model_version'], 'venue-vision-bootstrap-v1');
+      expect((evidence['unconfirmed_candidates'] as List).single['confirmed'],
+          isFalse);
     });
 
     test('round trips through the persisted request map', () {
@@ -35,6 +40,8 @@ void main() {
       expect(restored.cakeWidthM, original.cakeWidthM);
       expect(restored.decorationBudgetPkr, original.decorationBudgetPkr);
       expect(restored.venuePhotos.single.quality, 'high');
+      expect(restored.venuePhotos.single.unconfirmedCandidates.single.label,
+          'door');
       expect(restored.obstacles.single.label, 'main door');
       expect(restored.obstacleMapConfirmed, isTrue);
       expect(restored.knownReferenceM, 1.5);
@@ -129,6 +136,17 @@ EventDesignRequest _request() {
         contrastScore: 0.42,
         sharpnessScore: 0.38,
         horizontalStructureScore: 0.4,
+        visionModelVersion: 'venue-vision-bootstrap-v1',
+        unconfirmedCandidates: [
+          VenueVisionCandidate(
+            label: 'door',
+            confidence: 0.49,
+            boundingBox: [0.1, 0.2, 0.2, 0.6],
+            areaFraction: 0.12,
+            confirmed: false,
+            source: 'synthetic_bootstrap_model',
+          ),
+        ],
         observations: ['Landscape venue photo supplied.'],
         limitations: ['No automatic object confirmation.'],
       ),

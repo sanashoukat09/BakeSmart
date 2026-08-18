@@ -95,6 +95,48 @@ abstract final class EventDesignOptions {
   }
 }
 
+class VenueVisionCandidate {
+  final String label;
+  final double confidence;
+  final List<double> boundingBox;
+  final double areaFraction;
+  final bool confirmed;
+  final String source;
+
+  const VenueVisionCandidate({
+    required this.label,
+    required this.confidence,
+    required this.boundingBox,
+    required this.areaFraction,
+    required this.confirmed,
+    required this.source,
+  });
+
+  factory VenueVisionCandidate.fromJson(Map<String, dynamic> json) {
+    return VenueVisionCandidate(
+      label: json['label'] as String,
+      confidence: (json['confidence'] as num).toDouble(),
+      boundingBox: (json['bounding_box'] as List)
+          .map((value) => (value as num).toDouble())
+          .toList(growable: false),
+      areaFraction: (json['area_fraction'] as num).toDouble(),
+      confirmed: json['confirmed'] as bool? ?? false,
+      source: json['source'] as String? ?? 'synthetic_bootstrap_model',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'label': label,
+      'confidence': confidence,
+      'bounding_box': boundingBox,
+      'area_fraction': areaFraction,
+      'confirmed': false,
+      'source': source,
+    };
+  }
+}
+
 class VenuePhotoAnalysis {
   final String photoId;
   final String angle;
@@ -107,6 +149,8 @@ class VenuePhotoAnalysis {
   final double contrastScore;
   final double sharpnessScore;
   final double horizontalStructureScore;
+  final String? visionModelVersion;
+  final List<VenueVisionCandidate> unconfirmedCandidates;
   final List<String> observations;
   final List<String> limitations;
 
@@ -122,6 +166,8 @@ class VenuePhotoAnalysis {
     required this.contrastScore,
     required this.sharpnessScore,
     required this.horizontalStructureScore,
+    this.visionModelVersion,
+    this.unconfirmedCandidates = const [],
     required this.observations,
     required this.limitations,
   });
@@ -140,6 +186,13 @@ class VenuePhotoAnalysis {
       sharpnessScore: (json['sharpness_score'] as num).toDouble(),
       horizontalStructureScore:
           (json['horizontal_structure_score'] as num).toDouble(),
+      visionModelVersion: json['vision_model_version'] as String?,
+      unconfirmedCandidates:
+          (json['unconfirmed_candidates'] as List? ?? const [])
+              .map((item) => VenueVisionCandidate.fromJson(
+                    Map<String, dynamic>.from(item as Map),
+                  ))
+              .toList(growable: false),
       observations:
           List<String>.from(json['observations'] as List? ?? const []),
       limitations:
@@ -159,6 +212,9 @@ class VenuePhotoAnalysis {
       'contrast_score': contrastScore,
       'sharpness_score': sharpnessScore,
       'observations': observations,
+      'vision_model_version': visionModelVersion,
+      'unconfirmed_candidates':
+          unconfirmedCandidates.map((candidate) => candidate.toJson()).toList(),
     };
   }
 }

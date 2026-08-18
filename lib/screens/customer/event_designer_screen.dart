@@ -626,7 +626,30 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
               ),
               child: bytes == null
                   ? const Icon(Icons.add_a_photo_outlined, color: _brown)
-                  : Image.memory(bytes, fit: BoxFit.cover),
+                  : Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.memory(bytes, fit: BoxFit.fill),
+                        if (analysis != null)
+                          ...analysis.unconfirmedCandidates.take(4).map(
+                                (candidate) => Positioned(
+                                  left: candidate.boundingBox[0] * 88,
+                                  top: candidate.boundingBox[1] * 78,
+                                  width: candidate.boundingBox[2] * 88,
+                                  height: candidate.boundingBox[3] * 78,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: const Color(0x26FF9800),
+                                      border: Border.all(
+                                        color: const Color(0xFFFF9800),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                      ],
+                    ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -668,6 +691,21 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
                         fontSize: 11,
                       ),
                     ),
+                    if (analysis.unconfirmedCandidates.isNotEmpty) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        'Unconfirmed suggestions: '
+                        '${analysis.unconfirmedCandidates.map((item) => item.label).toSet().join(', ')}. '
+                        'Review them, then add only confirmed obstacles below.',
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFF9A5A14),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                   ],
                 ],
               ),

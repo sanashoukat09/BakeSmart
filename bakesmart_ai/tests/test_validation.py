@@ -60,3 +60,22 @@ def test_duplicate_photo_angles_are_rejected(client, valid_design_request):
 
     assert response.status_code == 422
     assert "only one photo per angle" in response.text
+
+
+def test_vision_candidate_cannot_be_marked_confirmed(client, valid_design_request):
+    request = deepcopy(valid_design_request)
+    request["space"]["photo_evidence"][0]["unconfirmed_candidates"] = [
+        {
+            "label": "door",
+            "confidence": 0.49,
+            "bounding_box": [0.1, 0.2, 0.2, 0.6],
+            "area_fraction": 0.12,
+            "confirmed": True,
+            "source": "synthetic_bootstrap_model",
+        }
+    ]
+
+    response = client.post("/api/v1/designs/validate", json=request)
+
+    assert response.status_code == 422
+    assert "Input should be False" in response.text

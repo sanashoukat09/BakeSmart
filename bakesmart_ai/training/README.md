@@ -64,11 +64,32 @@ training history. The current 2,400 labels are synthetic bootstrap labels and
 expert review is complete. Reported Phase 5 scores measure recovery of those
 synthetic rules, not real-world recommendation quality.
 
+Phase 11 adds a separate venue segmentation bootstrap:
+
+```powershell
+python -m training.venue_vision_data
+python -m training.train_venue_vision --allow-synthetic-bootstrap --evaluate-locked-test
+```
+
+The deterministic scene generator creates exact masks for wall, floor, door,
+window, furniture, outlet and walkway. It splits all 240 scenes before pixel
+sampling, so pixels from one scene cannot leak across train, validation and
+test. The model uses 3×3 RGB patches plus normalized x/y position and reuses
+BakeSmart's own NumPy MLP, backpropagation and Adam implementation. All weights
+start randomly; no external AI API, pretrained checkpoint or ML framework is
+used.
+
+`data/venue_vision/v1/real_annotations_template.csv` defines the source,
+licence/consent, annotator and independent-review fields required for future
+real images. It currently has zero data rows. Consequently, Phase 11 scores
+measure synthetic recovery only and runtime regions are capped below 0.50,
+marked unconfirmed and excluded from automatic obstacle or scale decisions.
+
 A later approved phase will add:
 
 - original or redistribution-safe artist-created assets to replace procedural
   placeholder geometry;
 - cake-photo reconstruction only after a suitable owned training dataset exists;
-- client-side AR capability detection and an AR link only on supported devices;
-- a generated 2D concept-preview fallback on unsupported devices; and
-- persistent save/share records after customer authentication is connected.
+- expert-labelled, rights-cleared real venue photos for domain-gap evaluation;
+- actual live-camera AR scenes on supported devices; and
+- production deployment and physical-device verification.

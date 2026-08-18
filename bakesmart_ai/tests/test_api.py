@@ -5,7 +5,7 @@ def test_health_reports_ready_local_model(client):
     assert response.json() == {
         "status": "ok",
         "service": "BakeSmart AI",
-        "version": "0.4.0",
+        "version": "0.5.0",
         "model_status": "ready",
     }
 

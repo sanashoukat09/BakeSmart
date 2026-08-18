@@ -1,0 +1,29 @@
+{
+  "approved_real_annotation_rows": 0,
+  "artifacts": {
+    "real_annotations_template_sha256": "1505756e8a61ce0053b9253273de49bcfde58bbccfa8a6b0b739bebb92391ab8",
+    "synthetic_index_sha256": "6f0b6746a9ebe9f83e8c632c41003df62729c3a53e83c71b5ca8cca2315a4d16"
+  },
+  "dataset_version": "venue-vision-v1",
+  "labels": [
+    "wall",
+    "floor",
+    "door",
+    "window",
+    "furniture",
+    "outlet",
+    "walkway"
+  ],
+  "real_annotation_rows": 0,
+  "synthetic_scene_counts": {
+    "test": 36,
+    "train": 168,
+    "validation": 36
+  },
+  "synthetic_scene_total": 240,
+  "training_gate": {
+    "real_photo_production_evaluation_ready": false,
+    "real_photo_training_ready": false,
+    "synthetic_bootstrap_ready": true
+  }
+}

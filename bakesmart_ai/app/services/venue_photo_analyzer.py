@@ -1,9 +1,8 @@
-"""Local, model-free venue-photo quality and structure analysis.
+"""Local venue-photo quality and synthetic-bootstrap segmentation analysis.
 
-This module deliberately reports only pixel-derived facts. It does not claim
-that walls, doors, furniture, outlets, or real-world scale were recognised.
-Those safety-critical facts must come from customer-confirmed measurements and
-the obstacle map until BakeSmart has a reviewed, labelled image dataset.
+The quality signals are deterministic pixel calculations. Segmentation regions
+come from BakeSmart's own randomly initialized synthetic-bootstrap checkpoint.
+Neither source confirms safety-critical objects or real-world scale.
 """
 
 from __future__ import annotations
@@ -20,7 +19,9 @@ from app.schemas.design import (
     PhotoQuality,
     VenuePhotoAnalysis,
     VenuePhotoAnalysisRequest,
+    VenueVisionCandidate,
 )
+from training.venue_vision_runtime import VenueVisionRuntime
 
 
 MAX_PHOTO_BYTES = 8_000_000
@@ -33,6 +34,13 @@ SUPPORTED_FORMATS = {
 
 class VenuePhotoAnalyzer:
     """Extract reproducible image-quality signals without a pretrained model."""
+
+    def __init__(self) -> None:
+        self.vision_runtime: VenueVisionRuntime | None = None
+        try:
+            self.vision_runtime = VenueVisionRuntime.load()
+        except (FileNotFoundError, KeyError, TypeError, ValueError, OSError):
+            self.vision_runtime = None
 
     def analyze(self, request: VenuePhotoAnalysisRequest) -> VenuePhotoAnalysis:
         image_bytes = self._decode(request.image_base64)
@@ -48,10 +56,21 @@ class VenuePhotoAnalyzer:
                 width, height = source.size
                 if width * height > MAX_PHOTO_PIXELS:
                     raise ValueError("Venue photo exceeds the 24-megapixel limit.")
-                oriented = ImageOps.exif_transpose(source).convert("L")
-                width, height = oriented.size
-                oriented.thumbnail((512, 512), Image.Resampling.BILINEAR)
-                pixels = np.asarray(oriented, dtype=np.float64)
+                oriented_rgb = ImageOps.exif_transpose(source).convert("RGB")
+                width, height = oriented_rgb.size
+                vision_size = (
+                    self.vision_runtime.image_size if self.vision_runtime else 48
+                )
+                vision_pixels = np.asarray(
+                    oriented_rgb.resize(
+                        (vision_size, vision_size),
+                        Image.Resampling.BILINEAR,
+                    ),
+                    dtype=np.uint8,
+                )
+                grayscale = oriented_rgb.convert("L")
+                grayscale.thumbnail((512, 512), Image.Resampling.BILINEAR)
+                pixels = np.asarray(grayscale, dtype=np.float64)
         except (UnidentifiedImageError, OSError) as exc:
             raise ValueError(
                 "Venue photo is not a readable JPEG or PNG image."
@@ -83,6 +102,25 @@ class VenuePhotoAnalyzer:
             structure_score,
             structure_row,
         )
+        candidates: list[VenueVisionCandidate] = []
+        vision_model_version: str | None = None
+        if self.vision_runtime is not None:
+            vision_model_version = self.vision_runtime.model_version
+            candidates = [
+                VenueVisionCandidate(
+                    label=candidate.label,
+                    confidence=candidate.confidence,
+                    bounding_box=candidate.bounding_box,
+                    area_fraction=candidate.area_fraction,
+                    confirmed=False,
+                    source="synthetic_bootstrap_model",
+                )
+                for candidate in self.vision_runtime.candidates(vision_pixels)
+            ]
+            observations.append(
+                "The synthetic-bootstrap model proposed "
+                f"{len(candidates)} unconfirmed region candidate(s)."
+            )
         digest = hashlib.sha256(image_bytes).hexdigest()[:20]
         return VenuePhotoAnalysis(
             photo_id=f"venue-photo-{digest}",
@@ -96,9 +134,12 @@ class VenuePhotoAnalyzer:
             contrast_score=round(contrast, 4),
             sharpness_score=round(sharpness, 4),
             horizontal_structure_score=round(structure_score, 4),
+            vision_model_version=vision_model_version,
+            unconfirmed_candidates=candidates,
             observations=observations,
             limitations=[
                 "No doors, windows, furniture, outlets, or walkways are automatically confirmed.",
+                "Vision candidates come from synthetic training only and are capped below 0.50 confidence.",
                 "Exact scale comes only from customer-confirmed measurements, not photo pixels.",
                 "The uploaded photo is analysed in memory and is not persisted by this endpoint.",
             ],

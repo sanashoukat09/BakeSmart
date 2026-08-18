@@ -553,6 +553,19 @@ class SceneBuilder:
             assumptions.append("The venue appearance was not checked from a photo.")
         if photos and not has_second_angle:
             assumptions.append("Areas outside the single photo angle remain unknown.")
+        candidate_labels = sorted(
+            {
+                candidate.label
+                for photo in photos
+                for candidate in photo.unconfirmed_candidates
+            }
+        )
+        if candidate_labels:
+            assumptions.append(
+                "Synthetic vision suggested possible "
+                f"{', '.join(candidate_labels)} region(s); none were used as "
+                "confirmed obstacles."
+            )
         if not request.space.obstacle_map_confirmed:
             assumptions.append(
                 "Unlisted doors, furniture, outlets, or walkways may exist."

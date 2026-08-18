@@ -25,7 +25,10 @@ policy: a real AR URL may be shown only when the device and response both suppor
 it; otherwise the existing interactive 3D or concept fallback is used. Phase 10
 adds in-memory venue-photo quality analysis plus customer-confirmed obstacle and
 measurement evidence. The scene planner now returns focal-position, clearance,
-blocking-item, confidence, observed-fact and assumption results.
+blocking-item, confidence, observed-fact and assumption results. Phase 11 adds a
+seven-class venue segmentation model trained locally from random NumPy weights.
+Its synthetic-bootstrap candidates are unconfirmed and never override measured
+geometry or the customer-confirmed obstacle map.
 
 ## Project rules
 
@@ -99,6 +102,16 @@ Use `--evaluate-locked-test` only for a final evaluation run. Omit it while
 changing training settings so the locked test split cannot influence model
 selection.
 
+Prepare and train the Phase 11 venue segmentation bootstrap:
+
+```powershell
+python -m training.venue_vision_data
+python -m training.train_venue_vision --allow-synthetic-bootstrap --evaluate-locked-test
+```
+
+This creates no customer-photo copies. It renders deterministic synthetic
+images and masks in memory from the locked scene index.
+
 The current recommendation labels are synthetic and pending expert review. See
 [`data/README.md`](data/README.md) before using them.
 
@@ -131,8 +144,9 @@ Phase 9 does not change this truth contract: the current response leaves
 procedural scene.
 
 Phase 10 photo analysis is intentionally not an object detector. It reports
-pixel-derived photo facts and a possible horizontal structural cue, but never
-confirms walls, floors, doors, windows, furniture, outlets or physical scale.
+pixel-derived photo facts and a possible horizontal structural cue. Phase 11
+adds synthetic-bootstrap wall, floor, door, window, furniture, outlet and
+walkway candidates, but never confirms those candidates or physical scale.
 The raw JPEG/PNG is decoded in memory and discarded. Placement safety uses only
 customer-confirmed dimensions and obstacle coordinates, keeps a minimum 0.90 m
 front circulation target, and exposes unknowns in `venue_assessment.assumptions`.
@@ -157,11 +171,12 @@ bakesmart_ai/
 │   ├── training/     # Bootstrap samples, expert-review template and eval cases
 │   ├── processed/v1/ # Numeric split matrices and frozen preprocessing metadata
 │   ├── review/       # Two-reviewer assignments, instructions and status report
+│   ├── venue_vision/ # Synthetic scene index and real-photo annotation contract
 │   ├── manifest.json # Source hashes, file hashes, counts and review status
 │   ├── README.md     # Dataset card, limitations and change control
 │   ├── raw/          # Local source workbooks; ignored by Git
 │   └── processed/    # Future generated model inputs; ignored by Git
-├── models/           # Versioned local bootstrap model artifacts
+├── models/           # Recommendation and venue-vision bootstrap checkpoints
 ├── runtime/scenes/   # Generated customer GLB scenes; ignored by Git
 ├── training/         # Dataset preparation, training, metrics and local runtime
 └── tests/            # Automated API and schema tests
