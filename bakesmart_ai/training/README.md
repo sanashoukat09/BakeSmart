@@ -85,11 +85,21 @@ real images. It currently has zero data rows. Consequently, Phase 11 scores
 measure synthetic recovery only and runtime regions are capped below 0.50,
 marked unconfirmed and excluded from automatic obstacle or scale decisions.
 
+Phase 12 adds `training.collect_real_venue_photos`. It queries only Wikimedia
+Commons metadata, rejects ShareAlike/non-commercial/no-derivatives/GFDL
+licences, strips EXIF while resizing candidates, records SHA-256 and perceptual
+hashes, and keeps all raw files below ignored `data/venue_vision/raw/real_v2/`.
+The frozen audit currently contains 176 CC0/public-domain/CC BY source records.
+No row becomes training data until a real photograph passes venue/privacy and
+rights review, receives a complete seven-class manual PNG mask, and is accepted
+by a different reviewer. The approved-row count remains zero.
+
 A later approved phase will add:
 
 - original or redistribution-safe artist-created assets to replace procedural
   placeholder geometry;
 - cake-photo reconstruction only after a suitable owned training dataset exists;
-- expert-labelled, rights-cleared real venue photos for domain-gap evaluation;
+- at least 100 independently reviewed, rights-cleared real venue masks for
+  domain-gap evaluation;
 - actual live-camera AR scenes on supported devices; and
 - production deployment and physical-device verification.

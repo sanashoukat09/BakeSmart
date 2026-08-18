@@ -30,6 +30,12 @@ seven-class venue segmentation model trained locally from random NumPy weights.
 Its synthetic-bootstrap candidates are unconfirmed and never override measured
 geometry or the customer-confirmed obstacle map.
 
+Phase 12 adds an offline, provenance-first Commons collection tool. Its frozen
+source audit contains 176 CC0/public-domain/CC BY candidates, but all remain
+blocked from training until the image is visually approved, manually masked and
+independently reviewed. There are currently zero approved real masks, so no
+real-photo accuracy is reported.
+
 ## Project rules
 
 - The recommendation model will be trained from randomly initialized weights.
@@ -111,6 +117,16 @@ python -m training.train_venue_vision --allow-synthetic-bootstrap --evaluate-loc
 
 This creates no customer-photo copies. It renders deterministic synthetic
 images and masks in memory from the locked scene index.
+
+Prepare the Phase 12 rights-screened real-photo candidate pool:
+
+```powershell
+python -m training.collect_real_venue_photos --target-count 140
+```
+
+This command only downloads and records candidates. It never approves images or
+creates masks automatically. See `data/venue_vision/v2/README.md` for the
+required visual, privacy, manual annotation and independent-review steps.
 
 The current recommendation labels are synthetic and pending expert review. See
 [`data/README.md`](data/README.md) before using them.

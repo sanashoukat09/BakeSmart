@@ -123,6 +123,23 @@ original [U-Net paper](https://arxiv.org/abs/1505.04597), and the label scope wa
 compared with MIT's official [ADE20K dataset](https://ade20k.csail.mit.edu/).
 No code or trained weights were copied from either source.
 
+### Phase 12 — Rights-cleared real-photo collection (gate still closed)
+
+Phase 12 adds a reproducible Wikimedia Commons collector and freezes 176
+candidate source records with individual file-page URLs, creators, licences and
+licence URLs. Only CC0, public-domain and CC BY records pass the automated
+screen; ShareAlike, non-commercial, no-derivatives and GFDL records are
+rejected. Every accepted metadata row is still marked
+`candidate_not_for_training` because metadata alone cannot approve a photo.
+
+The 2026-08-18 workspace transfer obtained 89 provisional local files before
+outbound downloads were blocked. An exploratory 40-image contact-sheet review
+confirmed that many metadata matches are drawings, exteriors or people-filled
+conference images. None is counted as approved. No real mask has completed
+manual annotation and independent review, so the real-photo training and
+accuracy gates remain closed at zero approved rows. The Phase 11 synthetic
+checkpoint remains active without any new accuracy claim.
+
 ## 🚀 Step-by-Step Setup
 
 ### Step 1 — Create the Flutter project shell
@@ -274,7 +291,7 @@ D:\Bake Smart\
 | 3 | 🔜 Pending | Cost, Pricing & Surplus |
 | 4 | 🔜 Pending | Order Management & Scheduling |
 | 5 | 🔜 Pending | Customer Storefront & Cart |
-| 6 | ✅ **Phase 11 complete** | From-scratch venue segmentation bootstrap, measured placement, 3D fallback, save and sharing |
+| 6 | 🟡 **Phase 12 data collection** | Phase 11 bootstrap works; real-photo source audit exists, but 100 approved masks are still required |
 | 10 | 🔜 Pending | Storefront Discovery & Sharing |
 
 ---
