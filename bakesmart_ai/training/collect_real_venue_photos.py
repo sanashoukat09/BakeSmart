@@ -172,6 +172,16 @@ def _compact_download_url(url: str) -> str:
     return re.sub(r"/960px-", "/480px-", url)
 
 
+def _clean_wikimedia_download_url(url: str) -> str:
+    """Keep the canonical file address but remove nonessential tracking query."""
+    parsed = urllib.parse.urlsplit(url)
+    if parsed.netloc.casefold() == "upload.wikimedia.org":
+        return urllib.parse.urlunsplit(
+            (parsed.scheme, parsed.netloc, parsed.path, "", "")
+        )
+    return url
+
+
 def _request_json(parameters: dict[str, str], *, retries: int = 4) -> dict:
     query = urllib.parse.urlencode(
         {"format": "json", "formatversion": "2", **parameters}
@@ -410,7 +420,10 @@ def _prefetch_candidates(
     print(f"FALLBACK: {len(still_missing)} original files", flush=True)
     _curl_batch(
         [
-            (candidate.original_url, _download_cache_path(download_dir, candidate))
+            (
+                _clean_wikimedia_download_url(candidate.original_url),
+                _download_cache_path(download_dir, candidate),
+            )
             for candidate in still_missing
         ],
         maximum_bytes=15_000_000,

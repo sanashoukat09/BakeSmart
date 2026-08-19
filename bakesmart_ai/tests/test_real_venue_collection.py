@@ -7,6 +7,7 @@ from training.collect_real_venue_photos import (
     DEFAULT_DISCOVERY_CACHE,
     DEFAULT_MANIFEST,
     _compact_download_url,
+    _clean_wikimedia_download_url,
     _license_allowed,
     _looks_suitable,
 )
@@ -90,3 +91,6 @@ def test_licence_and_metadata_filters_are_conservative():
     assert _compact_download_url("https://example.test/960px-room.jpg") == (
         "https://example.test/480px-room.jpg"
     )
+    assert _clean_wikimedia_download_url(
+        "https://upload.wikimedia.org/a.jpg?utm_source=commons"
+    ) == "https://upload.wikimedia.org/a.jpg"

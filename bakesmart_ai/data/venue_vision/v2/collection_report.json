@@ -15,10 +15,10 @@
     "Public domain": 37
   },
   "local_transfer_attempt": {
-    "source_bound_candidates_in_manifest": 51,
+    "source_bound_candidates_in_manifest": 65,
     "provisional_files_not_versioned": 89,
     "source_binding_complete": false,
-    "status": "partial_collection_completed_51_of_140_requested_candidates"
+    "status": "partial_collection_completed_65_of_100_requested_candidates; further requests paused after Wikimedia rate limit"
   },
   "privacy_review": {
     "approved": 0,
@@ -36,7 +36,7 @@
   "truth_notes": [
     "A metadata licence screen is not manual rights approval.",
     "Provisional local files are ignored and are not part of this versioned dataset.",
-    "51 candidate files are source-bound in source_candidates.csv; all remain pending manual review.",
+    "65 candidate files are source-bound in source_candidates.csv; all remain pending manual review.",
     "No real-photo mask has been manually completed or independently reviewed.",
     "The Phase 11 synthetic checkpoint remains the active candidate-only model."
   ]

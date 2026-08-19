@@ -9,7 +9,7 @@ not yet contain an approved real-photo training dataset.
   on 2026-08-18.
 - `source_audit.csv` exposes the per-file source page, original URL, creator,
   licence and licence URL in a reviewable table.
-- `source_candidates.csv` contains 51 downloaded, source-linked candidates
+- `source_candidates.csv` contains 65 downloaded, source-linked candidates
   from the audited catalogue. All are pending human suitability, privacy and
   rights review; none are training data.
 - Every source row remains `candidate_not_for_training`.
