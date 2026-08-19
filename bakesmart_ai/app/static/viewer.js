@@ -19,7 +19,8 @@
 
   const gl = canvas.getContext("webgl", {
     antialias: true,
-    alpha: false,
+    alpha: true,
+    premultipliedAlpha: false,
     preserveDrawingBuffer: false,
   });
   if (!gl) {
@@ -29,9 +30,9 @@
 
   let program;
   let geometry;
-  let yaw = -0.55;
-  let pitch = -0.28;
-  let cameraDistance = 4.5;
+  let yaw = -0.38;
+  let pitch = -0.2;
+  let cameraDistance = 3.9;
   let pointerX = 0;
   let pointerY = 0;
   let pinchDistance = null;
@@ -43,12 +44,22 @@
     attribute vec3 aColor;
     uniform mat4 uMvp;
     uniform mat4 uModel;
+    uniform float uShadowPass;
     varying vec3 vNormal;
     varying vec3 vColor;
+    varying float vHeight;
     void main() {
+      vec3 position = aPosition;
+      vHeight = aPosition.y;
+      if (uShadowPass > 0.5) {
+        float heightAboveFloor = max(aPosition.y, 0.0);
+        position.x += heightAboveFloor * 0.16;
+        position.z += heightAboveFloor * 0.11;
+        position.y = 0.006;
+      }
       vNormal = normalize(mat3(uModel) * aNormal);
       vColor = aColor;
-      gl_Position = uMvp * vec4(aPosition, 1.0);
+      gl_Position = uMvp * vec4(position, 1.0);
     }
   `;
 
@@ -56,12 +67,46 @@
     precision mediump float;
     varying vec3 vNormal;
     varying vec3 vColor;
+    varying float vHeight;
+    uniform float uShadowPass;
+
     void main() {
-      vec3 lightDirection = normalize(vec3(0.45, 0.85, 0.55));
-      float diffuse = max(dot(normalize(vNormal), lightDirection), 0.0);
-      float rim = pow(1.0 - max(abs(vNormal.z), 0.0), 2.0) * 0.08;
-      vec3 shaded = vColor * (0.38 + diffuse * 0.7 + rim);
-      gl_FragColor = vec4(pow(clamp(shaded, 0.0, 1.0), vec3(0.9)), 1.0);
+      if (uShadowPass > 0.5) {
+        if (vHeight < 0.045) {
+          discard;
+        }
+        float shadowStrength = clamp(0.19 + vHeight * 0.025, 0.19, 0.28);
+        gl_FragColor = vec4(0.18, 0.12, 0.14, shadowStrength);
+        return;
+      }
+
+      vec3 normal = normalize(vNormal);
+      vec3 keyLight = normalize(vec3(0.42, 0.86, 0.34));
+      vec3 fillLight = normalize(vec3(-0.58, 0.34, 0.72));
+      vec3 viewDirection = normalize(vec3(0.0, 0.22, 1.0));
+
+      float keyDiffuse = max(dot(normal, keyLight), 0.0);
+      float fillDiffuse = max(dot(normal, fillLight), 0.0);
+      float hemisphere = normal.y * 0.5 + 0.5;
+
+      float luminance = dot(vColor, vec3(0.2126, 0.7152, 0.0722));
+      vec3 baseColor = clamp(mix(vec3(luminance), vColor, 1.14), 0.0, 1.0);
+
+      vec3 halfVector = normalize(keyLight + viewDirection);
+      float specular = pow(max(dot(normal, halfVector), 0.0), 30.0) * 0.14;
+      float edgeLight = pow(1.0 - max(dot(normal, viewDirection), 0.0), 3.0) * 0.055;
+      float heightFactor = 1.0 - exp(-max(vHeight, 0.0) * 2.6);
+      float ambientOcclusion = mix(0.8, 1.0, heightFactor);
+
+      vec3 warmKey = vec3(1.06, 0.97, 0.9) * keyDiffuse * 0.78;
+      vec3 coolFill = vec3(0.84, 0.91, 1.0) * fillDiffuse * 0.24;
+      vec3 ambient = mix(vec3(0.31, 0.3, 0.33), vec3(0.5, 0.47, 0.46), hemisphere);
+      vec3 shaded = baseColor * (ambient + warmKey + coolFill) * ambientOcclusion;
+      shaded += vec3(1.0, 0.91, 0.78) * specular;
+      shaded += baseColor * edgeLight;
+
+      shaded = pow(clamp(shaded, 0.0, 1.0), vec3(0.86));
+      gl_FragColor = vec4(shaded, 1.0);
     }
   `;
 
@@ -233,7 +278,7 @@
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.enable(gl.DEPTH_TEST);
     gl.disable(gl.CULL_FACE);
-    gl.clearColor(0.96, 0.94, 0.95, 1.0);
+    gl.clearColor(0.0, 0.0, 0.0, 0.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.useProgram(program);
 
@@ -243,22 +288,38 @@
     const span = geometry.boundsMin.map(
       (minimum, index) => geometry.boundsMax[index] - minimum,
     );
-    const normalization = 2.8 / Math.max(...span, 0.01);
+    const normalization = 3.05 / Math.max(...span, 0.01);
     const centerTranslation = translation(-center[0], -center[1], -center[2]);
     const rotation = multiply(rotationY(yaw), rotationX(pitch));
     const model = multiply(scale(normalization), multiply(rotation, centerTranslation));
-    const view = translation(0, -0.05, -cameraDistance);
+    const view = translation(0, -0.03, -cameraDistance);
     const projection = perspective(
-      Math.PI / 4,
+      Math.PI / 5.2,
       canvas.width / Math.max(canvas.height, 1),
       0.01,
       100,
     );
     const mvp = multiply(projection, multiply(view, model));
-    gl.uniformMatrix4fv(gl.getUniformLocation(program, "uMvp"), false, mvp);
-    gl.uniformMatrix4fv(gl.getUniformLocation(program, "uModel"), false, model);
+    const mvpLocation = gl.getUniformLocation(program, "uMvp");
+    const modelLocation = gl.getUniformLocation(program, "uModel");
+    const shadowLocation = gl.getUniformLocation(program, "uShadowPass");
+
+    gl.uniformMatrix4fv(mvpLocation, false, mvp);
+    gl.uniformMatrix4fv(modelLocation, false, model);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, geometry.indexBuffer);
+
+    gl.uniform1f(shadowLocation, 0.0);
+    gl.disable(gl.BLEND);
+    gl.depthMask(true);
     gl.drawElements(gl.TRIANGLES, geometry.indexCount, geometry.indexType, 0);
+
+    gl.uniform1f(shadowLocation, 1.0);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthMask(false);
+    gl.drawElements(gl.TRIANGLES, geometry.indexCount, geometry.indexType, 0);
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
   }
 
   function resizeAndDraw() {
@@ -365,8 +426,8 @@
       const nextDistance = distanceBetweenPointers();
       if (pinchDistance && nextDistance > 0) {
         cameraDistance = Math.max(
-          2.1,
-          Math.min(8.5, cameraDistance * (pinchDistance / nextDistance)),
+          2.0,
+          Math.min(8.0, cameraDistance * (pinchDistance / nextDistance)),
         );
       }
       pinchDistance = nextDistance;
@@ -374,7 +435,7 @@
       return;
     }
     yaw += (event.clientX - pointerX) * 0.009;
-    pitch = Math.max(-1.15, Math.min(1.15, pitch + (event.clientY - pointerY) * 0.009));
+    pitch = Math.max(-1.05, Math.min(1.05, pitch + (event.clientY - pointerY) * 0.009));
     pointerX = event.clientX;
     pointerY = event.clientY;
     draw();
@@ -410,16 +471,16 @@
     "wheel",
     (event) => {
       event.preventDefault();
-      cameraDistance = Math.max(2.1, Math.min(8.5, cameraDistance + event.deltaY * 0.004));
+      cameraDistance = Math.max(2.0, Math.min(8.0, cameraDistance + event.deltaY * 0.004));
       draw();
     },
     { passive: false },
   );
 
   resetButton.addEventListener("click", () => {
-    yaw = -0.55;
-    pitch = -0.28;
-    cameraDistance = 4.5;
+    yaw = -0.38;
+    pitch = -0.2;
+    cameraDistance = 3.9;
     draw();
   });
 
