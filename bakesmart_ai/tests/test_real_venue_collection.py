@@ -1,4 +1,5 @@
 import csv
+import hashlib
 import json
 from collections import Counter
 from pathlib import Path
@@ -6,9 +7,11 @@ from pathlib import Path
 from training.collect_real_venue_photos import (
     DEFAULT_DISCOVERY_CACHE,
     DEFAULT_MANIFEST,
+    MANIFEST_COLUMNS,
     _compact_download_url,
     _clean_wikimedia_download_url,
     _license_allowed,
+    _load_existing_rows,
     _looks_suitable,
 )
 
@@ -73,10 +76,10 @@ def test_ai_visual_prescreen_is_complete_but_not_human_approval():
     with prescreen_path.open("r", encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
 
-    assert len(rows) == 65
-    assert len({row["candidate_id"] for row in rows}) == 65
-    assert sum(row["disposition"] == "human_review_pending" for row in rows) == 28
-    assert sum(row["disposition"] == "reject" for row in rows) == 37
+    assert len(rows) == 74
+    assert len({row["candidate_id"] for row in rows}) == 74
+    assert sum(row["disposition"] == "human_review_pending" for row in rows) == 33
+    assert sum(row["disposition"] == "reject" for row in rows) == 41
     assert not any(row["disposition"] == "approved" for row in rows)
 
 
@@ -106,3 +109,25 @@ def test_licence_and_metadata_filters_are_conservative():
     assert _clean_wikimedia_download_url(
         "https://upload.wikimedia.org/a.jpg?utm_source=commons"
     ) == "https://upload.wikimedia.org/a.jpg"
+
+
+def test_incremental_manifest_loader_preserves_stable_ids(tmp_path):
+    image_path = tmp_path / "candidate.jpg"
+    image_path.write_bytes(b"stable-image")
+    row = {column: "" for column in MANIFEST_COLUMNS}
+    row.update(
+        {
+            "candidate_id": "commons-venue-0065",
+            "commons_page_id": "12345",
+            "image_path": "candidate.jpg",
+            "image_sha256": hashlib.sha256(b"stable-image").hexdigest(),
+            "perceptual_hash": "0000000000000000",
+        }
+    )
+    manifest_path = tmp_path / "source_candidates.csv"
+    with manifest_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=MANIFEST_COLUMNS)
+        writer.writeheader()
+        writer.writerow(row)
+
+    assert _load_existing_rows(manifest_path) == [row]

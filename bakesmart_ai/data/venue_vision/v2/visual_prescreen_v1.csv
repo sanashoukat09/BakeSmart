@@ -64,3 +64,12 @@ commons-venue-0062,pass,pass,human_review_pending,useful empty conference room
 commons-venue-0063,reject,reject,reject,person visible and appliance close-up
 commons-venue-0064,reject,pass,reject,building exterior
 commons-venue-0065,pass,reject,reject,identifiable people
+commons-venue-0066,pass,pass,human_review_pending,useful empty ballroom
+commons-venue-0067,reject,pass,reject,postcard collage rather than a usable room photograph
+commons-venue-0068,reject,pass,reject,outdoor sign without venue interior
+commons-venue-0069,pass,pass,human_review_pending,useful empty function room
+commons-venue-0070,reject,pass,reject,building exterior
+commons-venue-0071,pass,pass,human_review_pending,useful empty hotel hallway
+commons-venue-0072,pass,pass,human_review_pending,useful empty hotel reception
+commons-venue-0073,pass,pass,human_review_pending,archival photograph with usable room geometry
+commons-venue-0074,reject,pass,reject,building exterior

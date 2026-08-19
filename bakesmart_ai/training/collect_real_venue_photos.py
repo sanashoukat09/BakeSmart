@@ -497,6 +497,31 @@ def _hash_distance(first: str, second: str) -> int:
     return (int(first, 16) ^ int(second, 16)).bit_count()
 
 
+def _load_existing_rows(manifest_path: Path) -> list[dict[str, str]]:
+    """Load a partial collection without changing its stable candidate IDs."""
+    if not manifest_path.is_file():
+        return []
+    with manifest_path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        if tuple(reader.fieldnames or ()) != MANIFEST_COLUMNS:
+            raise ValueError("existing candidate manifest has an unexpected schema")
+        rows = list(reader)
+    candidate_ids = [row["candidate_id"] for row in rows]
+    page_ids = [row["commons_page_id"] for row in rows]
+    if len(candidate_ids) != len(set(candidate_ids)):
+        raise ValueError("existing candidate manifest has duplicate candidate IDs")
+    if len(page_ids) != len(set(page_ids)):
+        raise ValueError("existing candidate manifest has duplicate Commons page IDs")
+    for row in rows:
+        image_path = (manifest_path.parent / row["image_path"]).resolve()
+        if not image_path.is_file():
+            raise ValueError(f"existing candidate image is missing: {row['candidate_id']}")
+        actual_sha256 = hashlib.sha256(image_path.read_bytes()).hexdigest()
+        if actual_sha256 != row["image_sha256"]:
+            raise ValueError(f"existing candidate checksum changed: {row['candidate_id']}")
+    return rows
+
+
 def collect(
     *,
     target_count: int,
@@ -507,15 +532,23 @@ def collect(
         raise ValueError("real venue collection must request at least 100 candidates")
     output_dir.mkdir(parents=True, exist_ok=True)
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    rows: list[dict[str, str]] = []
-    accepted_hashes: list[str] = []
+    rows = _load_existing_rows(manifest_path)
+    accepted_hashes = [row["perceptual_hash"] for row in rows]
+    existing_page_ids = {int(row["commons_page_id"]) for row in rows}
+    next_candidate_number = max(
+        (int(row["candidate_id"].rsplit("-", 1)[1]) for row in rows),
+        default=0,
+    ) + 1
     candidates = discover_candidates()
     write_source_audit(candidates, manifest_path.parent / "source_audit.csv")
+    remaining_candidates = [
+        candidate for candidate in candidates if candidate.page_id not in existing_page_ids
+    ]
     download_dir = output_dir / "downloads"
-    _prefetch_candidates(candidates, download_dir)
+    _prefetch_candidates(remaining_candidates, download_dir)
     with ThreadPoolExecutor(max_workers=4) as executor:
-        for start in range(0, len(candidates), 32):
-            batch = candidates[start : start + 32]
+        for start in range(0, len(remaining_candidates), 32):
+            batch = remaining_candidates[start : start + 32]
             prepared_rows = list(
                 executor.map(
                     _prepare_candidate,
@@ -534,7 +567,8 @@ def collect(
                     for seen in accepted_hashes
                 ):
                     continue
-                candidate_id = f"commons-venue-{len(rows) + 1:04d}"
+                candidate_id = f"commons-venue-{next_candidate_number:04d}"
+                next_candidate_number += 1
                 image_path = output_dir / "images" / f"{candidate_id}.jpg"
                 image_path.parent.mkdir(parents=True, exist_ok=True)
                 image.save(image_path, format="JPEG", quality=90, optimize=True)

@@ -9,11 +9,11 @@ not yet contain an approved real-photo training dataset.
   on 2026-08-18.
 - `source_audit.csv` exposes the per-file source page, original URL, creator,
   licence and licence URL in a reviewable table.
-- `source_candidates.csv` contains 65 downloaded, source-linked candidates
+- `source_candidates.csv` contains 74 downloaded, source-linked candidates
   from the audited catalogue. All are pending human suitability, privacy and
   rights review; none are training data.
-- `visual_prescreen_v1.csv` records the first AI-assisted visual screen: 28
-  candidates remain pending human review and 37 are rejected. This is not a
+- `visual_prescreen_v1.csv` records the AI-assisted visual screen: 33
+  candidates remain pending human review and 41 are rejected. This is not a
   substitute for the required human privacy, suitability and rights review.
 - Every source row remains `candidate_not_for_training`.
 - No real image or mask is committed. Transfer files stay under ignored

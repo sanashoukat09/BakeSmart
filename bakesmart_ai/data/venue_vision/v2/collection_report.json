@@ -15,16 +15,16 @@
     "Public domain": 37
   },
   "local_transfer_attempt": {
-    "source_bound_candidates_in_manifest": 65,
+    "source_bound_candidates_in_manifest": 74,
     "provisional_files_not_versioned": 89,
     "source_binding_complete": false,
-    "status": "partial_collection_completed_65_of_100_requested_candidates; further requests paused after Wikimedia rate limit"
+    "status": "partial_collection_completed_74_of_100_requested_candidates; further requests subject to Wikimedia rate limit"
   },
   "privacy_review": {
     "approved": 0,
-    "ai_prescreen_rejected": 37,
-    "ai_prescreen_retained_for_human_review": 28,
-    "contact_sheet_images_inspected_exploratorily": 65,
+    "ai_prescreen_rejected": 41,
+    "ai_prescreen_retained_for_human_review": 33,
+    "contact_sheet_images_inspected_exploratorily": 74,
     "status": "ai_prescreen_complete_human_review_not_started"
   },
   "source_catalog_records": 176,
@@ -38,8 +38,8 @@
   "truth_notes": [
     "A metadata licence screen is not manual rights approval.",
     "Provisional local files are ignored and are not part of this versioned dataset.",
-    "65 candidate files are source-bound in source_candidates.csv; all remain pending manual review.",
-    "AI-assisted visual prescreen retained 28 candidates and rejected 37; it does not count as human approval.",
+    "74 candidate files are source-bound in source_candidates.csv; all remain pending manual review.",
+    "AI-assisted visual prescreen retained 33 candidates and rejected 41; it does not count as human approval.",
     "No real-photo mask has been manually completed or independently reviewed.",
     "The Phase 11 synthetic checkpoint remains the active candidate-only model."
   ]
