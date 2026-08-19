@@ -46,3 +46,29 @@ Architecture ideas were informed by the localisation goal in the original
 scope was compared with the official [ADE20K scene parsing dataset](https://ade20k.csail.mit.edu/).
 BakeSmart does not download either project's weights or call either project as
 an inference service.
+
+## Optional Gemini synthetic augmentation
+
+`python -m training.generate_gemini_venue_images` can create additional
+photorealistic-looking synthetic venue candidates through the Gemini API. It
+reads `GEMINI_API_KEY` only from the process environment. The key is never
+placed in a URL, manifest, prompt or log. Raw images and their resumable
+`generation_manifest.csv` stay under ignored
+`raw/gemini_synthetic_v1/` storage.
+
+Preview deterministic prompts without a key or network request:
+
+```powershell
+python -m training.generate_gemini_venue_images --count 3 --dry-run
+```
+
+Generate images after privately setting `GEMINI_API_KEY`:
+
+```powershell
+python -m training.generate_gemini_venue_images --count 10 --acknowledge-external-synthetic-data
+```
+
+Every output is recorded as `external_ai_generated` and
+`unlabelled_not_for_training`. It must pass suitability review and receive a
+complete seven-class mask before training. Gemini images cannot enter the
+locked real-photo test split and cannot support a real-photo accuracy claim.

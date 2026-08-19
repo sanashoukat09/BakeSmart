@@ -94,6 +94,18 @@ No row becomes training data until a real photograph passes venue/privacy and
 rights review, receives a complete seven-class manual PNG mask, and is accepted
 by a different reviewer. The approved-row count remains zero.
 
+An optional external synthetic-data utility is available for additional visual
+diversity:
+
+```powershell
+python -m training.generate_gemini_venue_images --count 10 --acknowledge-external-synthetic-data
+```
+
+It requires `GEMINI_API_KEY` in the process environment, records image and
+prompt provenance, and keeps all generated pixels ignored. These outputs are
+unlabelled synthetic augmentation candidates, not real photos, approved masks
+or evidence of production accuracy.
+
 A later approved phase will add:
 
 - original or redistribution-safe artist-created assets to replace procedural
