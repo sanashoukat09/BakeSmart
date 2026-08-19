@@ -68,6 +68,18 @@ def test_real_annotation_template_requires_provenance_and_two_reviewers():
         assert required in columns
 
 
+def test_ai_visual_prescreen_is_complete_but_not_human_approval():
+    prescreen_path = DEFAULT_MANIFEST.parent / "visual_prescreen_v1.csv"
+    with prescreen_path.open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+
+    assert len(rows) == 65
+    assert len({row["candidate_id"] for row in rows}) == 65
+    assert sum(row["disposition"] == "human_review_pending" for row in rows) == 28
+    assert sum(row["disposition"] == "reject" for row in rows) == 37
+    assert not any(row["disposition"] == "approved" for row in rows)
+
+
 def test_licence_and_metadata_filters_are_conservative():
     for allowed in (
         "CC0",

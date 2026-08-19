@@ -1,0 +1,66 @@
+candidate_id,ai_venue_prescreen,ai_people_prescreen,disposition,reason
+commons-venue-0001,pass,reject,reject,identifiable people and crowded event
+commons-venue-0002,reject,pass,reject,postcard collage rather than a usable room photograph
+commons-venue-0003,reject,pass,reject,colorized archival postcard
+commons-venue-0004,reject,pass,reject,illustration rather than photograph
+commons-venue-0005,pass,pass,human_review_pending,useful empty interior
+commons-venue-0006,pass,pass,human_review_pending,useful empty function room
+commons-venue-0007,reject,pass,reject,exterior landscape
+commons-venue-0008,pass,pass,human_review_pending,useful empty event room
+commons-venue-0009,pass,pass,human_review_pending,useful hotel interior
+commons-venue-0010,reject,pass,reject,building exterior
+commons-venue-0011,reject,pass,reject,illustration rather than photograph
+commons-venue-0012,pass,pass,human_review_pending,useful empty meeting room
+commons-venue-0013,pass,pass,human_review_pending,useful restaurant interior
+commons-venue-0014,pass,pass,human_review_pending,archival photograph with usable room geometry
+commons-venue-0015,reject,pass,reject,building exterior
+commons-venue-0016,pass,reject,reject,identifiable people
+commons-venue-0017,reject,pass,reject,building exterior
+commons-venue-0018,pass,pass,human_review_pending,useful empty banquet room
+commons-venue-0019,reject,pass,reject,illustration rather than photograph
+commons-venue-0020,pass,reject,reject,identifiable people
+commons-venue-0021,pass,pass,human_review_pending,useful empty lobby
+commons-venue-0022,pass,pass,human_review_pending,useful restaurant interior
+commons-venue-0023,pass,pass,human_review_pending,archival photograph with usable room geometry
+commons-venue-0024,reject,pass,reject,building exterior
+commons-venue-0025,pass,reject,reject,identifiable people
+commons-venue-0026,reject,pass,reject,building exterior
+commons-venue-0027,pass,pass,human_review_pending,archival photograph with usable room geometry
+commons-venue-0028,pass,reject,reject,identifiable people
+commons-venue-0029,pass,pass,human_review_pending,useful empty meeting room
+commons-venue-0030,pass,pass,human_review_pending,useful restaurant interior
+commons-venue-0031,pass,pass,human_review_pending,archival photograph with usable room geometry
+commons-venue-0032,pass,reject,reject,identifiable people
+commons-venue-0033,pass,reject,reject,identifiable people
+commons-venue-0034,reject,pass,reject,building exterior
+commons-venue-0035,pass,reject,reject,crowded archival event
+commons-venue-0036,pass,reject,reject,identifiable people
+commons-venue-0037,pass,reject,reject,identifiable people
+commons-venue-0038,pass,pass,human_review_pending,useful restaurant interior
+commons-venue-0039,pass,reject,reject,identifiable people
+commons-venue-0040,pass,reject,reject,crowded event
+commons-venue-0041,reject,pass,reject,illustration rather than photograph
+commons-venue-0042,pass,reject,reject,identifiable people
+commons-venue-0043,pass,pass,human_review_pending,useful empty modern interior
+commons-venue-0044,reject,pass,reject,object close-up without usable room geometry
+commons-venue-0045,pass,reject,reject,identifiable people
+commons-venue-0046,reject,pass,reject,illustration rather than photograph
+commons-venue-0047,pass,reject,reject,person visible on display screen
+commons-venue-0048,pass,pass,human_review_pending,useful empty meeting room
+commons-venue-0049,pass,pass,human_review_pending,useful restaurant seating area
+commons-venue-0050,pass,reject,reject,identifiable person and display portrait
+commons-venue-0051,pass,pass,human_review_pending,useful empty foyer
+commons-venue-0052,pass,pass,human_review_pending,archival photograph with usable room geometry
+commons-venue-0053,pass,pass,human_review_pending,archival photograph with usable room geometry
+commons-venue-0054,pass,pass,human_review_pending,useful empty meeting room
+commons-venue-0055,pass,pass,human_review_pending,useful empty meeting room
+commons-venue-0056,pass,pass,human_review_pending,useful restaurant interior
+commons-venue-0057,pass,reject,reject,identifiable people and display portrait
+commons-venue-0058,pass,reject,reject,identifiable person
+commons-venue-0059,pass,pass,human_review_pending,usable living-room corner
+commons-venue-0060,reject,pass,reject,computer render rather than photograph
+commons-venue-0061,pass,pass,human_review_pending,useful empty function room
+commons-venue-0062,pass,pass,human_review_pending,useful empty conference room
+commons-venue-0063,reject,reject,reject,person visible and appliance close-up
+commons-venue-0064,reject,pass,reject,building exterior
+commons-venue-0065,pass,reject,reject,identifiable people

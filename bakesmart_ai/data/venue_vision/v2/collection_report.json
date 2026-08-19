@@ -22,8 +22,10 @@
   },
   "privacy_review": {
     "approved": 0,
-    "contact_sheet_images_inspected_exploratorily": 40,
-    "status": "formal_source-bound_review_not_started"
+    "ai_prescreen_rejected": 37,
+    "ai_prescreen_retained_for_human_review": 28,
+    "contact_sheet_images_inspected_exploratorily": 65,
+    "status": "ai_prescreen_complete_human_review_not_started"
   },
   "source_catalog_records": 176,
   "status": "blocked_pending_collection_annotation_and_independent_review",
@@ -37,6 +39,7 @@
     "A metadata licence screen is not manual rights approval.",
     "Provisional local files are ignored and are not part of this versioned dataset.",
     "65 candidate files are source-bound in source_candidates.csv; all remain pending manual review.",
+    "AI-assisted visual prescreen retained 28 candidates and rejected 37; it does not count as human approval.",
     "No real-photo mask has been manually completed or independently reviewed.",
     "The Phase 11 synthetic checkpoint remains the active candidate-only model."
   ]
