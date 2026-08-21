@@ -52,6 +52,7 @@ select, #annotator-id { width: 100%; border: 1px solid #dac9bf; border-radius: 1
 .tool-button { width: 100%; margin-top: 8px; }
 .tool-button.active { background: #4a2b20; color: #fff; border-color: #4a2b20; }
 .smart-tools-panel .button-grid .tool-button { margin-top: 0; }
+.walkway-panel { border-color: #b9dcbc; background: #f7fff8; }
 .compact-grid { display: grid; gap: 8px; }
 .compact-grid input[type="range"] { width: 100%; accent-color: var(--brand); }
 .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -73,8 +74,9 @@ select, #annotator-id { width: 100%; border: 1px solid #dac9bf; border-radius: 1
 .canvas-wrapper canvas { position: absolute; inset: 0; display: block; touch-action: none; }
 #image-canvas { z-index: 1; }
 #mask-canvas { z-index: 2; cursor: crosshair; }
-#diagnostic-canvas { z-index: 3; pointer-events: none; }
-#tool-canvas { z-index: 4; pointer-events: none; }
+#walkway-canvas { z-index: 3; pointer-events: none; display: none; }
+#diagnostic-canvas { z-index: 4; pointer-events: none; }
+#tool-canvas { z-index: 5; pointer-events: none; }
 .message { min-height: 22px; padding: 4px 2px; color: var(--muted); font-size: 12px; }
 .message.error { color: #a52828; }
 .message.success { color: #257137; }
