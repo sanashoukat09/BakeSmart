@@ -3,9 +3,9 @@ import json
 import numpy as np
 from PIL import Image
 
-from training.annotation_workspace import AnnotationWorkspace
 from training.auto_label_mapping import map_ade20k_to_bakesmart
 from training.auto_label_real_venues import AutoLabelPrediction, BatchVenueAutoLabeller
+from training.semantic_annotation_workspace import SemanticAnnotationWorkspace
 
 
 class _FakeEngine:
@@ -29,7 +29,7 @@ def _workspace(tmp_path):
     images = tmp_path / "data" / "venue_vision" / "raw" / "real_v2" / "images"
     images.mkdir(parents=True)
     Image.new("RGB", (32, 24), (180, 170, 160)).save(images / "real-venue-0001.jpg")
-    return AnnotationWorkspace(tmp_path)
+    return SemanticAnnotationWorkspace(tmp_path)
 
 
 def test_ade_mapping_maps_core_room_classes_and_leaves_sky_unlabelled():
@@ -38,19 +38,37 @@ def test_ade_mapping_maps_core_room_classes_and_leaves_sky_unlabelled():
     assert mapped.tolist() == [[0, 1, 2, 3, 4, 255]]
 
 
-def test_batch_auto_labeller_saves_review_only_draft(tmp_path):
+def test_batch_auto_labeller_saves_semantics_and_separate_walkway(tmp_path):
     workspace = _workspace(tmp_path)
     report = BatchVenueAutoLabeller(workspace, _FakeEngine()).run(
         annotator_id="sana-01",
     )
     assert report["auto_labelled_scene_count"] == 1
     assert report["quick_review_count"] == 1
+    assert report["semantic_schema"] == "six_visual_classes_v2"
+    assert report["walkway_storage"] == "separate_binary_mask"
+
+    with Image.open(workspace.mask_path("real_v2", "real-venue-0001")) as mask:
+        semantic = np.asarray(mask.convert("L"))
+    assert 6 not in np.unique(semantic)
+    assert np.count_nonzero(semantic == 1) > 0
+
+    walkway_path = workspace.walkway_path("real_v2", "real-venue-0001")
+    assert walkway_path.is_file()
+    with Image.open(walkway_path) as mask:
+        walkway = np.asarray(mask.convert("L"))
+    assert set(np.unique(walkway)).issubset({0, 1})
+    assert np.count_nonzero(walkway) > 0
+
     record = workspace.load_record("real_v2", "real-venue-0001")
     assert record["status"] == "draft_in_progress"
     assert record["annotation_method"] == "pretrained_scene_model_draft"
     assert record["annotation_helper_is_final_model"] is False
     assert record["human_review_required"] is True
+    assert record["semantic_class_ids"] == [0, 1, 2, 3, 4, 5]
+    assert record["walkway_storage"] == "separate_binary_mask"
     assert record["training_status"] == "not_for_training"
+
     provenance_path = workspace.record_path(
         "real_v2", "real-venue-0001"
     ).with_name("real-venue-0001.autolabel.json")
