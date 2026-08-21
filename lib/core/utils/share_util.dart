@@ -39,7 +39,7 @@ class ShareUtil {
     required String designId,
     required String viewerUrl,
     Rect? sharePositionOrigin,
-  }) {
+  }) async {
     final message = 'See my $themeName event concept from BakeSmart. '
         'The cake and decorations are shown together in an interactive 3D view.\n\n'
         'Open Interactive 3D View: $viewerUrl\n\n'
