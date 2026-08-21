@@ -64,6 +64,17 @@
         <button id="zoom-in" type="button">+ Zoom</button>
       </section>
 
+      <section id="missing-panel" class="panel missing-panel" hidden>
+        <div class="section-title">Unlabelled finder</div>
+        <p id="missing-summary" class="missing-summary"></p>
+        <p id="missing-location" class="missing-location"></p>
+        <div class="missing-actions">
+          <button id="next-missing-area" type="button">Next missing area</button>
+          <button id="toggle-missing-overlay" type="button">Show unlabelled areas</button>
+        </div>
+        <p class="hint">Validate again after painting a highlighted gap. Nearby missed pixels are grouped so you can fix one area at a time.</p>
+      </section>
+
       <section class="panel action-stack">
         <button id="save-draft" class="secondary-action" type="button">Save draft</button>
         <button id="validate-mask" class="secondary-action" type="button">Validate mask</button>
@@ -73,12 +84,13 @@
 
     <section class="workspace-panel">
       <div class="workspace-note">
-        <strong>Tip:</strong> fill the whole image with the dominant class first, then paint the other regions. Use zoom for small outlets and boundaries.
+        <strong>Tip:</strong> fill the whole image with the dominant class first, then paint the other regions. If validation finds missed pixels, BakeSmart will highlight them and jump to the first missing area automatically.
       </div>
       <div id="canvas-viewport" class="canvas-viewport">
         <div id="canvas-wrapper" class="canvas-wrapper">
           <canvas id="image-canvas"></canvas>
           <canvas id="mask-canvas"></canvas>
+          <canvas id="diagnostic-canvas" aria-hidden="true"></canvas>
         </div>
       </div>
       <div id="message" class="message" role="status" aria-live="polite"></div>
