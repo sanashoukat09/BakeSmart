@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>BakeSmart Venue Mask Labeller</title>
+  <title>BakeSmart Venue Mask Review</title>
   <link rel="stylesheet" href="/static/labeler.css" />
 </head>
 <body>
   <header class="topbar">
     <div>
       <p class="eyebrow">BakeSmart · Venue Vision</p>
-      <h1>Seven-class mask labeller</h1>
-      <p class="subtle">Drafts may contain unlabelled pixels. Completion requires every pixel to be assigned to class 0-6.</p>
+      <h1>Venue mask review labeller</h1>
+      <p class="subtle">Manually annotate Wall, Floor, Door, Window, Furniture and Outlet. Walkway candidate is generated automatically from the labelled floor.</p>
     </div>
     <div id="status-pill" class="status-pill">Loading…</div>
   </header>
@@ -35,13 +35,14 @@
       <section class="panel">
         <label for="annotator-id">Annotator ID</label>
         <input id="annotator-id" maxlength="80" placeholder="Example: sana-01" autocomplete="off" />
-        <p class="hint">Required only when marking an annotation complete.</p>
+        <p class="hint">Required when marking an annotation complete.</p>
       </section>
 
       <section class="panel">
         <div class="section-title">Classes</div>
         <div id="class-buttons" class="class-grid"></div>
         <button id="eraser-button" class="tool-button" type="button">Eraser</button>
+        <p class="hint">Class 6 is read-only. BakeSmart derives Walkway candidate from Floor during CVAT import.</p>
       </section>
 
       <section class="panel compact-grid">
@@ -72,12 +73,10 @@
           <button id="next-missing-area" type="button">Next missing area</button>
           <button id="toggle-missing-overlay" type="button">Show unlabelled areas</button>
         </div>
-        <p class="hint">Validate again after painting a highlighted gap. Nearby missed pixels are grouped so you can fix one area at a time.</p>
+        <p class="hint">Validate again after correcting a highlighted gap. Nearby missed pixels are grouped so you can review one area at a time.</p>
       </section>
 
       <section class="panel action-stack">
-        <button id="suggest-mask" class="secondary-action" type="button">✨ Suggest mask</button>
-        <p class="hint">Creates a machine-assisted draft using BakeSmart's local synthetic-bootstrap venue model. Review and correct every region before completion.</p>
         <button id="save-draft" class="secondary-action" type="button">Save draft</button>
         <button id="validate-mask" class="secondary-action" type="button">Validate mask</button>
         <button id="complete-mask" class="primary-action" type="button">Mark annotation complete</button>
@@ -86,7 +85,7 @@
 
     <section class="workspace-panel">
       <div class="workspace-note">
-        <strong>Tip:</strong> use <strong>Suggest mask</strong> for a starting draft, then correct the predicted regions manually. If validation finds missed pixels, BakeSmart will highlight them and jump to the first missing area automatically.
+        <strong>Recommended workflow:</strong> create the six manual classes in CVAT using its interactive segmentation tools, export as <strong>Segmentation Mask 1.1</strong>, import with BakeSmart, then use this screen only for final review and small corrections. Walkway is derived automatically and is a visual candidate, not a metric safety clearance.
       </div>
       <div id="canvas-viewport" class="canvas-viewport">
         <div id="canvas-wrapper" class="canvas-wrapper">
@@ -101,6 +100,6 @@
 
   <script src="/static/labeler.js"></script>
   <script src="/static/missing_finder.js"></script>
-  <script src="/static/suggest_mask.js"></script>
+  <script src="/static/derived_walkway.js"></script>
 </body>
 </html>
