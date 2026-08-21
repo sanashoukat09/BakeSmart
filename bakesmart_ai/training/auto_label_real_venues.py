@@ -4,6 +4,9 @@ This helper uses a pretrained SegFormer ADE20K ONNX model only to accelerate
 annotation. The final BakeSmart venue model remains separate and is trained on
 human-reviewed BakeSmart masks.
 
+New drafts use semantic IDs 0-5 only. Walkway is derived from Floor and saved as
+a separate binary mask so Floor pixels are never replaced by Walkway.
+
 Run from bakesmart_ai:
     python -m training.auto_label_real_venues
 """
@@ -24,8 +27,9 @@ import cv2
 import numpy as np
 from PIL import Image, ImageOps
 
-from training.annotation_workspace import AnnotationWorkspace, PROJECT_DIR, UNLABELLED_ID
+from training.annotation_workspace import PROJECT_DIR, UNLABELLED_ID
 from training.auto_label_mapping import map_ade20k_to_bakesmart, mapping_coverage
+from training.semantic_annotation_workspace import SemanticAnnotationWorkspace
 from training.walkway_generator import derive_walkway_candidate
 
 MODEL_NAME = "Xenova/segformer-b0-finetuned-ade-512-512"
@@ -124,8 +128,8 @@ class SegformerOnnxEngine:
 
 
 class BatchVenueAutoLabeller:
-    def __init__(self, workspace: AnnotationWorkspace | None = None, engine: PredictionEngine | None = None) -> None:
-        self.workspace = workspace or AnnotationWorkspace()
+    def __init__(self, workspace: SemanticAnnotationWorkspace | None = None, engine: PredictionEngine | None = None) -> None:
+        self.workspace = workspace or SemanticAnnotationWorkspace()
         self.engine = engine or SegformerOnnxEngine()
 
     def run(
@@ -161,8 +165,10 @@ class BatchVenueAutoLabeller:
 
         processed = [item for item in results if item["action"] == "auto_labelled"]
         report = {
-            "schema_version": 1,
+            "schema_version": 2,
             "dataset": dataset_key,
+            "semantic_schema": "six_visual_classes_v2",
+            "walkway_storage": "separate_binary_mask",
             "model_name": MODEL_NAME,
             "model_version": self.engine.model_version,
             "annotation_method": "pretrained_scene_model_draft_then_human_review",
@@ -191,7 +197,8 @@ class BatchVenueAutoLabeller:
         with Image.open(self.workspace.image_path(dataset_key, scene_id)) as source:
             prediction = self.engine.predict(ImageOps.exif_transpose(source).convert("RGB"))
         walkway = derive_walkway_candidate(prediction.labels)
-        stats = self.workspace.validate_labels(walkway.labels)
+        semantic_labels = walkway.semantic_labels
+        stats = self.workspace.validate_labels(semantic_labels)
         score = float(np.clip(0.65 * prediction.mean_confidence + 0.35 * prediction.direct_mapping_fraction, 0, 1))
         priority = "quick_review" if score >= 0.72 and prediction.direct_mapping_fraction >= 0.82 else "needs_attention"
         result = {
@@ -209,7 +216,8 @@ class BatchVenueAutoLabeller:
         if dry_run:
             return result
 
-        self.workspace._save_mask(dataset_key, scene_id, walkway.labels)  # noqa: SLF001
+        self.workspace._save_mask(dataset_key, scene_id, semantic_labels)  # noqa: SLF001
+        self.workspace._save_walkway_mask(dataset_key, scene_id, walkway.walkway_mask)  # noqa: SLF001
         auto_record = self.workspace._record(  # noqa: SLF001
             dataset_key=dataset_key,
             scene_id=scene_id,
@@ -227,7 +235,11 @@ class BatchVenueAutoLabeller:
             "auto_label_review_score": round(score, 4),
             "auto_label_mean_confidence": round(prediction.mean_confidence, 4),
             "auto_label_direct_mapping_fraction": round(prediction.direct_mapping_fraction, 4),
-            "walkway_annotation_method": "derived_from_floor",
+            "semantic_schema_version": 2,
+            "semantic_class_ids": [0, 1, 2, 3, 4, 5],
+            "walkway_annotation_method": "derived_from_floor_separate_binary_mask",
+            "walkway_mask_path": self.workspace._relative(self.workspace.walkway_path(dataset_key, scene_id)),  # noqa: SLF001
+            "walkway_mask_sha256": self.workspace._sha256_file(self.workspace.walkway_path(dataset_key, scene_id)),  # noqa: SLF001
             "outlet_annotation_method": "manual_if_visible",
             "training_status": "not_for_training",
         })
@@ -242,9 +254,11 @@ class BatchVenueAutoLabeller:
     def _write_scene_provenance(self, dataset_key, scene_id, record, result):
         path = self.workspace.record_path(dataset_key, scene_id).with_name(f"{scene_id}.autolabel.json")
         payload = {
-            "schema_version": 1,
+            "schema_version": 2,
             "dataset": dataset_key,
             "scene_id": scene_id,
+            "semantic_schema": "six_visual_classes_v2",
+            "walkway_storage": "separate_binary_mask",
             "annotation_helper_model": MODEL_NAME,
             "annotation_helper_model_version": self.engine.model_version,
             "annotation_helper_model_sha256": self._helper_model_sha256(),
@@ -252,6 +266,7 @@ class BatchVenueAutoLabeller:
             "human_review_required": True,
             "image_sha256": record["image_sha256"],
             "suggested_mask_sha256": record["mask_sha256"],
+            "walkway_mask_sha256": record.get("walkway_mask_sha256"),
             "generated_at": record["updated_at"],
             "training_status": "not_for_training",
             **result,
@@ -343,7 +358,7 @@ def main() -> int:
     print(f"Skipped: {report['skipped_scene_count']}")
     if report.get("report_path"):
         print(f"Report: {report['report_path']}")
-    print("Next: open the BakeSmart labeller, review the drafts, correct obvious mistakes, then complete them.")
+    print("Next: open the BakeSmart labeller, review the six semantic classes, optionally view Walkway, then complete them.")
     return 0
 
 
