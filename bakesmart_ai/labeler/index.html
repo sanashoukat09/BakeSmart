@@ -11,7 +11,7 @@
     <div>
       <p class="eyebrow">BakeSmart · Venue Vision</p>
       <h1>Venue mask labeller</h1>
-      <p class="subtle">Annotate Wall, Floor, Door, Window, Furniture and Outlet directly in BakeSmart. Walkway candidate is generated automatically from the labelled floor.</p>
+      <p class="subtle">Annotate six visual classes: Wall, Floor, Door, Window, Furniture and Outlet. Walkway is a separate derived overlay, so Floor always remains Floor.</p>
     </div>
     <div id="status-pill" class="status-pill">Loading…</div>
   </header>
@@ -39,10 +39,16 @@
       </section>
 
       <section class="panel">
-        <div class="section-title">Classes</div>
+        <div class="section-title">Semantic classes</div>
         <div id="class-buttons" class="class-grid"></div>
         <button id="eraser-button" class="tool-button" type="button">Eraser</button>
-        <p class="hint">Class 6 is read-only. BakeSmart derives Walkway candidate from Floor.</p>
+        <p class="hint">The semantic mask contains IDs 0-5 only. Walkway is not a semantic class.</p>
+      </section>
+
+      <section class="panel walkway-panel">
+        <div class="section-title">Derived placement layer</div>
+        <button id="toggle-walkway-overlay" class="tool-button" type="button">Show Walkway overlay</button>
+        <p class="hint">Green Walkway is calculated from Floor and stored separately. It does not replace blue Floor and does not prove metric clearance.</p>
       </section>
 
       <section class="panel smart-tools-panel">
@@ -96,12 +102,13 @@
 
     <section class="workspace-panel">
       <div class="workspace-note">
-        <strong>Fast workflow:</strong> use <strong>Polygon Fill</strong> for Wall/Floor, <strong>Smart Object</strong> for Furniture/Door/Window, and the brush only for small corrections. Walkway is derived automatically and is a visual candidate, not a metric safety clearance.
+        <strong>Mask structure:</strong> blue Floor remains part of the six-class semantic mask. The optional green Walkway overlay is calculated separately from Floor for placement guidance.
       </div>
       <div id="canvas-viewport" class="canvas-viewport">
         <div id="canvas-wrapper" class="canvas-wrapper">
           <canvas id="image-canvas"></canvas>
           <canvas id="mask-canvas"></canvas>
+          <canvas id="walkway-canvas" aria-hidden="true"></canvas>
           <canvas id="diagnostic-canvas" aria-hidden="true"></canvas>
           <canvas id="tool-canvas" aria-hidden="true"></canvas>
         </div>
@@ -112,7 +119,7 @@
 
   <script src="/static/labeler.js"></script>
   <script src="/static/missing_finder.js"></script>
-  <script src="/static/derived_walkway.js"></script>
+  <script src="/static/walkway_overlay.js"></script>
   <script src="/static/smart_tools.js"></script>
 </body>
 </html>
