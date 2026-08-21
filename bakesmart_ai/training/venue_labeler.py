@@ -24,6 +24,7 @@ from training.annotation_workspace import (
     PROJECT_DIR,
     label_class_payload,
 )
+from training.mask_suggestion import MaskSuggestionService
 
 
 STATIC_DIR = PROJECT_DIR / "labeler"
@@ -39,6 +40,11 @@ class CompleteMaskSubmission(BaseModel):
     annotator_id: str = Field(min_length=1, max_length=80)
 
 
+class SuggestMaskSubmission(BaseModel):
+    annotator_id: str | None = None
+    replace_existing: bool = False
+
+
 def _translate_error(exc: Exception) -> HTTPException:
     if isinstance(exc, FileNotFoundError):
         return HTTPException(status_code=404, detail=str(exc))
@@ -52,15 +58,17 @@ def _translate_error(exc: Exception) -> HTTPException:
 def create_app(
     *,
     workspace: AnnotationWorkspace | None = None,
+    suggestion_service: MaskSuggestionService | None = None,
     static_dir: Path | None = STATIC_DIR,
 ) -> FastAPI:
     active_workspace = workspace or AnnotationWorkspace()
+    active_suggestion_service = suggestion_service or MaskSuggestionService()
     app = FastAPI(
         title="BakeSmart Venue Mask Labeller",
-        version="1.0.0",
+        version="1.1.0",
         description=(
             "Local-only annotation UI for wall, floor, door, window, furniture, "
-            "outlet and walkway-candidate masks."
+            "outlet and walkway-candidate masks, with optional machine-assisted drafts."
         ),
     )
 
@@ -126,6 +134,19 @@ def create_app(
                 active_workspace.overlay_png(dataset, scene_id),
                 media_type="image/png",
                 headers={"Cache-Control": "no-store"},
+            )
+        except Exception as exc:
+            raise _translate_error(exc) from exc
+
+    @app.post("/api/scenes/{dataset}/{scene_id}/suggest")
+    def suggest_mask(dataset: str, scene_id: str, body: SuggestMaskSubmission):
+        try:
+            return active_suggestion_service.suggest(
+                workspace=active_workspace,
+                dataset_key=dataset,
+                scene_id=scene_id,
+                annotator_id=body.annotator_id,
+                replace_existing=body.replace_existing,
             )
         except Exception as exc:
             raise _translate_error(exc) from exc
