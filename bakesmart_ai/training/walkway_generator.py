@@ -1,9 +1,12 @@
-"""Derive visual walkway candidates from human-labelled venue floor masks.
+"""Derive a separate visual walkway mask from BakeSmart Floor pixels.
 
-Walkway is not a manually annotated semantic object. BakeSmart derives class 6
-from the interior of class-1 floor regions after wall/door/window/furniture/
-outlet annotation is complete. The result is a visual candidate only; it does
-not establish real-world metric clearance or safety.
+Walkway is not a semantic class. BakeSmart keeps Wall/Floor/Door/Window/
+Furniture/Outlet in the main semantic mask and stores Walkway separately as a
+binary mask. This preserves all Floor pixels for semantic-model training while
+still giving placement logic a visual usable-floor candidate.
+
+Legacy class-6 pixels are accepted as input and normalized back to Floor in
+memory. They are never required in new semantic masks.
 """
 
 from __future__ import annotations
@@ -14,9 +17,10 @@ import numpy as np
 
 
 FLOOR_ID = 1
-WALKWAY_ID = 6
+LEGACY_WALKWAY_ID = 6
 UNLABELLED_ID = 255
-VALID_IDS = frozenset(range(7)) | {UNLABELLED_ID}
+SEMANTIC_IDS = frozenset(range(6))
+VALID_INPUT_IDS = SEMANTIC_IDS | {LEGACY_WALKWAY_ID, UNLABELLED_ID}
 DEFAULT_CLEARANCE_FRACTION = 0.015
 MAX_CLEARANCE_PIXELS = 24
 MIN_WALKWAY_COMPONENT_FRACTION = 0.0015
@@ -24,12 +28,19 @@ MIN_WALKWAY_COMPONENT_FRACTION = 0.0015
 
 @dataclass(frozen=True)
 class WalkwayGenerationResult:
-    labels: np.ndarray
+    semantic_labels: np.ndarray
+    walkway_mask: np.ndarray
     clearance_pixels: int
     floor_pixels_before: int
     walkway_pixels: int
     walkway_components: int
     walkway_fraction_of_floor: float
+
+    @property
+    def labels(self) -> np.ndarray:
+        """Backward-compatible alias returning semantic labels only."""
+
+        return self.semantic_labels
 
 
 def derive_walkway_candidate(
@@ -38,10 +49,10 @@ def derive_walkway_candidate(
     clearance_pixels: int | None = None,
     clearance_fraction: float = DEFAULT_CLEARANCE_FRACTION,
 ) -> WalkwayGenerationResult:
-    """Return a copy with class-6 walkway generated from class-1 floor.
+    """Return normalized semantic labels plus a separate 0/1 walkway mask.
 
-    Existing class-6 pixels are first restored to floor, making regeneration
-    deterministic after a human corrects floor or obstacle boundaries.
+    New semantic outputs contain only IDs 0-5 and 255. Legacy class-6 pixels
+    are restored to Floor before the walkway is regenerated.
     """
 
     source = np.asarray(labels)
@@ -50,7 +61,7 @@ def derive_walkway_candidate(
     if source.size == 0:
         raise ValueError("walkway generation requires a non-empty label mask")
     unique_ids = {int(value) for value in np.unique(source)}
-    invalid = unique_ids - VALID_IDS
+    invalid = unique_ids - VALID_INPUT_IDS
     if invalid:
         raise ValueError(f"walkway generation received invalid label IDs: {sorted(invalid)}")
     if not 0 < clearance_fraction <= 0.20:
@@ -63,13 +74,14 @@ def derive_walkway_candidate(
     if clearance_pixels < 0:
         raise ValueError("clearance_pixels must be >= 0")
 
-    result = source.astype(np.uint8, copy=True)
-    result[result == WALKWAY_ID] = FLOOR_ID
-    floor = result == FLOOR_ID
+    semantic = source.astype(np.uint8, copy=True)
+    semantic[semantic == LEGACY_WALKWAY_ID] = FLOOR_ID
+    floor = semantic == FLOOR_ID
     floor_pixels = int(np.count_nonzero(floor))
     if floor_pixels == 0:
         return WalkwayGenerationResult(
-            labels=result,
+            semantic_labels=semantic,
+            walkway_mask=np.zeros_like(semantic, dtype=np.uint8),
             clearance_pixels=int(clearance_pixels),
             floor_pixels_before=0,
             walkway_pixels=0,
@@ -80,16 +92,17 @@ def derive_walkway_candidate(
     interior = _erode_eight_connected(floor, int(clearance_pixels))
     minimum_component_pixels = max(
         9,
-        round(result.size * MIN_WALKWAY_COMPONENT_FRACTION),
+        round(semantic.size * MIN_WALKWAY_COMPONENT_FRACTION),
     )
     interior, component_count = _keep_large_components(
         interior,
         minimum_pixels=minimum_component_pixels,
     )
-    result[interior] = WALKWAY_ID
-    walkway_pixels = int(np.count_nonzero(interior))
+    walkway_mask = interior.astype(np.uint8)
+    walkway_pixels = int(np.count_nonzero(walkway_mask))
     return WalkwayGenerationResult(
-        labels=result,
+        semantic_labels=semantic,
+        walkway_mask=walkway_mask,
         clearance_pixels=int(clearance_pixels),
         floor_pixels_before=floor_pixels,
         walkway_pixels=walkway_pixels,
