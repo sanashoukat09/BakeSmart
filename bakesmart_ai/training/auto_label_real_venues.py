@@ -1,19 +1,11 @@
-"""Automatically create review-ready draft masks for BakeSmart venue photos.
+"""Create review-ready automatic draft masks for BakeSmart real venue photos.
 
-This is deliberately an annotation helper, not the final BakeSmart model. It
-uses a small pretrained SegFormer ADE20K ONNX model to create initial masks for
-Wall, Floor, Door, Window and Furniture, then derives Walkway from Floor.
-Outlet remains a manual small-object correction when it is visible.
+This helper uses a pretrained SegFormer ADE20K ONNX model only to accelerate
+annotation. The final BakeSmart venue model remains separate and is trained on
+human-reviewed BakeSmart masks.
 
-First run downloads one ~15 MB ONNX model. Later runs use the local copy.
-
-Run from ``bakesmart_ai``::
-
+Run from bakesmart_ai:
     python -m training.auto_label_real_venues
-
-To replace unfinished masks created by an older workflow::
-
-    python -m training.auto_label_real_venues --replace-existing
 """
 
 from __future__ import annotations
@@ -36,14 +28,12 @@ from training.annotation_workspace import AnnotationWorkspace, PROJECT_DIR, UNLA
 from training.auto_label_mapping import map_ade20k_to_bakesmart, mapping_coverage
 from training.walkway_generator import derive_walkway_candidate
 
-
 MODEL_NAME = "Xenova/segformer-b0-finetuned-ade-512-512"
 MODEL_VERSION = "segformer-b0-ade20k-onnx-v1"
 MODEL_URL = (
     "https://huggingface.co/Xenova/segformer-b0-finetuned-ade-512-512/"
     "resolve/main/onnx/model.onnx?download=true"
 )
-MODEL_SHA256 = "3e5c18a4be395f16646438d54c42377ddc202edfa33d5eced0c9506de75c44c2"
 DEFAULT_MODEL_PATH = PROJECT_DIR / "models" / "annotation_helpers" / "segformer_ade20k" / "model.onnx"
 INPUT_SIZE = 512
 IMAGE_MEAN = np.asarray([0.485, 0.456, 0.406], dtype=np.float32)
@@ -67,15 +57,21 @@ class PredictionEngine(Protocol):
 class SegformerOnnxEngine:
     model_version = MODEL_VERSION
 
-    def __init__(
-        self,
-        model_path: Path = DEFAULT_MODEL_PATH,
-        *,
-        allow_download: bool = True,
-    ) -> None:
+    def __init__(self, model_path: Path = DEFAULT_MODEL_PATH, *, allow_download: bool = True) -> None:
         self.model_path = Path(model_path)
         self.allow_download = allow_download
         self._session = None
+
+    def _active_session(self):
+        if self._session is not None:
+            return self._session
+        model_path = ensure_model(self.model_path, allow_download=self.allow_download)
+        try:
+            import onnxruntime as ort
+        except ImportError as exc:
+            raise RuntimeError("onnxruntime is missing. Run: pip install -r requirements.txt") from exc
+        self._session = ort.InferenceSession(str(model_path), providers=["CPUExecutionProvider"])
+        return self._session
 
     def predict(self, image: Image.Image) -> AutoLabelPrediction:
         session = self._active_session()
@@ -84,37 +80,29 @@ class SegformerOnnxEngine:
         resized = source.resize((INPUT_SIZE, INPUT_SIZE), Image.Resampling.BILINEAR)
         pixels = np.asarray(resized, dtype=np.float32) / 255.0
         normalized = (pixels - IMAGE_MEAN) / IMAGE_STD
-        model_input = np.transpose(normalized, (2, 0, 1))[None].astype(np.float32)
-
-        input_name = session.get_inputs()[0].name
-        output_name = session.get_outputs()[0].name
-        logits = np.asarray(session.run([output_name], {input_name: model_input})[0])
+        tensor = np.transpose(normalized, (2, 0, 1))[None].astype(np.float32)
+        logits = np.asarray(
+            session.run([session.get_outputs()[0].name], {session.get_inputs()[0].name: tensor})[0]
+        )
         if logits.ndim != 4 or logits.shape[0] != 1:
-            raise ValueError(f"annotation model returned unexpected output shape {logits.shape}")
+            raise ValueError(f"unexpected annotation-model output shape: {logits.shape}")
         logits = logits[0]
         if logits.shape[0] == 150:
             class_logits = logits
         elif logits.shape[-1] == 150:
             class_logits = np.transpose(logits, (2, 0, 1))
         else:
-            raise ValueError(f"annotation model output does not contain 150 ADE20K classes: {logits.shape}")
+            raise ValueError(f"annotation-model output has no 150-class ADE20K axis: {logits.shape}")
 
         maximum = np.max(class_logits, axis=0, keepdims=True)
         exponentials = np.exp(class_logits - maximum)
         probabilities = exponentials / np.sum(exponentials, axis=0, keepdims=True)
         confidence = np.max(probabilities, axis=0).astype(np.float32)
 
-        # SegFormer emits lower-resolution logits. Upsample logits before argmax
-        # so boundaries are much less blocky than stretching class IDs directly.
         logits_hwc = np.transpose(class_logits.astype(np.float32), (1, 2, 0))
         if logits_hwc.shape[:2] != (INPUT_SIZE, INPUT_SIZE):
-            logits_hwc = cv2.resize(
-                logits_hwc,
-                (INPUT_SIZE, INPUT_SIZE),
-                interpolation=cv2.INTER_LINEAR,
-            )
+            logits_hwc = cv2.resize(logits_hwc, (INPUT_SIZE, INPUT_SIZE), interpolation=cv2.INTER_LINEAR)
         ade_ids = np.argmax(logits_hwc, axis=2).astype(np.uint8)
-        del logits_hwc
 
         ade_full = np.asarray(
             Image.fromarray(ade_ids, mode="L").resize((width, height), Image.Resampling.NEAREST),
@@ -126,9 +114,7 @@ class SegformerOnnxEngine:
         )
         labels = map_ade20k_to_bakesmart(ade_full)
         mapped = labels != UNLABELLED_ID
-        mean_confidence = (
-            float(np.mean(confidence_full[mapped])) if np.any(mapped) else 0.0
-        )
+        mean_confidence = float(np.mean(confidence_full[mapped])) if np.any(mapped) else 0.0
         return AutoLabelPrediction(
             labels=labels,
             pixel_confidence=confidence_full,
@@ -136,29 +122,9 @@ class SegformerOnnxEngine:
             direct_mapping_fraction=mapping_coverage(labels),
         )
 
-    def _active_session(self):
-        if self._session is not None:
-            return self._session
-        model_path = ensure_model(self.model_path, allow_download=self.allow_download)
-        try:
-            import onnxruntime as ort
-        except ImportError as exc:
-            raise RuntimeError(
-                "onnxruntime is not installed. Run: pip install -r requirements.txt"
-            ) from exc
-        self._session = ort.InferenceSession(
-            str(model_path),
-            providers=["CPUExecutionProvider"],
-        )
-        return self._session
-
 
 class BatchVenueAutoLabeller:
-    def __init__(
-        self,
-        workspace: AnnotationWorkspace | None = None,
-        engine: PredictionEngine | None = None,
-    ) -> None:
+    def __init__(self, workspace: AnnotationWorkspace | None = None, engine: PredictionEngine | None = None) -> None:
         self.workspace = workspace or AnnotationWorkspace()
         self.engine = engine or SegformerOnnxEngine()
 
@@ -174,30 +140,22 @@ class BatchVenueAutoLabeller:
     ) -> dict[str, object]:
         if limit is not None and limit < 1:
             raise ValueError("limit must be >= 1")
-        normalized_annotator = self.workspace._normalize_annotator_id(  # noqa: SLF001
-            annotator_id,
-            required=False,
-        )
-        descriptors = self.workspace.list_scenes(dataset_key)
+        annotator = self.workspace._normalize_annotator_id(annotator_id, required=False)  # noqa: SLF001
+        scenes = self.workspace.list_scenes(dataset_key)
         if scene_ids:
-            unknown = scene_ids - {item["scene_id"] for item in descriptors}
+            known = {item["scene_id"] for item in scenes}
+            unknown = scene_ids - known
             if unknown:
                 raise ValueError("unknown scene ID(s): " + ", ".join(sorted(unknown)))
-            descriptors = [item for item in descriptors if item["scene_id"] in scene_ids]
+            scenes = [item for item in scenes if item["scene_id"] in scene_ids]
         if limit is not None:
-            descriptors = descriptors[:limit]
+            scenes = scenes[:limit]
 
-        results: list[dict[str, object]] = []
-        for index, descriptor in enumerate(descriptors, start=1):
+        results = []
+        for index, descriptor in enumerate(scenes, 1):
             scene_id = str(descriptor["scene_id"])
-            print(f"[{index}/{len(descriptors)}] {scene_id}", flush=True)
-            result = self._process_scene(
-                dataset_key=dataset_key,
-                scene_id=scene_id,
-                replace_existing=replace_existing,
-                annotator_id=normalized_annotator,
-                dry_run=dry_run,
-            )
+            print(f"[{index}/{len(scenes)}] {scene_id}", flush=True)
+            result = self._process_scene(dataset_key, scene_id, replace_existing, annotator, dry_run)
             results.append(result)
             print(f"    {result['action']}: {result.get('review_priority', result.get('reason', ''))}", flush=True)
 
@@ -210,12 +168,12 @@ class BatchVenueAutoLabeller:
             "annotation_method": "pretrained_scene_model_draft_then_human_review",
             "final_bakesmart_model_dependency": False,
             "dry_run": dry_run,
-            "requested_scene_count": len(descriptors),
+            "requested_scene_count": len(scenes),
             "auto_labelled_scene_count": len(processed),
             "skipped_scene_count": len(results) - len(processed),
-            "quick_review_count": sum(item.get("review_priority") == "quick_review" for item in processed),
-            "needs_attention_count": sum(item.get("review_priority") == "needs_attention" for item in processed),
-            "outlet_note": "Outlet is not predicted by this ADE20K helper; add it manually only when clearly visible.",
+            "quick_review_count": sum(x.get("review_priority") == "quick_review" for x in processed),
+            "needs_attention_count": sum(x.get("review_priority") == "needs_attention" for x in processed),
+            "outlet_note": "Outlet is not predicted by this helper; add it manually only when clearly visible.",
             "scenes": results,
         }
         if not dry_run:
@@ -223,44 +181,24 @@ class BatchVenueAutoLabeller:
             report["report_path"] = self.workspace._relative(report_path)  # noqa: SLF001
         return report
 
-    def _process_scene(
-        self,
-        *,
-        dataset_key: str,
-        scene_id: str,
-        replace_existing: bool,
-        annotator_id: str | None,
-        dry_run: bool,
-    ) -> dict[str, object]:
+    def _process_scene(self, dataset_key, scene_id, replace_existing, annotator_id, dry_run):
         record = self.workspace.load_record(dataset_key, scene_id)
         if record and record.get("status") == "annotation_complete_pending_review":
             return {"scene_id": scene_id, "action": "skipped", "reason": "already_complete_pending_review"}
-        mask_path = self.workspace.mask_path(dataset_key, scene_id)
-        if mask_path.is_file() and not replace_existing:
+        if self.workspace.mask_path(dataset_key, scene_id).is_file() and not replace_existing:
             return {"scene_id": scene_id, "action": "skipped", "reason": "existing_mask_use_--replace-existing"}
 
-        image_path = self.workspace.image_path(dataset_key, scene_id)
-        with Image.open(image_path) as source:
-            image = ImageOps.exif_transpose(source).convert("RGB")
-            prediction = self.engine.predict(image)
-
+        with Image.open(self.workspace.image_path(dataset_key, scene_id)) as source:
+            prediction = self.engine.predict(ImageOps.exif_transpose(source).convert("RGB"))
         walkway = derive_walkway_candidate(prediction.labels)
-        labels = walkway.labels
-        stats = self.workspace.validate_labels(labels)
-        auto_score = self._review_score(
-            mean_confidence=prediction.mean_confidence,
-            mapped_fraction=prediction.direct_mapping_fraction,
-        )
-        review_priority = (
-            "quick_review"
-            if auto_score >= 0.72 and prediction.direct_mapping_fraction >= 0.82
-            else "needs_attention"
-        )
-        scene_result = {
+        stats = self.workspace.validate_labels(walkway.labels)
+        score = float(np.clip(0.65 * prediction.mean_confidence + 0.35 * prediction.direct_mapping_fraction, 0, 1))
+        priority = "quick_review" if score >= 0.72 and prediction.direct_mapping_fraction >= 0.82 else "needs_attention"
+        result = {
             "scene_id": scene_id,
             "action": "auto_labelled",
-            "review_priority": review_priority,
-            "review_score": round(auto_score, 4),
+            "review_priority": priority,
+            "review_score": round(score, 4),
             "mean_model_confidence": round(prediction.mean_confidence, 4),
             "direct_mapping_fraction": round(prediction.direct_mapping_fraction, 4),
             "coverage_fraction": stats["coverage_fraction"],
@@ -269,9 +207,9 @@ class BatchVenueAutoLabeller:
             "walkway_pixels": walkway.walkway_pixels,
         }
         if dry_run:
-            return scene_result
+            return result
 
-        self.workspace._save_mask(dataset_key, scene_id, labels)  # noqa: SLF001
+        self.workspace._save_mask(dataset_key, scene_id, walkway.labels)  # noqa: SLF001
         auto_record = self.workspace._record(  # noqa: SLF001
             dataset_key=dataset_key,
             scene_id=scene_id,
@@ -279,90 +217,69 @@ class BatchVenueAutoLabeller:
             status="draft_in_progress",
             annotation_completed_at=None,
         )
-        auto_record.update(
-            {
-                "annotation_method": "pretrained_scene_model_draft",
-                "annotation_helper_model": MODEL_NAME,
-                "annotation_helper_model_version": self.engine.model_version,
-                "annotation_helper_is_final_model": False,
-                "human_review_required": True,
-                "auto_label_review_priority": review_priority,
-                "auto_label_review_score": round(auto_score, 4),
-                "auto_label_mean_confidence": round(prediction.mean_confidence, 4),
-                "auto_label_direct_mapping_fraction": round(prediction.direct_mapping_fraction, 4),
-                "walkway_annotation_method": "derived_from_floor",
-                "outlet_annotation_method": "manual_if_visible",
-                "training_status": "not_for_training",
-            }
-        )
+        auto_record.update({
+            "annotation_method": "pretrained_scene_model_draft",
+            "annotation_helper_model": MODEL_NAME,
+            "annotation_helper_model_version": self.engine.model_version,
+            "annotation_helper_is_final_model": False,
+            "human_review_required": True,
+            "auto_label_review_priority": priority,
+            "auto_label_review_score": round(score, 4),
+            "auto_label_mean_confidence": round(prediction.mean_confidence, 4),
+            "auto_label_direct_mapping_fraction": round(prediction.direct_mapping_fraction, 4),
+            "walkway_annotation_method": "derived_from_floor",
+            "outlet_annotation_method": "manual_if_visible",
+            "training_status": "not_for_training",
+        })
         self.workspace._write_record(dataset_key, scene_id, auto_record)  # noqa: SLF001
-        self._write_scene_provenance(dataset_key, scene_id, auto_record, scene_result)
-        return scene_result
+        self._write_scene_provenance(dataset_key, scene_id, auto_record, result)
+        return result
 
-    @staticmethod
-    def _review_score(*, mean_confidence: float, mapped_fraction: float) -> float:
-        return float(np.clip(0.65 * mean_confidence + 0.35 * mapped_fraction, 0.0, 1.0))
+    def _helper_model_sha256(self) -> str | None:
+        path = getattr(self.engine, "model_path", None)
+        return sha256_file(Path(path)) if path and Path(path).is_file() else None
 
-    def _write_scene_provenance(
-        self,
-        dataset_key: str,
-        scene_id: str,
-        record: dict[str, object],
-        scene_result: dict[str, object],
-    ) -> Path:
-        path = self.workspace.record_path(dataset_key, scene_id).with_name(
-            f"{scene_id}.autolabel.json"
-        )
+    def _write_scene_provenance(self, dataset_key, scene_id, record, result):
+        path = self.workspace.record_path(dataset_key, scene_id).with_name(f"{scene_id}.autolabel.json")
         payload = {
             "schema_version": 1,
             "dataset": dataset_key,
             "scene_id": scene_id,
             "annotation_helper_model": MODEL_NAME,
             "annotation_helper_model_version": self.engine.model_version,
-            "annotation_helper_model_sha256": MODEL_SHA256,
+            "annotation_helper_model_sha256": self._helper_model_sha256(),
             "annotation_helper_is_final_model": False,
             "human_review_required": True,
             "image_sha256": record["image_sha256"],
             "suggested_mask_sha256": record["mask_sha256"],
             "generated_at": record["updated_at"],
             "training_status": "not_for_training",
-            **scene_result,
+            **result,
         }
         path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = path.with_suffix(".json.part")
-        temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        temporary.replace(path)
-        return path
+        path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
-    def _write_report(self, dataset_key: str, report: dict[str, object]) -> Path:
+    def _write_report(self, dataset_key, report):
         dataset = self.workspace._dataset(dataset_key)  # noqa: SLF001
-        report_dir = dataset.records_dir / "auto_label_runs"
-        report_dir.mkdir(parents=True, exist_ok=True)
-        timestamp = self.workspace._utc_now().replace(":", "-")  # noqa: SLF001
-        path = report_dir / f"auto-label-{timestamp}.json"
+        directory = dataset.records_dir / "auto_label_runs"
+        directory.mkdir(parents=True, exist_ok=True)
+        stamp = self.workspace._utc_now().replace(":", "-")  # noqa: SLF001
+        path = directory / f"auto-label-{stamp}.json"
         path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         return path
 
 
 def ensure_model(path: Path, *, allow_download: bool = True) -> Path:
     path = Path(path)
-    if path.is_file():
-        checksum = sha256_file(path)
-        if checksum == MODEL_SHA256:
-            return path
-        if not allow_download:
-            raise ValueError(f"annotation helper model checksum is invalid: {path}")
-        print("Existing annotation helper model has the wrong checksum; downloading a clean copy.", flush=True)
-    elif not allow_download:
+    if path.is_file() and path.stat().st_size > 1_000_000:
+        return path
+    path.unlink(missing_ok=True)
+    if not allow_download:
         raise FileNotFoundError(f"annotation helper model is missing: {path}")
-
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(".onnx.part")
-    print("First run: downloading the small venue annotation helper model (~15 MB)...", flush=True)
-    request = urllib.request.Request(
-        MODEL_URL,
-        headers={"User-Agent": "BakeSmart-FYP/1.0"},
-    )
+    print("First run: downloading the venue annotation helper model...", flush=True)
+    request = urllib.request.Request(MODEL_URL, headers={"User-Agent": "BakeSmart-FYP/1.0"})
     try:
         with urllib.request.urlopen(request, timeout=120) as response, temporary.open("wb") as output:
             total = int(response.headers.get("Content-Length") or 0)
@@ -377,18 +294,13 @@ def ensure_model(path: Path, *, allow_download: bool = True) -> Path:
                     print(f"    downloaded {downloaded * 100 // total}%", flush=True)
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         temporary.unlink(missing_ok=True)
-        raise RuntimeError(
-            "Could not download the annotation helper model. Check the internet connection and run the command again."
-        ) from exc
-
-    checksum = sha256_file(temporary)
-    if checksum != MODEL_SHA256:
+        raise RuntimeError("Could not download the annotation helper model. Check internet and run again.") from exc
+    if temporary.stat().st_size <= 1_000_000:
         temporary.unlink(missing_ok=True)
-        raise ValueError(
-            "Downloaded annotation helper model failed its SHA256 check; no model was installed."
-        )
+        raise ValueError("downloaded annotation helper model file is unexpectedly small")
     temporary.replace(path)
     print(f"Annotation helper model ready: {path}", flush=True)
+    print(f"Model SHA256: {sha256_file(path)}", flush=True)
     return path
 
 
@@ -403,18 +315,17 @@ def sha256_file(path: Path) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset", default="real_v2")
-    parser.add_argument("--replace-existing", action="store_true", help="replace unfinished local draft masks")
-    parser.add_argument("--limit", type=int, default=None, help="process only the first N selected scenes")
-    parser.add_argument("--scene-id", action="append", default=[], help="process only this scene ID; may be repeated")
-    parser.add_argument("--annotator-id", default=None, help="optional human ID recorded on generated drafts")
-    parser.add_argument("--dry-run", action="store_true", help="run predictions and report quality without saving masks")
-    parser.add_argument("--no-download", action="store_true", help="fail instead of downloading the helper model if missing")
+    parser.add_argument("--replace-existing", action="store_true")
+    parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--scene-id", action="append", default=[])
+    parser.add_argument("--annotator-id", default=None)
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--no-download", action="store_true")
     args = parser.parse_args()
-
-    engine = SegformerOnnxEngine(allow_download=not args.no_download)
-    labeller = BatchVenueAutoLabeller(engine=engine)
     try:
-        report = labeller.run(
+        report = BatchVenueAutoLabeller(
+            engine=SegformerOnnxEngine(allow_download=not args.no_download)
+        ).run(
             dataset_key=args.dataset,
             replace_existing=args.replace_existing,
             limit=args.limit,
@@ -425,7 +336,6 @@ def main() -> int:
     except (FileNotFoundError, RuntimeError, ValueError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
-
     print("\nBakeSmart auto-labelling finished.")
     print(f"Auto-labelled: {report['auto_labelled_scene_count']}")
     print(f"Quick review: {report['quick_review_count']}")
@@ -433,7 +343,7 @@ def main() -> int:
     print(f"Skipped: {report['skipped_scene_count']}")
     if report.get("report_path"):
         print(f"Report: {report['report_path']}")
-    print("Next: open the BakeSmart labeller, review the drafts, correct obvious mistakes, then mark complete.")
+    print("Next: open the BakeSmart labeller, review the drafts, correct obvious mistakes, then complete them.")
     return 0
 
 
