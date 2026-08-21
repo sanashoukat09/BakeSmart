@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BakeSmart Venue Mask Labeller</title>
+  <link rel="stylesheet" href="/static/labeler.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">BakeSmart · Venue Vision</p>
+      <h1>Seven-class mask labeller</h1>
+      <p class="subtle">Drafts may contain unlabelled pixels. Completion requires every pixel to be assigned to class 0-6.</p>
+    </div>
+    <div id="status-pill" class="status-pill">Loading…</div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <section class="panel">
+        <label for="dataset-select">Dataset</label>
+        <select id="dataset-select"></select>
+        <div class="scene-nav">
+          <button id="previous-scene" type="button">← Previous</button>
+          <span id="scene-counter">0 / 0</span>
+          <button id="next-scene" type="button">Next →</button>
+        </div>
+        <div class="scene-card">
+          <strong id="scene-name">No scene</strong>
+          <span id="scene-size">—</span>
+        </div>
+      </section>
+
+      <section class="panel">
+        <label for="annotator-id">Annotator ID</label>
+        <input id="annotator-id" maxlength="80" placeholder="Example: sana-01" autocomplete="off" />
+        <p class="hint">Required only when marking an annotation complete.</p>
+      </section>
+
+      <section class="panel">
+        <div class="section-title">Classes</div>
+        <div id="class-buttons" class="class-grid"></div>
+        <button id="eraser-button" class="tool-button" type="button">Eraser</button>
+      </section>
+
+      <section class="panel compact-grid">
+        <label for="brush-size">Brush size <span id="brush-value">48</span> px</label>
+        <input id="brush-size" type="range" min="4" max="240" value="48" />
+        <label for="opacity">Overlay opacity <span id="opacity-value">55</span>%</label>
+        <input id="opacity" type="range" min="10" max="90" value="55" />
+      </section>
+
+      <section class="panel button-grid">
+        <button id="undo-button" type="button">Undo</button>
+        <button id="redo-button" type="button">Redo</button>
+        <button id="fill-button" type="button">Fill entire image</button>
+        <button id="clear-button" type="button">Clear mask</button>
+      </section>
+
+      <section class="panel button-grid">
+        <button id="zoom-out" type="button">− Zoom</button>
+        <button id="zoom-fit" type="button">Fit</button>
+        <button id="zoom-in" type="button">+ Zoom</button>
+      </section>
+
+      <section class="panel action-stack">
+        <button id="save-draft" class="secondary-action" type="button">Save draft</button>
+        <button id="validate-mask" class="secondary-action" type="button">Validate mask</button>
+        <button id="complete-mask" class="primary-action" type="button">Mark annotation complete</button>
+      </section>
+    </aside>
+
+    <section class="workspace-panel">
+      <div class="workspace-note">
+        <strong>Tip:</strong> fill the whole image with the dominant class first, then paint the other regions. Use zoom for small outlets and boundaries.
+      </div>
+      <div id="canvas-viewport" class="canvas-viewport">
+        <div id="canvas-wrapper" class="canvas-wrapper">
+          <canvas id="image-canvas"></canvas>
+          <canvas id="mask-canvas"></canvas>
+        </div>
+      </div>
+      <div id="message" class="message" role="status" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <script src="/static/labeler.js"></script>
+</body>
+</html>
