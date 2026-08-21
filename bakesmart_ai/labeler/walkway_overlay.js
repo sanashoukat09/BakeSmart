@@ -6,6 +6,7 @@
   const button = document.getElementById("toggle-walkway-overlay");
   const datasetSelect = document.getElementById("dataset-select");
   const sceneName = document.getElementById("scene-name");
+  const message = document.getElementById("message");
   if (!maskCanvas || !walkwayCanvas || !button || !datasetSelect || !sceneName) return;
 
   const context = walkwayCanvas.getContext("2d");
@@ -68,6 +69,15 @@
     attributes: true,
     attributeFilter: ["width", "height", "style"],
   });
+
+  if (message) {
+    const copyObserver = new MutationObserver(() => {
+      if (message.textContent.includes("class 0-6")) {
+        message.textContent = message.textContent.replace("class 0-6", "classes 0-5");
+      }
+    });
+    copyObserver.observe(message, { childList: true, characterData: true, subtree: true });
+  }
 
   document.getElementById("save-draft")?.addEventListener("click", () => {
     if (visible) setTimeout(reload, 350);
