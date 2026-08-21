@@ -40,7 +40,7 @@ select, input[type="text"], input:not([type]) { width: 100%; }
 select, #annotator-id { width: 100%; border: 1px solid #dac9bf; border-radius: 10px; padding: 10px 11px; background: #fff; color: var(--ink); }
 .hint { color: var(--muted); font-size: 11px; line-height: 1.4; margin: 7px 0 0; }
 .scene-nav { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; margin-top: 10px; }
-.scene-nav button, .button-grid button, .tool-button { border: 1px solid #dbcabf; border-radius: 9px; padding: 8px; background: #fff; color: var(--ink); }
+.scene-nav button, .button-grid button, .tool-button, .missing-actions button { border: 1px solid #dbcabf; border-radius: 9px; padding: 8px; background: #fff; color: var(--ink); }
 .scene-nav span { font-size: 11px; color: var(--muted); }
 .scene-card { margin-top: 10px; padding: 10px; border-radius: 10px; background: #fff8f1; display: grid; gap: 3px; }
 .scene-card span { color: var(--muted); font-size: 11px; }
@@ -59,6 +59,12 @@ select, #annotator-id { width: 100%; border: 1px solid #dac9bf; border-radius: 1
 .primary-action { background: var(--brand); color: #fff; }
 .secondary-action { background: #fff0e5; color: var(--brand-dark); }
 
+.missing-panel { border-color: #e3b4d8; background: #fff8fd; }
+.missing-summary { margin: 0 0 6px; font-size: 13px; font-weight: 800; color: #7b245f; }
+.missing-location { margin: 0 0 10px; font-size: 12px; line-height: 1.45; color: var(--ink); overflow-wrap: anywhere; }
+.missing-actions { display: grid; grid-template-columns: 1fr; gap: 7px; }
+.missing-actions button { font-weight: 750; border-color: #ddb0d2; background: #fff; }
+
 .workspace-panel { min-width: 0; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .workspace-note { color: var(--muted); font-size: 12px; line-height: 1.45; }
 .canvas-viewport { position: relative; flex: 1; min-height: 520px; overflow: auto; border: 1px solid var(--line); border-radius: 16px; background: #2e2926; padding: 16px; }
@@ -66,6 +72,7 @@ select, #annotator-id { width: 100%; border: 1px solid #dac9bf; border-radius: 1
 .canvas-wrapper canvas { position: absolute; inset: 0; display: block; touch-action: none; }
 #image-canvas { z-index: 1; }
 #mask-canvas { z-index: 2; cursor: crosshair; }
+#diagnostic-canvas { z-index: 3; pointer-events: none; }
 .message { min-height: 22px; padding: 4px 2px; color: var(--muted); font-size: 12px; }
 .message.error { color: #a52828; }
 .message.success { color: #257137; }
