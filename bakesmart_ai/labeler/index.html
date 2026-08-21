@@ -76,6 +76,8 @@
       </section>
 
       <section class="panel action-stack">
+        <button id="suggest-mask" class="secondary-action" type="button">✨ Suggest mask</button>
+        <p class="hint">Creates a machine-assisted draft using BakeSmart's local synthetic-bootstrap venue model. Review and correct every region before completion.</p>
         <button id="save-draft" class="secondary-action" type="button">Save draft</button>
         <button id="validate-mask" class="secondary-action" type="button">Validate mask</button>
         <button id="complete-mask" class="primary-action" type="button">Mark annotation complete</button>
@@ -84,7 +86,7 @@
 
     <section class="workspace-panel">
       <div class="workspace-note">
-        <strong>Tip:</strong> fill the whole image with the dominant class first, then paint the other regions. If validation finds missed pixels, BakeSmart will highlight them and jump to the first missing area automatically.
+        <strong>Tip:</strong> use <strong>Suggest mask</strong> for a starting draft, then correct the predicted regions manually. If validation finds missed pixels, BakeSmart will highlight them and jump to the first missing area automatically.
       </div>
       <div id="canvas-viewport" class="canvas-viewport">
         <div id="canvas-wrapper" class="canvas-wrapper">
@@ -99,5 +101,6 @@
 
   <script src="/static/labeler.js"></script>
   <script src="/static/missing_finder.js"></script>
+  <script src="/static/suggest_mask.js"></script>
 </body>
 </html>
