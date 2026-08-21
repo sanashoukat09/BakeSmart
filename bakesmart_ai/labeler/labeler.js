@@ -168,7 +168,8 @@
       updateFitScale();
       updateSceneMeta();
       setStatus(scene.status, scene.status === "annotation_complete_pending_review");
-      setMessage("Scene ready. Paint directly on the photo overlay.");
+      setMessage("Scene ready. Use Polygon Fill, Smart Object, or the brush.");
+      window.dispatchEvent(new CustomEvent("bakesmart:scene-loaded"));
     } catch (error) {
       setStatus("Load failed");
       setMessage(error.message, "error");
@@ -240,6 +241,7 @@
     imageCanvas.style.height = `${height}px`;
     maskCanvas.style.width = `${width}px`;
     maskCanvas.style.height = `${height}px`;
+    window.dispatchEvent(new CustomEvent("bakesmart:canvas-scaled"));
   }
 
   function pointerToImage(event) {
@@ -452,6 +454,7 @@
   document.getElementById("save-draft").addEventListener("click", () => submit("draft"));
   document.getElementById("validate-mask").addEventListener("click", () => submit("validate"));
   document.getElementById("complete-mask").addEventListener("click", () => submit("complete"));
+  window.addEventListener("bakesmart:mask-changed", pushHistory);
   window.addEventListener("resize", updateFitScale);
   window.addEventListener("beforeunload", (event) => {
     if (!state.dirty) return;
