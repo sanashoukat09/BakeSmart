@@ -1,11 +1,11 @@
-"""Run BakeSmart's local seven-class venue-mask labelling screen.
+"""Run BakeSmart's local six-class venue-mask labelling screen.
 
 Usage from ``bakesmart_ai``::
 
     python -m training.venue_labeler
 
-The server binds to 127.0.0.1 by default. It writes masks and local annotation
-records only under ignored venue-vision raw-data directories.
+The server binds to 127.0.0.1 by default. Semantic masks use IDs 0-5; Walkway
+is a separate derived binary layer.
 """
 
 from __future__ import annotations
@@ -19,12 +19,12 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from training.annotation_workspace import (
-    AnnotationWorkspace,
-    PROJECT_DIR,
-    label_class_payload,
-)
+from training.annotation_workspace import PROJECT_DIR
 from training.mask_suggestion import MaskSuggestionService
+from training.semantic_annotation_workspace import (
+    SemanticAnnotationWorkspace,
+    semantic_label_class_payload,
+)
 from training.smart_annotation import SmartAnnotationService
 
 
@@ -65,20 +65,20 @@ def _translate_error(exc: Exception) -> HTTPException:
 
 def create_app(
     *,
-    workspace: AnnotationWorkspace | None = None,
+    workspace: SemanticAnnotationWorkspace | None = None,
     suggestion_service: MaskSuggestionService | None = None,
     smart_annotation_service: SmartAnnotationService | None = None,
     static_dir: Path | None = STATIC_DIR,
 ) -> FastAPI:
-    active_workspace = workspace or AnnotationWorkspace()
+    active_workspace = workspace or SemanticAnnotationWorkspace()
     active_suggestion_service = suggestion_service or MaskSuggestionService()
     active_smart_annotation_service = smart_annotation_service or SmartAnnotationService()
     app = FastAPI(
         title="BakeSmart Venue Mask Labeller",
-        version="1.2.0",
+        version="2.0.0",
         description=(
-            "Local-only annotation UI for wall, floor, door, window, furniture, "
-            "outlet and walkway-candidate masks, with fast polygon and smart-object tools."
+            "Local-only annotation UI for six visual semantic classes with a "
+            "separate derived Walkway overlay."
         ),
     )
 
@@ -103,9 +103,14 @@ def create_app(
     @app.get("/api/label-classes")
     def label_classes():
         return {
-            "classes": label_class_payload(),
+            "classes": semantic_label_class_payload(),
             "draft_unlabelled_id": 255,
-            "completion_allowed_ids": list(range(7)),
+            "completion_allowed_ids": list(range(6)),
+            "walkway": {
+                "separate_layer": True,
+                "color": "#81C784",
+                "derived_from": "floor",
+            },
         }
 
     @app.get("/api/datasets")
@@ -142,6 +147,17 @@ def create_app(
         try:
             return Response(
                 active_workspace.overlay_png(dataset, scene_id),
+                media_type="image/png",
+                headers={"Cache-Control": "no-store"},
+            )
+        except Exception as exc:
+            raise _translate_error(exc) from exc
+
+    @app.get("/api/scenes/{dataset}/{scene_id}/walkway-overlay")
+    def walkway_overlay(dataset: str, scene_id: str):
+        try:
+            return Response(
+                active_workspace.walkway_overlay_png(dataset, scene_id),
                 media_type="image/png",
                 headers={"Cache-Control": "no-store"},
             )
