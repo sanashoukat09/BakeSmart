@@ -91,8 +91,43 @@ licences, strips EXIF while resizing candidates, records SHA-256 and perceptual
 hashes, and keeps all raw files below ignored `data/venue_vision/raw/real_v2/`.
 The frozen audit currently contains 176 CC0/public-domain/CC BY source records.
 No row becomes training data until a real photograph passes venue/privacy and
-rights review, receives a complete seven-class manual PNG mask, and is accepted
-by a different reviewer. The approved-row count remains zero.
+rights review, receives a complete venue mask, and is accepted by a different
+reviewer. The approved-row count remains zero.
+
+## Real venue Step 1: finalize completed annotations
+
+The current real-photo semantic schema has six visual classes only: Wall,
+Floor, Door, Window, Furniture and Outlet (IDs 0-5). Walkway is derived from
+Floor and stored separately as a binary PNG; it is not a semantic training
+class.
+
+After all real venue images have been marked complete in the local labeller,
+preview the finalization audit first:
+
+```powershell
+python -m training.finalize_real_venue_annotations --dry-run
+```
+
+If the dry run reports only expected legacy class-6 migrations and no missing,
+invalid or unlabelled masks, run the real finalizer:
+
+```powershell
+python -m training.finalize_real_venue_annotations
+```
+
+The finalizer checks every `real_v2` image/mask pair, requires matching image
+and mask dimensions, accepts only semantic IDs 0-5 plus legacy 6 and draft 255,
+reports any remaining 255 pixels, verifies the completion record, migrates
+legacy class-6 Walkway pixels to class-1 Floor, and regenerates a separate
+binary Walkway mask. Before modifying any legacy mask it copies the original
+mask and annotation record into a timestamped backup folder under
+`raw/real_v2/backups/annotation_finalization/`. It also writes a JSON report
+under `raw/real_v2/annotation_records/finalization_runs/`.
+
+This step never approves masks for training. Successful scenes remain
+`not_for_training` and advance only to `ready_for_independent_review`. Independent
+human review is the next gate before train/validation/test splitting and real
+model training.
 
 An optional external synthetic-data utility is available for additional visual
 diversity:
@@ -111,7 +146,6 @@ A later approved phase will add:
 - original or redistribution-safe artist-created assets to replace procedural
   placeholder geometry;
 - cake-photo reconstruction only after a suitable owned training dataset exists;
-- at least 100 independently reviewed, rights-cleared real venue masks for
-  domain-gap evaluation;
+- independently reviewed, rights-cleared real venue masks for domain-gap evaluation;
 - actual live-camera AR scenes on supported devices; and
 - production deployment and physical-device verification.
