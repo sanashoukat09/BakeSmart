@@ -148,6 +148,38 @@ note. Review decisions update annotation metadata only: this screen never
 changes mask pixels. Once every scene has a final review decision, the next
 step is to create the locked train/validation/test split from approved images.
 
+## Real venue Step 3: locked train/validation/test split
+
+After Step 2 has no pending or correction scenes, create the real-data split:
+
+```powershell
+python -m training.split_real_venue_dataset
+```
+
+Only reviewed scenes with `review_status=approved` are eligible. The splitter
+uses a fixed seed and class-presence balancing to spread rarer semantic classes
+across train, validation and test while keeping the exact requested 70/15/15
+sizes. With 60 approved scenes this produces 42 training, 9 validation and 9
+locked test images.
+
+The first successful run writes both `split_manifest.json` and
+`split_manifest.csv` under `data/venue_vision/raw/real_v2/splits/`, records the
+split in every approved annotation sidecar, and stores SHA-256 checksums for the
+image, semantic mask and separate Walkway mask. Re-running the command verifies
+and reuses the existing split instead of shuffling it again.
+
+The test set is deliberately locked. Do not train on it, tune model settings
+against it, or repeatedly inspect its scores while developing the Step-4 model.
+If the approved dataset genuinely changes later, resetting the split requires
+both explicit flags:
+
+```powershell
+python -m training.split_real_venue_dataset --force-resplit --acknowledge-test-lock-reset
+```
+
+That reset should be treated as an exceptional dataset-version change, not a
+normal training command.
+
 An optional external synthetic-data utility is available for additional visual
 diversity:
 
