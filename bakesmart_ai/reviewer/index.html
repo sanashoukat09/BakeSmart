@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BakeSmart Venue Reviewer</title>
+  <link rel="stylesheet" href="/static/reviewer.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">BakeSmart · Venue Vision · Step 2</p>
+      <h1>Independent mask review</h1>
+      <p class="subtle">A second reviewer checks the completed mask. This screen never changes mask pixels.</p>
+    </div>
+    <div id="summary" class="summary">Loading…</div>
+  </header>
+
+  <main class="page">
+    <section class="controls card">
+      <div class="scene-row">
+        <button id="previous" type="button">← Previous</button>
+        <div>
+          <strong id="scene-name">No scene</strong>
+          <div id="scene-meta" class="muted">—</div>
+        </div>
+        <button id="next" type="button">Next →</button>
+      </div>
+
+      <div class="form-grid">
+        <label>
+          Reviewer ID
+          <input id="reviewer-id" maxlength="80" placeholder="Example: reviewer-02" autocomplete="off" />
+        </label>
+        <label>
+          Review notes
+          <textarea id="review-notes" rows="3" placeholder="Required for correction or rejection. Optional for approval."></textarea>
+        </label>
+      </div>
+
+      <div class="facts">
+        <span>Annotator: <strong id="annotator-id">—</strong></span>
+        <span>Current review: <strong id="review-status">pending</strong></span>
+      </div>
+    </section>
+
+    <section class="comparison">
+      <article class="card visual-card">
+        <h2>Original photo</h2>
+        <div class="image-stage"><img id="source-image" alt="Original venue" /></div>
+      </article>
+      <article class="card visual-card">
+        <h2>Completed semantic mask</h2>
+        <div class="image-stage mask-stage"><img id="mask-image" alt="Venue mask" /></div>
+        <p class="legend">Wall · Floor · Door · Window · Furniture · Outlet</p>
+      </article>
+    </section>
+
+    <section class="card review-actions">
+      <p class="instruction"><strong>Choose one:</strong> Approve if the mask is good enough for model training. Use Needs correction for visible labelling mistakes. Reject only if this image/mask should not be used.</p>
+      <div class="action-grid">
+        <button id="approve" class="approve" type="button">Approve</button>
+        <button id="correct" class="correct" type="button">Needs correction</button>
+        <button id="reject" class="reject" type="button">Reject</button>
+      </div>
+      <div id="message" class="message" role="status" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <script src="/static/reviewer.js"></script>
+</body>
+</html>
