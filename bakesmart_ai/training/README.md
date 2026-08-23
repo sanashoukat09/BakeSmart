@@ -180,6 +180,63 @@ python -m training.split_real_venue_dataset --force-resplit --acknowledge-test-l
 That reset should be treated as an exceptional dataset-version change, not a
 normal training command.
 
+## Real venue Step 4: train the six-class model from scratch
+
+Install the updated Python dependencies once inside the project virtual
+environment:
+
+```powershell
+pip install -r requirements.txt
+```
+
+Then train the real-photo venue model:
+
+```powershell
+python -m training.train_real_venue_segmentation
+```
+
+Step 4 uses PyTorch only as the local numerical/deep-learning engine. The model
+is BakeSmart's compact U-Net and all of its weights are initialized randomly;
+no pretrained model, external inference API or downloaded model checkpoint is
+used. The default input is a 256 x 256 letterboxed image and the output has
+exactly six semantic channels: Wall, Floor, Door, Window, Furniture and Outlet.
+Walkway remains a separate post-processing result derived from predicted Floor.
+
+The trainer verifies the locked Step-3 image and mask checksums, loads only the
+training and validation scene memberships, and deliberately refuses requests to
+load the test split through the Step-4 data API. The 42 training scenes receive
+horizontal-flip and mild brightness/contrast augmentation. Class weights are
+calculated only from training-mask pixels, and the objective combines weighted
+cross-entropy with multiclass Dice loss so small classes receive more signal.
+
+The validation split is used for early stopping and best-checkpoint selection by
+mean Intersection over Union (mIoU). Every epoch prints training loss,
+validation loss, validation mIoU and pixel accuracy. The best validation report
+also includes per-class IoU, precision and recall. The default run stops after
+60 epochs at most, or earlier after 12 epochs without meaningful validation
+improvement.
+
+Local outputs are written under the ignored directory
+`models/venue_vision_real_v1/`:
+
+- `best_model.pt` - best validation-selected checkpoint;
+- `validation_report.json` - configuration, history, class weights and
+  validation-only metrics.
+
+Both files record `pretrained=false`, `random_initialization=true` and
+`test_split_used=false`. Do not evaluate the locked 9-image test set while
+changing model settings. The final locked-test evaluation is a separate Step 5
+after the Step-4 model configuration is frozen.
+
+Useful optional arguments include:
+
+```powershell
+python -m training.train_real_venue_segmentation --epochs 80 --batch-size 2 --device auto
+```
+
+On a machine without a supported CUDA GPU, `--device auto` uses CPU. Training
+on CPU is slower but supported.
+
 An optional external synthetic-data utility is available for additional visual
 diversity:
 
