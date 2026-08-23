@@ -129,6 +129,25 @@ This step never approves masks for training. Successful scenes remain
 human review is the next gate before train/validation/test splitting and real
 model training.
 
+## Real venue Step 2: independent mask review
+
+Run the local reviewer from `bakesmart_ai`:
+
+```powershell
+python -m training.venue_reviewer
+```
+
+Then open `http://127.0.0.1:8011`. The reviewer shows the EXIF-normalized
+original photo beside the completed semantic mask and lets a second person
+choose `Approve`, `Needs correction`, or `Reject`.
+
+The reviewer must use an ID different from the original annotator ID. Approval
+marks the scene `approved_pending_split`; correction keeps it out of training
+and requires a short note; rejection marks it rejected and also requires a
+note. Review decisions update annotation metadata only: this screen never
+changes mask pixels. Once every scene has a final review decision, the next
+step is to create the locked train/validation/test split from approved images.
+
 An optional external synthetic-data utility is available for additional visual
 diversity:
 
