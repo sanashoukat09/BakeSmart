@@ -4,6 +4,10 @@ from io import BytesIO
 import numpy as np
 from PIL import Image
 
+from app.schemas.design import VenuePhotoAnalysisRequest
+from app.services.venue_photo_analyzer import VenuePhotoAnalyzer
+from training.venue_vision_runtime import VenueVisionCandidate as RuntimeCandidate
+
 
 def _venue_photo_base64(width: int = 1280, height: int = 720) -> str:
     rows = np.arange(height, dtype=np.uint16)[:, None]
@@ -79,3 +83,35 @@ def test_declared_media_type_must_match_photo_content(client):
 
     assert response.status_code == 422
     assert "media type" in response.json()["detail"]["message"]
+
+
+def test_reviewed_real_runtime_is_preferred_and_reported_honestly():
+    class FakeRealRuntime:
+        model_version = "venue-vision-real-six-class-test"
+
+        @staticmethod
+        def candidates(_image):
+            return [
+                RuntimeCandidate(
+                    label="door",
+                    confidence=0.49,
+                    bounding_box=(0.1, 0.1, 0.2, 0.6),
+                    area_fraction=0.12,
+                )
+            ]
+
+    analyzer = VenuePhotoAnalyzer()
+    analyzer.real_vision_runtime = FakeRealRuntime()
+    result = analyzer.analyze(
+        VenuePhotoAnalysisRequest(
+            file_name="room.png",
+            media_type="image/png",
+            image_base64=_venue_photo_base64(),
+            angle="wide",
+        )
+    )
+    assert result.vision_model_version == "venue-vision-real-six-class-test"
+    assert result.unconfirmed_candidates[0].source == "reviewed_real_six_class_model"
+    assert result.unconfirmed_candidates[0].confirmed is False
+    assert result.exact_scale_available is False
+    assert any("Walkway is derived" in line for line in result.limitations)

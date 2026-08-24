@@ -33,8 +33,20 @@ geometry or the customer-confirmed obstacle map.
 Phase 12 adds an offline, provenance-first Commons collection tool. Its frozen
 source audit contains 176 CC0/public-domain/CC BY candidates, but all remain
 blocked from training until the image is visually approved, manually masked and
-independently reviewed. There are currently zero approved real masks, so no
-real-photo accuracy is reported.
+independently reviewed. Raw masks, review decisions, splits and real checkpoints
+remain ignored local artifacts, so Git alone does not establish an approved-row
+count or real-photo accuracy result.
+
+The real-photo follow-up now includes the six-class annotation finalizer,
+independent reviewer, locked 70/15/15 splitter, from-scratch compact U-Net v1,
+rare-class v2/v3 experiments, Door/Outlet diagnostics and a protected visual
+audit. `training.freeze_real_venue_model` freezes the best checkpoint only
+after the audit is fully resolved and common validation comparison succeeds.
+`training.evaluate_locked_real_venue_model` then performs the explicit one-time
+locked-test evaluation. The customer API prefers that frozen six-class model
+only when its matching locked-test report exists; otherwise it safely retains
+the synthetic-bootstrap fallback. All predictions remain unconfirmed and do
+not provide physical scale.
 
 ## Project rules
 
@@ -163,6 +175,9 @@ Phase 10 photo analysis is intentionally not an object detector. It reports
 pixel-derived photo facts and a possible horizontal structural cue. Phase 11
 adds synthetic-bootstrap wall, floor, door, window, furniture, outlet and
 walkway candidates, but never confirms those candidates or physical scale.
+When a frozen and locked-test-evaluated real checkpoint is available locally,
+the endpoint instead uses its six semantic classes and derives Walkway from
+predicted Floor. It still never confirms obstacles or scale automatically.
 The raw JPEG/PNG is decoded in memory and discarded. Placement safety uses only
 customer-confirmed dimensions and obstacle coordinates, keeps a minimum 0.90 m
 front circulation target, and exposes unknowns in `venue_assessment.assumptions`.

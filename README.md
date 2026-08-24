@@ -123,7 +123,7 @@ original [U-Net paper](https://arxiv.org/abs/1505.04597), and the label scope wa
 compared with MIT's official [ADE20K dataset](https://ade20k.csail.mit.edu/).
 No code or trained weights were copied from either source.
 
-### Phase 12 — Rights-cleared real-photo collection (gate still closed)
+### Phase 12+ — Reviewed real-photo training pipeline
 
 Phase 12 adds a reproducible Wikimedia Commons collector and freezes 176
 candidate source records with individual file-page URLs, creators, licences and
@@ -132,13 +132,18 @@ screen; ShareAlike, non-commercial, no-derivatives and GFDL records are
 rejected. Every accepted metadata row is still marked
 `candidate_not_for_training` because metadata alone cannot approve a photo.
 
-The 2026-08-18 workspace transfer obtained 89 provisional local files before
-outbound downloads were blocked. An exploratory 40-image contact-sheet review
-confirmed that many metadata matches are drawings, exteriors or people-filled
-conference images. None is counted as approved. No real mask has completed
-manual annotation and independent review, so the real-photo training and
-accuracy gates remain closed at zero approved rows. The Phase 11 synthetic
-checkpoint remains active without any new accuracy claim.
+The project now also includes a six-class local annotation finalizer,
+independent reviewer, checksum-locked 70/15/15 splitter, from-scratch compact
+U-Net v1, rare-class v2/v3 training, Door/Outlet diagnostics and a protected
+visual audit. Raw masks, review records, splits and real model checkpoints remain
+local ignored artifacts, so Git does not itself establish final approved counts
+or accuracy. After every Door/Outlet audit item is resolved,
+`training.freeze_real_venue_model` compares v1/v2/v3 through one common
+validation pipeline and freezes the best result without opening the test set.
+`training.evaluate_locked_real_venue_model` then performs the explicit one-time
+locked-test evaluation. Only a frozen checkpoint with its matching final report
+can replace the Phase 11 synthetic runtime in the venue-photo API; otherwise the
+synthetic fallback remains active without a real-photo accuracy claim.
 
 ## 🚀 Step-by-Step Setup
 

@@ -78,7 +78,10 @@ class VenueVisionCandidate(StrictModel):
     bounding_box: tuple[float, float, float, float]
     area_fraction: float = Field(gt=0, le=1)
     confirmed: Literal[False] = False
-    source: Literal["synthetic_bootstrap_model"] = "synthetic_bootstrap_model"
+    source: Literal[
+        "synthetic_bootstrap_model",
+        "reviewed_real_six_class_model",
+    ] = "synthetic_bootstrap_model"
 
     @model_validator(mode="after")
     def validate_normalized_box(self) -> "VenueVisionCandidate":

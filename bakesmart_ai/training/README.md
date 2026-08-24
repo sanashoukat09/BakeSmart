@@ -343,6 +343,45 @@ model. If label issues are found, correct them deliberately and treat any
 resulting split/dataset version change explicitly rather than silently altering
 an already locked evaluation protocol.
 
+### Step 4 finalization: freeze the best validation model
+
+After every current train/validation rare-class audit scene is marked
+`Looks correct`, and after v1/v2/v3 validation training is complete, freeze the
+best model through one common 512-pixel tiled validation path:
+
+```powershell
+python -m training.freeze_real_venue_model
+```
+
+The command refuses to continue while the audit contains `Pending`, `Unsure`
+or `Label issue`, and it never loads the locked test split. It verifies the
+split and checkpoint checksums, compares available v1/v2/v3 checkpoints using
+80% validation mIoU, 10% Door IoU and 10% Outlet IoU, and writes the frozen
+checkpoint and `model_selection.json` under the ignored
+`models/venue_vision_real_selected/` directory.
+
+### Step 5: one-time locked real-photo test
+
+Only after Step 4 is frozen, run the final locked test once:
+
+```powershell
+python -m training.evaluate_locked_real_venue_model `
+  --acknowledge-locked-test I_UNDERSTAND_THIS_OPENS_THE_LOCKED_TEST_ONCE
+```
+
+The evaluator verifies every locked image/mask checksum, uses exactly the same
+inference settings recorded by model selection, writes per-class and per-scene
+metrics to `locked_test_report.json`, and refuses to run again when that report
+already exists. It does not mark the model production-approved.
+
+When both `model_selection.json` and the matching locked-test report exist, the
+venue-photo API loads the frozen real six-class checkpoint on CPU. It reports
+Wall, Floor, Door, Window, Furniture and Outlet candidates; derives Walkway
+separately from predicted Floor; keeps every candidate unconfirmed and below
+0.50 confidence; and continues to require customer-confirmed dimensions for
+scale and clearance. If the frozen artifacts are missing or invalid, the API
+safely falls back to the earlier synthetic-bootstrap runtime.
+
 An optional external synthetic-data utility is available for additional visual
 diversity:
 

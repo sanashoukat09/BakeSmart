@@ -1,6 +1,7 @@
 # Venue Vision Dataset Card
 
-Phase 11 uses seven semantic mask labels:
+Phase 11 synthetic bootstrap used seven labels. The reviewed real-photo model
+uses six semantic labels and derives Walkway separately from predicted Floor:
 
 | ID | Label | Meaning |
 |---:|---|---|
@@ -10,7 +11,7 @@ Phase 11 uses seven semantic mask labels:
 | 3 | `window` | Window region |
 | 4 | `furniture` | Furniture blocking the setup area |
 | 5 | `outlet` | Visible electrical outlet region |
-| 6 | `walkway` | Circulation area that must remain clear |
+| 6 | `walkway` | Legacy synthetic label; stored as a separate binary mask for real photos |
 
 `v1/synthetic_index.csv` contains 240 deterministic scene seeds split by whole
 scene into 70% train, 15% validation and 15% locked test. Images and masks are
@@ -70,5 +71,6 @@ python -m training.generate_gemini_venue_images --count 10 --acknowledge-externa
 
 Every output is recorded as `external_ai_generated` and
 `unlabelled_not_for_training`. It must pass suitability review and receive a
-complete seven-class mask before training. Gemini images cannot enter the
+complete six-class semantic mask plus separate Walkway mask before real-photo
+training. Gemini images cannot enter the
 locked real-photo test split and cannot support a real-photo accuracy claim.

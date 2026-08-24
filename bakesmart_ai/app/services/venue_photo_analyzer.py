@@ -23,6 +23,11 @@ from app.schemas.design import (
 )
 from training.venue_vision_runtime import VenueVisionRuntime
 
+try:
+    from training.real_venue_runtime import RealVenueSegmentationRuntime
+except ImportError:  # pragma: no cover - synthetic fallback remains available
+    RealVenueSegmentationRuntime = None  # type: ignore[assignment,misc]
+
 
 MAX_PHOTO_BYTES = 8_000_000
 MAX_PHOTO_PIXELS = 24_000_000
@@ -36,6 +41,19 @@ class VenuePhotoAnalyzer:
     """Extract reproducible image-quality signals without a pretrained model."""
 
     def __init__(self) -> None:
+        self.real_vision_runtime = None
+        if RealVenueSegmentationRuntime is not None:
+            try:
+                self.real_vision_runtime = RealVenueSegmentationRuntime.load()
+            except (
+                FileNotFoundError,
+                ImportError,
+                KeyError,
+                TypeError,
+                ValueError,
+                OSError,
+            ):
+                self.real_vision_runtime = None
         self.vision_runtime: VenueVisionRuntime | None = None
         try:
             self.vision_runtime = VenueVisionRuntime.load()
@@ -58,16 +76,18 @@ class VenuePhotoAnalyzer:
                     raise ValueError("Venue photo exceeds the 24-megapixel limit.")
                 oriented_rgb = ImageOps.exif_transpose(source).convert("RGB")
                 width, height = oriented_rgb.size
-                vision_size = (
-                    self.vision_runtime.image_size if self.vision_runtime else 48
-                )
-                vision_pixels = np.asarray(
-                    oriented_rgb.resize(
-                        (vision_size, vision_size),
-                        Image.Resampling.BILINEAR,
-                    ),
-                    dtype=np.uint8,
-                )
+                vision_pixels = None
+                if self.real_vision_runtime is None:
+                    vision_size = (
+                        self.vision_runtime.image_size if self.vision_runtime else 48
+                    )
+                    vision_pixels = np.asarray(
+                        oriented_rgb.resize(
+                            (vision_size, vision_size),
+                            Image.Resampling.BILINEAR,
+                        ),
+                        dtype=np.uint8,
+                    )
                 grayscale = oriented_rgb.convert("L")
                 grayscale.thumbnail((512, 512), Image.Resampling.BILINEAR)
                 pixels = np.asarray(grayscale, dtype=np.float64)
@@ -104,7 +124,22 @@ class VenuePhotoAnalyzer:
         )
         candidates: list[VenueVisionCandidate] = []
         vision_model_version: str | None = None
-        if self.vision_runtime is not None:
+        active_model_source: str | None = None
+        if self.real_vision_runtime is not None:
+            vision_model_version = self.real_vision_runtime.model_version
+            candidates = [
+                VenueVisionCandidate(
+                    label=candidate.label,
+                    confidence=candidate.confidence,
+                    bounding_box=candidate.bounding_box,
+                    area_fraction=candidate.area_fraction,
+                    confirmed=False,
+                    source="reviewed_real_six_class_model",
+                )
+                for candidate in self.real_vision_runtime.candidates(oriented_rgb)
+            ]
+            active_model_source = "reviewed real-photo six-class model"
+        elif self.vision_runtime is not None and vision_pixels is not None:
             vision_model_version = self.vision_runtime.model_version
             candidates = [
                 VenueVisionCandidate(
@@ -117,8 +152,10 @@ class VenuePhotoAnalyzer:
                 )
                 for candidate in self.vision_runtime.candidates(vision_pixels)
             ]
+            active_model_source = "synthetic-bootstrap model"
+        if active_model_source is not None:
             observations.append(
-                "The synthetic-bootstrap model proposed "
+                f"The {active_model_source} proposed "
                 f"{len(candidates)} unconfirmed region candidate(s)."
             )
         digest = hashlib.sha256(image_bytes).hexdigest()[:20]
@@ -139,7 +176,16 @@ class VenuePhotoAnalyzer:
             observations=observations,
             limitations=[
                 "No doors, windows, furniture, outlets, or walkways are automatically confirmed.",
-                "Vision candidates come from synthetic training only and are capped below 0.50 confidence.",
+                (
+                    "Vision candidates use the frozen reviewed-real six-class checkpoint; "
+                    "Walkway is derived separately from predicted Floor and all confidence "
+                    "values remain capped below 0.50."
+                    if self.real_vision_runtime is not None
+                    else (
+                        "Vision candidates come from synthetic training only and are "
+                        "capped below 0.50 confidence."
+                    )
+                ),
                 "Exact scale comes only from customer-confirmed measurements, not photo pixels.",
                 "The uploaded photo is analysed in memory and is not persisted by this endpoint.",
             ],
