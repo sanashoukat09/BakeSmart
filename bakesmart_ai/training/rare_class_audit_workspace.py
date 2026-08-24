@@ -3,6 +3,10 @@
 Only the locked train and validation scene memberships are exposed. Semantic
 masks and the Step-3 split are never modified. Optional audit decisions are
 stored in a separate diagnostics JSON file and have no training-gate effect.
+
+The scene list is intentionally lightweight: it uses split-manifest metadata
+instead of scanning every full-resolution mask. Expensive mask/component work
+is done lazily only for the scene currently being inspected.
 """
 
 from __future__ import annotations
@@ -18,7 +22,6 @@ from PIL import Image, ImageDraw, ImageOps
 
 from training.annotation_workspace import PROJECT_DIR
 from training.real_venue_segmentation import (
-    CLASS_NAMES,
     SplitSample,
     _validate_mask_values,
     load_locked_split_manifest,
@@ -47,6 +50,7 @@ DEFAULT_AUDIT_STATE = (
 )
 RARE_CLASSES = {"door": 2, "outlet": 5}
 AUDIT_DECISIONS = {"looks_correct", "label_issue", "unsure"}
+MAX_ZOOM_COMPONENTS_PER_CLASS = 12
 
 
 @dataclass(frozen=True)
@@ -95,40 +99,84 @@ class RareClassAuditWorkspace:
                 self.samples[sample.scene_id] = sample
         # Deliberately no call for the locked test split.
 
+        self._manifest_rows = {
+            str(row["scene_id"]): row
+            for row in self.manifest["scenes"]
+            if row.get("split") in {"train", "validation"}
+        }
+        self._component_cache: dict[str, list[RareComponent]] = {}
+        self._detail_cache: dict[str, dict[str, object]] = {}
+
     def list_scenes(self) -> list[dict[str, object]]:
+        """Return fast scene metadata without opening image or mask files."""
         state = self._load_state()
         scenes: list[dict[str, object]] = []
         for sample in sorted(
             self.samples.values(), key=lambda item: (item.split, item.scene_id)
         ):
-            labels = self._read_mask(sample)
-            class_counts = {
-                name: int(np.count_nonzero(labels == class_id))
-                for name, class_id in RARE_CLASSES.items()
-            }
-            if not any(class_counts.values()):
-                continue
-            components = self.components(sample.scene_id)
+            manifest_row = self._manifest_rows.get(sample.scene_id, {})
+            class_ids = manifest_row.get("class_ids_present")
+            if isinstance(class_ids, list):
+                present_ids = {int(value) for value in class_ids}
+                has_door = RARE_CLASSES["door"] in present_ids
+                has_outlet = RARE_CLASSES["outlet"] in present_ids
+                if not (has_door or has_outlet):
+                    continue
+            else:
+                # Older/synthetic manifests may not expose class presence.
+                # Keep the scene visible rather than forcing a full-mask scan.
+                has_door = True
+                has_outlet = True
+
             saved = state.get("scenes", {}).get(sample.scene_id, {})
             scenes.append(
                 {
                     "scene_id": sample.scene_id,
                     "split": sample.split,
-                    "door_pixels": class_counts["door"],
-                    "outlet_pixels": class_counts["outlet"],
-                    "door_components": sum(
-                        1 for item in components if item.class_name == "door"
-                    ),
-                    "outlet_components": sum(
-                        1 for item in components if item.class_name == "outlet"
-                    ),
-                    "components": [item.as_dict() for item in components],
+                    "has_door": has_door,
+                    "has_outlet": has_outlet,
                     "audit_decision": saved.get("decision", "pending"),
                     "audit_notes": saved.get("notes", ""),
                     "audit_updated_at": saved.get("updated_at"),
                 }
             )
         return scenes
+
+    def scene_detail(self, scene_id: str) -> dict[str, object]:
+        """Analyze only the requested scene and cache the result in memory."""
+        if scene_id in self._detail_cache:
+            return dict(self._detail_cache[scene_id])
+
+        sample = self._sample(scene_id)
+        labels = self._read_mask(sample)
+        counts = {
+            name: int(np.count_nonzero(labels == class_id))
+            for name, class_id in RARE_CLASSES.items()
+        }
+        all_components = self.components(scene_id)
+        display_components: list[RareComponent] = []
+        total_components: dict[str, int] = {}
+        for class_name in RARE_CLASSES:
+            class_components = [
+                item for item in all_components if item.class_name == class_name
+            ]
+            total_components[class_name] = len(class_components)
+            display_components.extend(
+                class_components[:MAX_ZOOM_COMPONENTS_PER_CLASS]
+            )
+
+        detail = {
+            "scene_id": scene_id,
+            "split": sample.split,
+            "door_pixels": counts["door"],
+            "outlet_pixels": counts["outlet"],
+            "door_components": total_components["door"],
+            "outlet_components": total_components["outlet"],
+            "components_shown_limit_per_class": MAX_ZOOM_COMPONENTS_PER_CLASS,
+            "components": [item.as_dict() for item in display_components],
+        }
+        self._detail_cache[scene_id] = detail
+        return dict(detail)
 
     def summary(self) -> dict[str, int]:
         scenes = self.list_scenes()
@@ -149,6 +197,9 @@ class RareClassAuditWorkspace:
         }
 
     def components(self, scene_id: str) -> list[RareComponent]:
+        if scene_id in self._component_cache:
+            return list(self._component_cache[scene_id])
+
         sample = self._sample(scene_id)
         labels = self._read_mask(sample)
         result: list[RareComponent] = []
@@ -180,7 +231,8 @@ class RareClassAuditWorkspace:
                         height=height,
                     )
                 )
-        return result
+        self._component_cache[scene_id] = result
+        return list(result)
 
     def image_png(self, scene_id: str) -> bytes:
         sample = self._sample(scene_id)
@@ -192,9 +244,8 @@ class RareClassAuditWorkspace:
         sample = self._sample(scene_id)
         image, labels = self._read_pair(sample)
         base = image.convert("RGBA")
-        overlay = Image.new("RGBA", base.size, (0, 0, 0, 0))
         overlay_pixels = np.zeros((image.height, image.width, 4), dtype=np.uint8)
-        for class_name, class_id in RARE_CLASSES.items():
+        for class_id in RARE_CLASSES.values():
             color = next(
                 label.rgb for label in SEMANTIC_LABEL_CLASSES if label.class_id == class_id
             )
@@ -204,12 +255,16 @@ class RareClassAuditWorkspace:
         overlay = Image.fromarray(overlay_pixels, mode="RGBA")
         composite = Image.alpha_composite(base, overlay)
         draw = ImageDraw.Draw(composite)
-        for component in self.components(scene_id):
-            color = "#FF9800" if component.class_name == "door" else "#EC407A"
-            x1, y1 = component.x, component.y
-            x2 = component.x + component.width - 1
-            y2 = component.y + component.height - 1
-            draw.rectangle((x1, y1, x2, y2), outline=color, width=max(2, image.width // 500))
+        # Draw only the largest components; all rare pixels remain visible in the overlay.
+        detail = self.scene_detail(scene_id)
+        for component_data in detail["components"]:
+            x, y, width, height = component_data["bbox"]
+            color = "#FF9800" if component_data["class_name"] == "door" else "#EC407A"
+            draw.rectangle(
+                (x, y, x + width - 1, y + height - 1),
+                outline=color,
+                width=max(2, image.width // 500),
+            )
         return self._png(composite.convert("RGB"))
 
     def crop_png(self, scene_id: str, class_name: str, component_index: int) -> bytes:
