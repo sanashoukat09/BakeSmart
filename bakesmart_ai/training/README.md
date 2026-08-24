@@ -237,6 +237,39 @@ python -m training.train_real_venue_segmentation --epochs 80 --batch-size 2 --de
 On a machine without a supported CUDA GPU, `--device auto` uses CPU. Training
 on CPU is slower but supported.
 
+### Step 4 improvement: rare-class v2
+
+The first real v1 run can be kept as a baseline. If small semantic classes such
+as Door or Outlet have near-zero validation IoU, do not touch the locked test
+set. Instead train the separate v2 configuration:
+
+```powershell
+python -m training.train_real_venue_segmentation_v2
+```
+
+v2 starts a fresh random U-Net and does not load the v1 checkpoint. It keeps the
+same locked 42/9/9 split and does not modify any masks. Every training scene
+still contributes a full-room view, but the training set additionally creates
+random local crops, extra Door-focused crops, and more heavily oversampled
+Outlet-focused crops. The loss also increases Door/Outlet weight. This gives
+small objects many more visible pixels than whole-room 256 x 256 resizing alone.
+
+Validation remains the same nine approved validation scenes, but v2 evaluates
+them deterministically on a 512 x 512 letterboxed canvas using overlapping
+256-pixel tiles. This prevents tiny validation labels from disappearing solely
+because the entire room was reduced to 256 x 256. Best-checkpoint selection is
+still validation mIoU, so v1 and v2 can be compared using validation data only.
+
+v2 writes separate outputs and does not overwrite v1:
+
+- `models/venue_vision_real_v2/best_model.pt`;
+- `models/venue_vision_real_v2/validation_report.json`.
+
+The epoch log additionally prints Door IoU and Outlet IoU. Prefer v2 for the
+future locked-test evaluation only if its validation behaviour is meaningfully
+better than the v1 baseline. The locked nine-image test set remains untouched
+throughout this comparison.
+
 An optional external synthetic-data utility is available for additional visual
 diversity:
 
