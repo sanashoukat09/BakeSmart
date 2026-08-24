@@ -20,13 +20,15 @@
     .unsure { border-color: #c49a3a; }
     .pill { background: #202631; border: 1px solid #323a47; border-radius: 999px; padding: 7px 10px; font-size: 13px; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .panel { background: #171b22; border: 1px solid #2b313c; border-radius: 12px; padding: 12px; }
+    .panel { background: #171b22; border: 1px solid #2b313c; border-radius: 12px; padding: 12px; min-height: 260px; }
     .panel h2 { font-size: 15px; margin: 0 0 8px; color: #dbe1eb; }
     .panel img { width: 100%; max-height: 620px; object-fit: contain; background: #0b0d11; border-radius: 8px; }
     .components { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 16px; }
     .component { background: #171b22; border: 1px solid #2b313c; border-radius: 12px; padding: 10px; }
     .component img { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: #0b0d11; border-radius: 8px; }
     .meta { font-size: 13px; color: #bdc5d2; margin: 6px 0; }
+    .loading { color: #8ec5ff; font-size: 13px; }
+    .error { color: #ff8d8d; font-size: 13px; }
     textarea { min-width: 320px; min-height: 42px; resize: vertical; flex: 1; }
     .warning { color: #ffcf72; font-size: 13px; margin-bottom: 12px; }
     @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
@@ -45,8 +47,9 @@
     <select id="decisionFilter"><option value="all">All audit states</option><option value="pending">Pending</option><option value="looks_correct">Looks correct</option><option value="label_issue">Label issue</option><option value="unsure">Unsure</option></select>
     <button id="prev">Previous</button><button id="next">Next</button>
   </div>
-  <div class="statusbar" id="summary"></div>
+  <div class="statusbar" id="summary"><span class="pill">Loading scene list…</span></div>
   <div class="statusbar" id="sceneMeta"></div>
+  <div id="message" class="loading">Starting audit…</div>
   <div class="grid">
     <div class="panel"><h2>Original photo</h2><img id="original" alt="Original venue photo"></div>
     <div class="panel"><h2>Door / Outlet overlay</h2><img id="overlay" alt="Rare-class overlay"></div>
@@ -59,14 +62,22 @@
     <button class="issue" data-decision="label_issue">Label issue</button>
     <button class="unsure" data-decision="unsure">Unsure</button>
   </div>
-  <div id="message" class="meta"></div>
 </main>
 <script>
-let allScenes = [], filtered = [], index = 0;
+let allScenes = [], filtered = [], index = 0, renderToken = 0;
 const $ = id => document.getElementById(id);
+function setMessage(text, kind='loading') {
+  $('message').className = kind === 'error' ? 'error' : kind === 'meta' ? 'meta' : 'loading';
+  $('message').textContent = text;
+}
+async function jsonFetch(url, options) {
+  const r = await fetch(url, options); const data = await r.json();
+  if (!r.ok) throw new Error(data.detail || `Request failed (${r.status})`);
+  return data;
+}
 async function loadScenes() {
-  const r = await fetch('/api/scenes'); const data = await r.json();
-  if (!r.ok) throw new Error(data.detail || 'Could not load scenes');
+  setMessage('Loading train/validation scene list…');
+  const data = await jsonFetch('/api/scenes');
   allScenes = data.scenes; renderSummary(data.summary); applyFilters();
 }
 function renderSummary(s) {
@@ -79,50 +90,84 @@ function applyFilters() {
   const split = $('splitFilter').value, cls = $('classFilter').value, decision = $('decisionFilter').value;
   filtered = allScenes.filter(s =>
     (split === 'all' || s.split === split) &&
-    (cls === 'all' || (cls === 'door' ? s.door_pixels > 0 : s.outlet_pixels > 0)) &&
+    (cls === 'all' || (cls === 'door' ? s.has_door : s.has_outlet)) &&
     (decision === 'all' || s.audit_decision === decision)
   );
   index = Math.min(index, Math.max(0, filtered.length - 1)); renderScene();
 }
-function renderScene() {
+function imageError(label) {
+  return () => setMessage(`${label} could not load. Check the PowerShell server output for the API error.`, 'error');
+}
+async function renderScene() {
+  const token = ++renderToken;
   if (!filtered.length) {
     $('sceneMeta').innerHTML = '<span class="pill">No scenes match filters</span>';
-    $('components').innerHTML = ''; $('original').removeAttribute('src'); $('overlay').removeAttribute('src'); return;
+    $('components').innerHTML = ''; $('original').removeAttribute('src'); $('overlay').removeAttribute('src');
+    setMessage('No scenes match the selected filters.', 'meta'); return;
   }
   const s = filtered[index];
   $('sceneMeta').innerHTML = [
-    `${index+1}/${filtered.length}`, s.scene_id, s.split,
-    `Door ${s.door_pixels.toLocaleString()} px / ${s.door_components} regions`,
-    `Outlet ${s.outlet_pixels.toLocaleString()} px / ${s.outlet_components} regions`,
-    `Audit: ${s.audit_decision}`
+    `${index+1}/${filtered.length}`, s.scene_id, s.split, `Audit: ${s.audit_decision}`
   ].map(x => `<span class="pill">${x}</span>`).join('');
-  $('original').src = `/api/scenes/${encodeURIComponent(s.scene_id)}/image?t=${Date.now()}`;
-  $('overlay').src = `/api/scenes/${encodeURIComponent(s.scene_id)}/overlay?t=${Date.now()}`;
+  $('components').innerHTML = '<div class="loading">Analyzing Door/Outlet regions for this scene…</div>';
+  $('original').removeAttribute('src'); $('overlay').removeAttribute('src');
   $('notes').value = s.audit_notes || '';
-  $('components').innerHTML = s.components.map(c => `
-    <div class="component">
-      <div class="meta"><strong>${c.class_name.toUpperCase()}</strong> region ${c.component_index + 1} · ${c.pixels.toLocaleString()} px · box ${c.bbox.join('×')}</div>
-      <img src="/api/scenes/${encodeURIComponent(s.scene_id)}/crop/${c.class_name}/${c.component_index}?t=${Date.now()}" alt="${c.class_name} crop">
-    </div>`).join('') || '<div class="meta">No Door/Outlet components.</div>';
+  setMessage(`Loading ${s.scene_id}…`);
+  try {
+    const detail = await jsonFetch(`/api/scenes/${encodeURIComponent(s.scene_id)}/detail`);
+    if (token !== renderToken) return;
+    $('sceneMeta').innerHTML = [
+      `${index+1}/${filtered.length}`, s.scene_id, s.split,
+      `Door ${detail.door_pixels.toLocaleString()} px / ${detail.door_components} regions`,
+      `Outlet ${detail.outlet_pixels.toLocaleString()} px / ${detail.outlet_components} regions`,
+      `Audit: ${s.audit_decision}`
+    ].map(x => `<span class="pill">${x}</span>`).join('');
+    const stamp = Date.now();
+    $('original').onerror = imageError('Original photo');
+    $('overlay').onerror = imageError('Rare-class overlay');
+    $('original').src = `/api/scenes/${encodeURIComponent(s.scene_id)}/image?t=${stamp}`;
+    $('overlay').src = `/api/scenes/${encodeURIComponent(s.scene_id)}/overlay?t=${stamp}`;
+    const cards = detail.components.map(c => `
+      <div class="component">
+        <div class="meta"><strong>${c.class_name.toUpperCase()}</strong> region ${c.component_index + 1} · ${c.pixels.toLocaleString()} px · box ${c.bbox.join('×')}</div>
+        <img src="/api/scenes/${encodeURIComponent(s.scene_id)}/crop/${c.class_name}/${c.component_index}?t=${stamp}" alt="${c.class_name} crop">
+      </div>`).join('');
+    const hidden = Math.max(0, detail.door_components + detail.outlet_components - detail.components.length);
+    $('components').innerHTML = cards || '<div class="meta">No Door/Outlet components in this scene.</div>';
+    if (hidden > 0) $('components').insertAdjacentHTML('beforeend', `<div class="meta">${hidden} additional tiny regions are not shown as zoom cards to keep the viewer responsive. They remain visible in the overlay.</div>`);
+    setMessage(`Loaded ${s.scene_id}. Review the overlay and zoomed regions, then record an audit decision.`, 'meta');
+  } catch (e) {
+    if (token !== renderToken) return;
+    $('components').innerHTML = '';
+    setMessage(`Could not load ${s.scene_id}: ${e.message}`, 'error');
+  }
 }
 async function saveDecision(decision) {
   if (!filtered.length) return; const s = filtered[index];
-  const r = await fetch(`/api/scenes/${encodeURIComponent(s.scene_id)}/audit`, {
-    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({decision, notes:$('notes').value})
-  });
-  const data = await r.json();
-  if (!r.ok) { $('message').textContent = data.detail || 'Could not save audit'; return; }
-  $('message').textContent = `Saved ${decision} for ${s.scene_id}`;
-  const target = allScenes.find(x => x.scene_id === s.scene_id);
-  target.audit_decision = data.decision; target.audit_notes = data.notes || ''; renderSummary(data.summary);
-  applyFilters();
-  if (filtered.length && index < filtered.length - 1) { index++; renderScene(); }
+  setMessage(`Saving ${decision} for ${s.scene_id}…`);
+  try {
+    const data = await jsonFetch(`/api/scenes/${encodeURIComponent(s.scene_id)}/audit`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({decision, notes:$('notes').value})
+    });
+    const target = allScenes.find(x => x.scene_id === s.scene_id);
+    target.audit_decision = data.decision; target.audit_notes = data.notes || ''; renderSummary(data.summary);
+    setMessage(`Saved ${decision} for ${s.scene_id}.`, 'meta');
+    const currentId = s.scene_id;
+    applyFilters();
+    const currentPos = filtered.findIndex(x => x.scene_id === currentId);
+    if (filtered.length && currentPos >= 0) {
+      index = (currentPos + 1) % filtered.length; renderScene();
+    }
+  } catch (e) { setMessage(e.message, 'error'); }
 }
 $('prev').onclick = () => { if (filtered.length) { index = (index - 1 + filtered.length) % filtered.length; renderScene(); } };
 $('next').onclick = () => { if (filtered.length) { index = (index + 1) % filtered.length; renderScene(); } };
 ['splitFilter','classFilter','decisionFilter'].forEach(id => $(id).onchange = applyFilters);
 document.querySelectorAll('[data-decision]').forEach(b => b.onclick = () => saveDecision(b.dataset.decision));
-loadScenes().catch(e => $('message').textContent = e.message);
+loadScenes().catch(e => {
+  $('summary').innerHTML = '<span class="pill">Load failed</span>';
+  setMessage(`Could not load audit scene list: ${e.message}. Check the PowerShell server output.`, 'error');
+});
 </script>
 </body>
 </html>
