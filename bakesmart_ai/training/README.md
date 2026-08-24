@@ -317,6 +317,32 @@ Use those findings to decide whether the next correction should target data,
 preprocessing, class definitions or the model architecture. Do not open the
 locked test set until the final Step-4 model choice is frozen.
 
+### Step 4 rare-class visual audit
+
+Use the read-only Door/Outlet audit before building a specialized rare-object
+model:
+
+```powershell
+python -m training.rare_class_audit
+```
+
+Then open `http://127.0.0.1:8012`. The page exposes only train and validation
+scenes that contain a Door or Outlet label. It shows the original image, a
+Door/Outlet overlay, and zoomed crops for every connected rare-class region.
+Filters let you inspect train versus validation and Door versus Outlet.
+
+For each scene you can record `Looks correct`, `Label issue`, or `Unsure`.
+These audit decisions are stored separately in
+`data/venue_vision/raw/real_v2/diagnostics/rare_class_visual_audit.json` and do
+not edit mask pixels, approval metadata, split assignments, or training status.
+`Label issue` requires a note so any later correction is explicit. The locked
+test split is never loaded by the audit workspace.
+
+Complete this audit before training a separate high-resolution Door/Outlet
+model. If label issues are found, correct them deliberately and treat any
+resulting split/dataset version change explicitly rather than silently altering
+an already locked evaluation protocol.
+
 An optional external synthetic-data utility is available for additional visual
 diversity:
 
