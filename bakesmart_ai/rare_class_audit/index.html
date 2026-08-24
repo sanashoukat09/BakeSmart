@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BakeSmart Rare-Class Visual Audit</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; }
+    body { margin: 0; background: #101217; color: #f4f6fb; }
+    header { padding: 18px 22px; border-bottom: 1px solid #2a2f39; background: #171a21; position: sticky; top: 0; z-index: 10; }
+    h1 { margin: 0 0 6px; font-size: 22px; }
+    .sub { color: #b9c0cc; font-size: 14px; }
+    main { padding: 20px; max-width: 1500px; margin: 0 auto; }
+    .toolbar, .statusbar, .decisionbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+    select, textarea, button { background: #1d222b; color: #f4f6fb; border: 1px solid #3b4350; border-radius: 8px; padding: 9px 11px; }
+    button { cursor: pointer; }
+    button:hover { border-color: #6f7b8c; }
+    .good { border-color: #2f9e64; }
+    .issue { border-color: #d15f5f; }
+    .unsure { border-color: #c49a3a; }
+    .pill { background: #202631; border: 1px solid #323a47; border-radius: 999px; padding: 7px 10px; font-size: 13px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .panel { background: #171b22; border: 1px solid #2b313c; border-radius: 12px; padding: 12px; }
+    .panel h2 { font-size: 15px; margin: 0 0 8px; color: #dbe1eb; }
+    .panel img { width: 100%; max-height: 620px; object-fit: contain; background: #0b0d11; border-radius: 8px; }
+    .components { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 16px; }
+    .component { background: #171b22; border: 1px solid #2b313c; border-radius: 12px; padding: 10px; }
+    .component img { width: 100%; aspect-ratio: 1/1; object-fit: contain; background: #0b0d11; border-radius: 8px; }
+    .meta { font-size: 13px; color: #bdc5d2; margin: 6px 0; }
+    textarea { min-width: 320px; min-height: 42px; resize: vertical; flex: 1; }
+    .warning { color: #ffcf72; font-size: 13px; margin-bottom: 12px; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<header>
+  <h1>BakeSmart Rare-Class Visual Audit</h1>
+  <div class="sub">Door + Outlet review for train/validation only. Semantic masks and the locked test set are read-only.</div>
+</header>
+<main>
+  <div class="warning">This audit does not edit labels. “Label issue” only records a note for later correction.</div>
+  <div class="toolbar">
+    <select id="splitFilter"><option value="all">All splits</option><option value="train">Train</option><option value="validation">Validation</option></select>
+    <select id="classFilter"><option value="all">Door + Outlet</option><option value="door">Door present</option><option value="outlet">Outlet present</option></select>
+    <select id="decisionFilter"><option value="all">All audit states</option><option value="pending">Pending</option><option value="looks_correct">Looks correct</option><option value="label_issue">Label issue</option><option value="unsure">Unsure</option></select>
+    <button id="prev">Previous</button><button id="next">Next</button>
+  </div>
+  <div class="statusbar" id="summary"></div>
+  <div class="statusbar" id="sceneMeta"></div>
+  <div class="grid">
+    <div class="panel"><h2>Original photo</h2><img id="original" alt="Original venue photo"></div>
+    <div class="panel"><h2>Door / Outlet overlay</h2><img id="overlay" alt="Rare-class overlay"></div>
+  </div>
+  <h2 style="margin-top:20px">Zoomed labelled regions</h2>
+  <div id="components" class="components"></div>
+  <div class="decisionbar" style="margin-top:18px">
+    <textarea id="notes" placeholder="Audit notes. Required for Label issue."></textarea>
+    <button class="good" data-decision="looks_correct">Looks correct</button>
+    <button class="issue" data-decision="label_issue">Label issue</button>
+    <button class="unsure" data-decision="unsure">Unsure</button>
+  </div>
+  <div id="message" class="meta"></div>
+</main>
+<script>
+let allScenes = [], filtered = [], index = 0;
+const $ = id => document.getElementById(id);
+async function loadScenes() {
+  const r = await fetch('/api/scenes'); const data = await r.json();
+  if (!r.ok) throw new Error(data.detail || 'Could not load scenes');
+  allScenes = data.scenes; renderSummary(data.summary); applyFilters();
+}
+function renderSummary(s) {
+  $('summary').innerHTML = [
+    `Total ${s.total}`, `Pending ${s.pending}`, `Correct ${s.looks_correct}`,
+    `Issues ${s.label_issue}`, `Unsure ${s.unsure}`
+  ].map(x => `<span class="pill">${x}</span>`).join('');
+}
+function applyFilters() {
+  const split = $('splitFilter').value, cls = $('classFilter').value, decision = $('decisionFilter').value;
+  filtered = allScenes.filter(s =>
+    (split === 'all' || s.split === split) &&
+    (cls === 'all' || (cls === 'door' ? s.door_pixels > 0 : s.outlet_pixels > 0)) &&
+    (decision === 'all' || s.audit_decision === decision)
+  );
+  index = Math.min(index, Math.max(0, filtered.length - 1)); renderScene();
+}
+function renderScene() {
+  if (!filtered.length) {
+    $('sceneMeta').innerHTML = '<span class="pill">No scenes match filters</span>';
+    $('components').innerHTML = ''; $('original').removeAttribute('src'); $('overlay').removeAttribute('src'); return;
+  }
+  const s = filtered[index];
+  $('sceneMeta').innerHTML = [
+    `${index+1}/${filtered.length}`, s.scene_id, s.split,
+    `Door ${s.door_pixels.toLocaleString()} px / ${s.door_components} regions`,
+    `Outlet ${s.outlet_pixels.toLocaleString()} px / ${s.outlet_components} regions`,
+    `Audit: ${s.audit_decision}`
+  ].map(x => `<span class="pill">${x}</span>`).join('');
+  $('original').src = `/api/scenes/${encodeURIComponent(s.scene_id)}/image?t=${Date.now()}`;
+  $('overlay').src = `/api/scenes/${encodeURIComponent(s.scene_id)}/overlay?t=${Date.now()}`;
+  $('notes').value = s.audit_notes || '';
+  $('components').innerHTML = s.components.map(c => `
+    <div class="component">
+      <div class="meta"><strong>${c.class_name.toUpperCase()}</strong> region ${c.component_index + 1} · ${c.pixels.toLocaleString()} px · box ${c.bbox.join('×')}</div>
+      <img src="/api/scenes/${encodeURIComponent(s.scene_id)}/crop/${c.class_name}/${c.component_index}?t=${Date.now()}" alt="${c.class_name} crop">
+    </div>`).join('') || '<div class="meta">No Door/Outlet components.</div>';
+}
+async function saveDecision(decision) {
+  if (!filtered.length) return; const s = filtered[index];
+  const r = await fetch(`/api/scenes/${encodeURIComponent(s.scene_id)}/audit`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({decision, notes:$('notes').value})
+  });
+  const data = await r.json();
+  if (!r.ok) { $('message').textContent = data.detail || 'Could not save audit'; return; }
+  $('message').textContent = `Saved ${decision} for ${s.scene_id}`;
+  const target = allScenes.find(x => x.scene_id === s.scene_id);
+  target.audit_decision = data.decision; target.audit_notes = data.notes || ''; renderSummary(data.summary);
+  applyFilters();
+  if (filtered.length && index < filtered.length - 1) { index++; renderScene(); }
+}
+$('prev').onclick = () => { if (filtered.length) { index = (index - 1 + filtered.length) % filtered.length; renderScene(); } };
+$('next').onclick = () => { if (filtered.length) { index = (index + 1) % filtered.length; renderScene(); } };
+['splitFilter','classFilter','decisionFilter'].forEach(id => $(id).onchange = applyFilters);
+document.querySelectorAll('[data-decision]').forEach(b => b.onclick = () => saveDecision(b.dataset.decision));
+loadScenes().catch(e => $('message').textContent = e.message);
+</script>
+</body>
+</html>
