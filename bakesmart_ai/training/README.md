@@ -270,6 +270,53 @@ future locked-test evaluation only if its validation behaviour is meaningfully
 better than the v1 baseline. The locked nine-image test set remains untouched
 throughout this comparison.
 
+### Step 4 improvement: balanced rare-class v3
+
+v2 can over-emphasize Outlet because nearly every training scene contains it.
+v3 reduces Outlet-focused views, keeps Door-focused crops, uses more moderate
+rare-class weights, and chooses the best checkpoint with a score made from 80%
+overall validation mIoU, 10% Door IoU and 10% Outlet IoU:
+
+```powershell
+python -m training.train_real_venue_segmentation_v3
+```
+
+v3 starts another fresh random U-Net and never loads v1 or v2. It writes to
+`models/venue_vision_real_v3/` and leaves the earlier experiments intact. The
+same locked test set remains unused.
+
+### Step 4 diagnostic: understand Door and Outlet failure
+
+Before creating another training variant, diagnose the actual class distribution
+and v1 behaviour:
+
+```powershell
+python -m training.diagnose_real_venue_classes
+```
+
+This command inspects only the 42 training and 9 validation scenes. It never
+requests the locked test split. For every class it reports scene presence and
+pixel counts in the original mask, after the v1 256 x 256 preprocessing and
+after 512 x 512 preprocessing. For Door and Outlet it also measures connected
+components at 512 x 512 and reports whether labelled rare-class pixels disappear
+during resizing.
+
+If `models/venue_vision_real_v1/best_model.pt` exists, the diagnostic also runs
+that local checkpoint on the nine validation scenes using the v1 preprocessing.
+It reports ground-truth and predicted pixel counts, per-class IoU/precision/
+recall and classifies each failure as, for example, `never_predicted` or
+`predicted_but_no_overlap`. This is validation diagnosis only; it does not train
+or alter any model.
+
+Outputs are written under the ignored real-data diagnostic directory:
+
+- `data/venue_vision/raw/real_v2/diagnostics/step4_class_diagnostic.json`;
+- `data/venue_vision/raw/real_v2/diagnostics/step4_class_diagnostic_scenes.csv`.
+
+Use those findings to decide whether the next correction should target data,
+preprocessing, class definitions or the model architecture. Do not open the
+locked test set until the final Step-4 model choice is frozen.
+
 An optional external synthetic-data utility is available for additional visual
 diversity:
 
