@@ -49,7 +49,7 @@ def create_app(
     active = workspace or RareClassAuditWorkspace()
     app = FastAPI(
         title="BakeSmart Rare-Class Visual Audit",
-        version="1.0.0",
+        version="1.1.0",
         description="Read-only Door/Outlet audit for train and validation masks.",
     )
     if static_dir is not None and Path(static_dir).is_dir():
@@ -65,6 +65,13 @@ def create_app(
     def scenes():
         try:
             return {"scenes": active.list_scenes(), "summary": active.summary()}
+        except Exception as exc:
+            raise _translate_error(exc) from exc
+
+    @app.get("/api/scenes/{scene_id}/detail")
+    def detail(scene_id: str):
+        try:
+            return active.scene_detail(scene_id)
         except Exception as exc:
             raise _translate_error(exc) from exc
 
