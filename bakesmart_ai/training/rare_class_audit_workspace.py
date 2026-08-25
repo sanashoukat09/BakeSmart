@@ -48,6 +48,9 @@ DEFAULT_AUDIT_STATE = (
     / "diagnostics"
     / "rare_class_visual_audit.json"
 )
+DEFAULT_REPAIRED_ROOT = (
+    PROJECT_DIR / "data" / "venue_vision" / "raw" / "real_v2_repaired"
+)
 RARE_CLASSES = {"door": 2, "outlet": 5}
 AUDIT_DECISIONS = {"looks_correct", "label_issue", "unsure"}
 MAX_ZOOM_COMPONENTS_PER_CLASS = 12
@@ -80,23 +83,46 @@ class RareClassAuditWorkspace:
         project_dir: Path = PROJECT_DIR,
         manifest_path: Path = DEFAULT_MANIFEST,
         audit_state_path: Path = DEFAULT_AUDIT_STATE,
+        dataset_root: Path | None = None,
+        dataset_name: str = "real_v2",
     ) -> None:
         self.project_dir = Path(project_dir).resolve()
         self.manifest_path = Path(manifest_path).resolve()
         self.audit_state_path = Path(audit_state_path).resolve()
+        self.dataset_root = Path(dataset_root).resolve() if dataset_root else None
+        self.dataset_name = dataset_name
         self.manifest = load_locked_split_manifest(
             self.manifest_path,
             project_dir=self.project_dir,
         )
         self.samples: dict[str, SplitSample] = {}
-        for split in ("train", "validation"):
-            for sample in samples_for_split(
-                self.manifest,
-                split,
-                project_dir=self.project_dir,
-                verify_hashes=True,
-            ):
-                self.samples[sample.scene_id] = sample
+        if self.dataset_root is None:
+            for split in ("train", "validation"):
+                for sample in samples_for_split(
+                    self.manifest,
+                    split,
+                    project_dir=self.project_dir,
+                    verify_hashes=True,
+                ):
+                    self.samples[sample.scene_id] = sample
+        else:
+            for row in self.manifest["scenes"]:
+                split = str(row.get("split") or "")
+                if split not in {"train", "validation"}:
+                    continue
+                scene_id = str(row["scene_id"])
+                image_path = self.dataset_root / "images" / f"{scene_id}.jpg"
+                mask_path = self.dataset_root / "masks" / f"{scene_id}.png"
+                if not image_path.is_file() or not mask_path.is_file():
+                    raise ValueError(f"repaired image/mask pair is missing: {scene_id}")
+                self.samples[scene_id] = SplitSample(
+                    scene_id=scene_id,
+                    split=split,
+                    image_path=image_path,
+                    mask_path=mask_path,
+                    image_sha256="",
+                    mask_sha256="",
+                )
         # Deliberately no call for the locked test split.
 
         self._manifest_rows = {
@@ -104,6 +130,7 @@ class RareClassAuditWorkspace:
             for row in self.manifest["scenes"]
             if row.get("split") in {"train", "validation"}
         }
+        self._rare_presence_cache: dict[str, tuple[bool, bool]] = {}
         self._component_cache: dict[str, list[RareComponent]] = {}
         self._detail_cache: dict[str, dict[str, object]] = {}
 
@@ -116,7 +143,11 @@ class RareClassAuditWorkspace:
         ):
             manifest_row = self._manifest_rows.get(sample.scene_id, {})
             class_ids = manifest_row.get("class_ids_present")
-            if isinstance(class_ids, list):
+            if self.dataset_root is not None:
+                has_door, has_outlet = self._rare_presence(sample)
+                if not (has_door or has_outlet):
+                    continue
+            elif isinstance(class_ids, list):
                 present_ids = {int(value) for value in class_ids}
                 has_door = RARE_CLASSES["door"] in present_ids
                 has_outlet = RARE_CLASSES["outlet"] in present_ids
@@ -141,6 +172,19 @@ class RareClassAuditWorkspace:
                 }
             )
         return scenes
+
+    def _rare_presence(self, sample: SplitSample) -> tuple[bool, bool]:
+        cached = self._rare_presence_cache.get(sample.scene_id)
+        if cached is not None:
+            return cached
+        labels = self._read_mask(sample)
+        present_ids = {int(value) for value in np.unique(labels)}
+        result = (
+            RARE_CLASSES["door"] in present_ids,
+            RARE_CLASSES["outlet"] in present_ids,
+        )
+        self._rare_presence_cache[sample.scene_id] = result
+        return result
 
     def scene_detail(self, scene_id: str) -> dict[str, object]:
         """Analyze only the requested scene and cache the result in memory."""
@@ -329,7 +373,7 @@ class RareClassAuditWorkspace:
             raise ValueError("notes are required when marking a label issue")
         state = self._load_state()
         state.setdefault("schema_version", 1)
-        state.setdefault("dataset", "real_v2")
+        state.setdefault("dataset", self.dataset_name)
         state.setdefault("test_split_used", False)
         scenes = state.setdefault("scenes", {})
         scenes[scene_id] = {
@@ -394,7 +438,7 @@ class RareClassAuditWorkspace:
         if not self.audit_state_path.is_file():
             return {
                 "schema_version": 1,
-                "dataset": "real_v2",
+                "dataset": self.dataset_name,
                 "test_split_used": False,
                 "scenes": {},
             }

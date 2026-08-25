@@ -20,7 +20,11 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from training.annotation_workspace import PROJECT_DIR
-from training.rare_class_audit_workspace import RareClassAuditWorkspace
+from training.rare_class_audit_workspace import (
+    DEFAULT_MANIFEST,
+    DEFAULT_REPAIRED_ROOT,
+    RareClassAuditWorkspace,
+)
 
 
 STATIC_DIR = PROJECT_DIR / "rare_class_audit"
@@ -125,10 +129,28 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8012)
+    parser.add_argument(
+        "--repaired",
+        action="store_true",
+        help=(
+            "audit real_v2_repaired masks while using the original locked split "
+            "only to exclude test scene IDs"
+        ),
+    )
     args = parser.parse_args()
     if not 1 <= args.port <= 65535:
         parser.error("--port must be between 1 and 65535")
-    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+    active_app = app
+    if args.repaired:
+        audit_state = DEFAULT_REPAIRED_ROOT / "diagnostics" / "rare_class_visual_audit.json"
+        workspace = RareClassAuditWorkspace(
+            manifest_path=DEFAULT_MANIFEST,
+            audit_state_path=audit_state,
+            dataset_root=DEFAULT_REPAIRED_ROOT,
+            dataset_name="real_v2_repaired",
+        )
+        active_app = create_app(workspace=workspace)
+    uvicorn.run(active_app, host=args.host, port=args.port, log_level="info")
     return 0
 
 

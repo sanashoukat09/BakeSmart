@@ -100,3 +100,35 @@ def test_label_issue_requires_notes(tmp_path):
     )
     with pytest.raises(ValueError, match="notes are required"):
         workspace.save_decision("train-a", "label_issue", "")
+
+
+def test_repaired_audit_reads_repaired_masks_and_excludes_locked_test(tmp_path):
+    manifest_path, _rows = _manifest(tmp_path)
+    repaired = tmp_path / "real_v2_repaired"
+    for scene_id, door, outlet in [
+        ("train-a", True, False),
+        ("val-a", False, False),
+        ("test-a", False, True),
+    ]:
+        _write_rgb(repaired / "images" / f"{scene_id}.jpg")
+        _write_mask(
+            repaired / "masks" / f"{scene_id}.png",
+            door=door,
+            outlet=outlet,
+        )
+
+    audit_path = repaired / "diagnostics" / "rare_class_visual_audit.json"
+    workspace = RareClassAuditWorkspace(
+        project_dir=tmp_path,
+        manifest_path=manifest_path,
+        audit_state_path=audit_path,
+        dataset_root=repaired,
+        dataset_name="real_v2_repaired",
+    )
+
+    scenes = workspace.list_scenes()
+    assert [scene["scene_id"] for scene in scenes] == ["train-a"]
+    assert "test-a" not in workspace.samples
+    workspace.save_decision("train-a", "looks_correct", "repaired mask checked")
+    state = json.loads(audit_path.read_text(encoding="utf-8"))
+    assert state["dataset"] == "real_v2_repaired"
