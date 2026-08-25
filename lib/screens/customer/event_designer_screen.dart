@@ -51,6 +51,7 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
   VenuePhotoAnalysis? _secondVenueAnalysis;
   bool _analysingWidePhoto = false;
   bool _analysingSecondPhoto = false;
+  bool _preparingPhotos = false;
   bool _obstacleMapConfirmed = false;
   final List<_ObstacleDraft> _obstacles = [];
 
@@ -334,6 +335,21 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
       return;
     }
 
+    setState(() => _preparingPhotos = true);
+    late final String cakePhotoId;
+    try {
+      cakePhotoId = await ref.read(eventDesignServiceProvider).uploadCakePhoto(
+            bytes: _cakeImageBytes!,
+            fileName: _cakeImage!.name,
+          );
+    } catch (error) {
+      if (mounted) {
+        setState(() => _preparingPhotos = false);
+        _showMessage('Could not prepare the cake photo: $error');
+      }
+      return;
+    }
+
     final request = EventDesignRequest(
       customerId: user.uid,
       areaType: _areaType,
@@ -354,7 +370,7 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
       guestCount: int.parse(_guestCount.text.trim()),
       themeId: _themeId,
       preferredColors: _parseColors(_colors.text),
-      cakeImageReference: _safeImageReference(_cakeImage!.name),
+      cakeImageReference: cakePhotoId,
       cakeShape: _cakeShape,
       cakeTiers: int.parse(_tiers.text.trim()),
       servingsRequired: int.parse(_servings.text.trim()),
@@ -367,6 +383,7 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
         .read(eventDesignNotifierProvider.notifier)
         .generate(request);
     if (!mounted) return;
+    setState(() => _preparingPhotos = false);
     if (recommendation == null) {
       final failure = ref.read(eventDesignNotifierProvider);
       _showMessage(failure.error?.toString() ?? 'Could not create the design.');
@@ -398,13 +415,6 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
     return normalized.isEmpty ? null : double.parse(normalized);
   }
 
-  static String _safeImageReference(String fileName) {
-    final cleaned = fileName
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9._-]+'), '-');
-    return 'customer-cake-${DateTime.now().millisecondsSinceEpoch}-$cleaned';
-  }
-
   void _showMessage(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -417,7 +427,7 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
     return Scaffold(
       backgroundColor: _canvas,
       appBar: AppBar(
-        title: const Text('3D Event Designer'),
+        title: const Text('Event Designer'),
         backgroundColor: _canvas,
         foregroundColor: _ink,
         elevation: 0,
@@ -440,7 +450,8 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
             _section(
               icon: Icons.photo_camera_back_outlined,
               title: 'Venue photos and safety map',
-              subtitle: 'Photos are analysed locally and are not retained.',
+              subtitle:
+                  'Photos stay on your local Python service for up to 24 hours, then are deleted.',
               children: [
                 _venuePhotoPicker(
                   title: 'Wide venue photo (required)',
@@ -515,7 +526,8 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
             _section(
               icon: Icons.cake_outlined,
               title: 'Cake picture',
-              subtitle: 'Used as a design reference for the procedural cake.',
+              subtitle:
+                  'Used in your real-photo concept previews; it is not uploaded to an external AI service.',
               children: [_imagePicker()],
             ),
             _section(
@@ -630,14 +642,15 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
             SizedBox(
               height: 54,
               child: FilledButton.icon(
-                onPressed: generation.isLoading ? null : _generate,
+                onPressed:
+                    generation.isLoading || _preparingPhotos ? null : _generate,
                 style: FilledButton.styleFrom(
                   backgroundColor: _brown,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                icon: generation.isLoading
+                icon: generation.isLoading || _preparingPhotos
                     ? const SizedBox(
                         width: 20,
                         height: 20,
@@ -648,9 +661,11 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
                       )
                     : const Icon(Icons.threed_rotation),
                 label: Text(
-                  generation.isLoading
-                      ? 'Building combined scene…'
-                      : 'Generate 3D design',
+                  _preparingPhotos
+                      ? 'Preparing your photos…'
+                      : generation.isLoading
+                          ? 'Building three design options…'
+                          : 'Generate design options',
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
@@ -683,8 +698,8 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
           ),
           SizedBox(height: 8),
           Text(
-            'BakeSmart uses its local trained model and procedural 3D renderer. '
-            'No AR service is required.',
+            'BakeSmart creates three varied decoration packages and photo-based '
+            'concept previews locally. A basic 3D layout is also available.',
             style: TextStyle(color: Color(0xFFFFE8D5), height: 1.4),
           ),
         ],

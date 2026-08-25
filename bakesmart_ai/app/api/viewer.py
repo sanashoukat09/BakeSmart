@@ -8,10 +8,12 @@ from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import FileResponse
 
 from app.services.scene_artifacts import SceneArtifactStore
+from app.services.photo_artifacts import PhotoPreviewStore
 
 
 router = APIRouter()
 artifact_store = SceneArtifactStore()
+photo_preview_store = PhotoPreviewStore()
 STATIC_DIR = Path(__file__).resolve().parents[1] / "static"
 
 
@@ -67,5 +69,38 @@ async def scene_glb(design_id: str) -> FileResponse:
         headers={
             "Cache-Control": "private, no-cache",
             "Content-Disposition": f'inline; filename="{design_id}.glb"',
+        },
+    )
+
+
+@router.get(
+    "/api/v1/designs/{design_id}/previews/{package_id}.png",
+    response_class=FileResponse,
+    tags=["viewer"],
+)
+async def photo_concept_preview(
+    design_id: str,
+    package_id: str,
+) -> FileResponse:
+    preview_id = f"{design_id}-{package_id}"
+    try:
+        path = photo_preview_store.existing_path(preview_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Concept preview not found",
+        ) from exc
+    if path is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Concept preview not found",
+        )
+    return FileResponse(
+        path,
+        media_type="image/png",
+        headers={
+            "Cache-Control": "private, no-store",
+            "Content-Disposition": f'inline; filename="{preview_id}.png"',
+            "X-Content-Type-Options": "nosniff",
         },
     )

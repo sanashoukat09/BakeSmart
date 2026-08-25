@@ -15,7 +15,7 @@ void main() {
       expect(cake['diameter_m'], 0.30);
       expect(cake.containsKey('width_m'), isFalse);
       expect(event['theme_id'], 'floral-romantic');
-      expect(event['required_decor_categories'], contains('table-setting'));
+      expect(event['required_decor_categories'], isEmpty);
       expect(json['minimum_clearance_m'], 0.9);
       final space = json['space'] as Map<String, dynamic>;
       expect(space['obstacle_map_confirmed'], isTrue);
@@ -101,6 +101,10 @@ void main() {
     expect(recommendation.remainingBudgetPkr, 8000);
     expect(recommendation.venueAssessment?.clearanceVerified, isTrue);
     expect(recommendation.venueAssessment?.availableFrontClearanceM, 1.575);
+    expect(recommendation.packages.single.name, 'Balanced Celebration');
+    expect(recommendation.packages.single.photoPreviewPath,
+        '/api/v1/designs/design-1234567890abcdef1234/previews/balanced.png');
+    expect(recommendation.recommendedPackageId, 'balanced');
   });
 
   test('resolves a relative viewer path against the configured service', () {
@@ -221,6 +225,33 @@ Map<String, dynamic> _recommendationJson() {
       'observed_facts': ['One photo analysed.'],
       'assumptions': ['Second angle not supplied.'],
     },
+    'packages': [
+      {
+        'package_id': 'balanced',
+        'name': 'Balanced Celebration',
+        'selected_theme_id': 'floral-romantic',
+        'rationale': 'Balances the focal pieces and room space.',
+        'decorations': [
+          {
+            'name': 'Blush chiffon arch',
+            'category': 'backdrop',
+            'quantity': 1,
+            'unit_cost_pkr': 25000,
+            'reason': 'Creates the focal point.',
+            'safety_note': 'Secure with ballast.',
+          }
+        ],
+        'decoration_cost_pkr': 42000,
+        'cake_cost_pkr': 18000,
+        'total_cost_pkr': 60000,
+        'budget_pkr': 50000,
+        'remaining_budget_pkr': 8000,
+        'photo_preview_url':
+            '/api/v1/designs/design-1234567890abcdef1234/previews/balanced.png',
+        'recommended': true,
+      }
+    ],
+    'recommended_package_id': 'balanced',
     'preview': {
       'interactive_3d_ready': true,
       'viewer_3d_url': '/viewer/design-1234567890abcdef1234',

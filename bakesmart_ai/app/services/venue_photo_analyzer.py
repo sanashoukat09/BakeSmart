@@ -16,11 +16,14 @@ import numpy as np
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from app.schemas.design import (
+    CakePhotoUploadRequest,
     PhotoQuality,
+    TemporaryPhotoAsset,
     VenuePhotoAnalysis,
     VenuePhotoAnalysisRequest,
     VenueVisionCandidate,
 )
+from app.services.photo_artifacts import TemporaryPhotoStore, temporary_photo_store
 from training.venue_vision_runtime import VenueVisionRuntime
 
 try:
@@ -45,7 +48,11 @@ SUPPORTED_FORMATS = {
 class VenuePhotoAnalyzer:
     """Extract reproducible image-quality signals without a pretrained model."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        photo_store: TemporaryPhotoStore = temporary_photo_store,
+    ) -> None:
+        self.photo_store = photo_store
         self.final_vision_runtime = None
         if VenueVisionBundleV6Runtime is not None:
             try:
@@ -192,8 +199,10 @@ class VenuePhotoAnalyzer:
                 f"{len(candidates)} unconfirmed region candidate(s)."
             )
         digest = hashlib.sha256(image_bytes).hexdigest()[:20]
+        photo_id = f"venue-photo-{digest}"
+        _, expires_at = self.photo_store.write(photo_id, oriented_rgb)
         return VenuePhotoAnalysis(
-            photo_id=f"venue-photo-{digest}",
+            photo_id=photo_id,
             angle=request.angle,
             pixel_width=width,
             pixel_height=height,
@@ -226,10 +235,43 @@ class VenuePhotoAnalyzer:
                     )
                 ),
                 "Exact scale comes only from customer-confirmed measurements, not photo pixels.",
-                "The uploaded photo is analysed in memory and is not persisted by this endpoint.",
+                "The uploaded photo is stored locally for up to 24 hours only so "
+                "BakeSmart can create photo-based concept previews.",
             ],
             exact_scale_available=False,
             persisted=False,
+            temporarily_stored=True,
+            temporary_storage_expires_at=expires_at,
+        )
+
+    def store_cake_photo(
+        self,
+        request: CakePhotoUploadRequest,
+    ) -> TemporaryPhotoAsset:
+        image_bytes = self._decode(request.image_base64)
+        if len(image_bytes) > MAX_PHOTO_BYTES:
+            raise ValueError("Cake photo must be 8 MB or smaller.")
+        try:
+            with Image.open(BytesIO(image_bytes)) as source:
+                if source.format != SUPPORTED_FORMATS[request.media_type]:
+                    raise ValueError(
+                        "Cake photo content does not match its declared media type."
+                    )
+                width, height = source.size
+                if width * height > MAX_PHOTO_PIXELS:
+                    raise ValueError("Cake photo exceeds the 24-megapixel limit.")
+                oriented_rgb = ImageOps.exif_transpose(source).convert("RGB")
+                width, height = oriented_rgb.size
+        except (UnidentifiedImageError, OSError) as exc:
+            raise ValueError("Cake photo is not a readable JPEG or PNG image.") from exc
+        asset_id = self.photo_store.asset_id("cake", image_bytes)
+        _, expires_at = self.photo_store.write(asset_id, oriented_rgb)
+        return TemporaryPhotoAsset(
+            asset_id=asset_id,
+            pixel_width=width,
+            pixel_height=height,
+            expires_at=expires_at,
+            persisted_permanently=False,
         )
 
     @staticmethod

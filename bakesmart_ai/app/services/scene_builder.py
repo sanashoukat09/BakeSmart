@@ -82,6 +82,77 @@ DECOR_PRIORITY = {
     ),
 }
 
+EVENT_DECOR_PRIORITY = {
+    "birthday": (
+        "backdrop",
+        "floor-arrangement",
+        "signage",
+        "lighting",
+        "table-setting",
+    ),
+    "kids_birthday": (
+        "backdrop",
+        "floor-arrangement",
+        "signage",
+        "table-setting",
+        "lighting",
+    ),
+    "baby_shower": (
+        "backdrop",
+        "floor-arrangement",
+        "table-setting",
+        "signage",
+        "lighting",
+    ),
+    "wedding": (
+        "backdrop",
+        "lighting",
+        "floor-arrangement",
+        "table-setting",
+        "signage",
+    ),
+    "engagement": (
+        "backdrop",
+        "lighting",
+        "floor-arrangement",
+        "signage",
+        "table-setting",
+    ),
+    "anniversary": (
+        "lighting",
+        "backdrop",
+        "table-setting",
+        "floor-arrangement",
+        "signage",
+    ),
+    "corporate": (
+        "signage",
+        "backdrop",
+        "lighting",
+        "table-setting",
+        "floor-arrangement",
+    ),
+    "other": (
+        "backdrop",
+        "table-setting",
+        "lighting",
+        "signage",
+        "floor-arrangement",
+    ),
+}
+
+PACKAGE_CATEGORY_TARGETS = {
+    "essential": 2,
+    "balanced": 4,
+    "statement": 5,
+}
+
+PACKAGE_BUDGET_FRACTIONS = {
+    "essential": 0.55,
+    "balanced": 0.80,
+    "statement": 1.00,
+}
+
 
 @dataclass(frozen=True)
 class SceneBuildResult:
@@ -112,7 +183,10 @@ class SceneBuilder:
         self,
         request: DesignRequest,
         model_signals: dict[str, dict[str, float | str]],
+        package_tier: str = "balanced",
     ) -> SceneBuildResult:
+        if package_tier not in PACKAGE_CATEGORY_TARGETS:
+            raise ValueError("unknown design package tier")
         warnings = [
             "The bootstrap model was trained on synthetic labels and is not production-approved.",
             "All prices are synthetic planning estimates, not vendor or bakery quotes.",
@@ -135,6 +209,7 @@ class SceneBuilder:
             request,
             decor_rows,
             str(model_signals["decor"]["label"]),
+            package_tier,
             warnings,
         )
         cake_row = self._select_cake(
@@ -285,6 +360,7 @@ class SceneBuilder:
         request: DesignRequest,
         candidates: list[dict[str, str]],
         decor_label: str,
+        package_tier: str,
         warnings: list[str],
     ) -> list[tuple[dict[str, str], int, int]]:
         by_category = {row["category"]: row for row in candidates}
@@ -296,7 +372,21 @@ class SceneBuilder:
             CATEGORY_ALIASES.get(value, value)
             for value in request.event.excluded_decor_categories
         }
-        order = list(dict.fromkeys([*required, *DECOR_PRIORITY.get(decor_label, ())]))
+        model_order = DECOR_PRIORITY.get(
+            decor_label,
+            DECOR_PRIORITY["minimal_backdrop"],
+        )
+        event_order = EVENT_DECOR_PRIORITY[request.event.event_type.value]
+        blended_order = [
+            category
+            for pair in zip(event_order, model_order)
+            for category in pair
+        ]
+        category_target = max(PACKAGE_CATEGORY_TARGETS[package_tier], len(required))
+        order = list(dict.fromkeys([*required, *blended_order]))[:category_target]
+        package_budget = int(
+            request.decoration_budget_pkr * PACKAGE_BUDGET_FRACTIONS[package_tier]
+        )
         selected: list[tuple[dict[str, str], int, int]] = []
         spent = 0
         for category in order:
@@ -313,15 +403,15 @@ class SceneBuilder:
                         f"Required category '{category}' has no compatible catalogue item."
                     )
                 continue
-            quantity = self._quantity_for(category, request)
+            quantity = self._quantity_for(category, request, package_tier)
             unit_cost = PLANNING_UNIT_COST_PKR[category]
             while (
                 quantity > 1
-                and spent + quantity * unit_cost > request.decoration_budget_pkr
+                and spent + quantity * unit_cost > package_budget
             ):
                 quantity -= 1
             item_cost = quantity * unit_cost
-            if spent + item_cost > request.decoration_budget_pkr:
+            if spent + item_cost > package_budget:
                 if category in required:
                     warnings.append(
                         f"Required category '{category}' did not fit the supplied "
@@ -333,11 +423,20 @@ class SceneBuilder:
         return selected
 
     @staticmethod
-    def _quantity_for(category: str, request: DesignRequest) -> int:
+    def _quantity_for(
+        category: str,
+        request: DesignRequest,
+        package_tier: str,
+    ) -> int:
         if category == "floor-arrangement":
-            return 2
+            return {"essential": 1, "balanced": 2, "statement": 3}[package_tier]
         if category == "lighting":
-            return max(1, min(4, math.ceil(request.space.dimensions.width_m / 2)))
+            base = max(1, min(4, math.ceil(request.space.dimensions.width_m / 2)))
+            if package_tier == "essential":
+                return 1
+            if package_tier == "statement":
+                return min(5, base + 1)
+            return base
         return 1
 
     def _select_cake(
@@ -701,11 +800,34 @@ class SceneBuilder:
                     quantity=quantity,
                     unit_cost_pkr=unit_cost,
                     placements=placements,
+                    reason=SceneBuilder._decor_reason(row["category"], request),
+                    safety_note=row["safety_notes"],
                 )
             )
             objects.extend(placements)
             total += quantity * unit_cost
         return recommendations, objects, total
+
+    @staticmethod
+    def _decor_reason(category: str, request: DesignRequest) -> str:
+        event_name = request.event.event_type.value.replace("_", " ")
+        if category == "backdrop":
+            return f"Creates a clear {event_name} focal point against the selected wall."
+        if category == "floor-arrangement":
+            return "Frames the cake table while keeping the confirmed walkway in view."
+        if category == "lighting":
+            return (
+                "Adds warm emphasis suited to this "
+                f"{request.space.environment.value.replace('_', ' ')} venue."
+            )
+        if category == "table-setting":
+            return "Connects the uploaded cake reference with the wider decoration palette."
+        if category == "signage":
+            return (
+                "Adds a personalised visual anchor without occupying the main "
+                "table surface."
+            )
+        return "Complements the selected theme and measured setup area."
 
     @staticmethod
     def _decor_placement(

@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import Literal
 
 from app.schemas.design import (
+    DesignPackageRecommendation,
     DesignRequest,
     PreviewAvailability,
     RecommendationResponse,
@@ -15,21 +16,35 @@ from app.schemas.design import (
 from app.services.catalog import CatalogStore
 from app.services.feature_adapter import RequestFeatureAdapter
 from app.services.glb_builder import ProceduralGlbBuilder
+from app.services.photo_artifacts import (
+    PhotoPreviewStore,
+    TemporaryPhotoStore,
+    photo_preview_store,
+    temporary_photo_store,
+)
+from app.services.photo_preview_builder import PhotoPreviewBuilder
 from app.services.scene_artifacts import SceneArtifactStore
-from app.services.scene_builder import SceneBuilder
+from app.services.scene_builder import SceneBuilder, SceneBuildResult
 from training.model_runtime import BootstrapModelRuntime
 
 
 class RecommendationService:
     """Load BakeSmart's own checkpoint and build one coordinated scene."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        photo_store: TemporaryPhotoStore = temporary_photo_store,
+        preview_store: PhotoPreviewStore = photo_preview_store,
+    ) -> None:
         self.runtime: BootstrapModelRuntime | None = None
         self.feature_adapter: RequestFeatureAdapter | None = None
         self.catalog_store: CatalogStore | None = None
         self.scene_builder: SceneBuilder | None = None
         self.glb_builder: ProceduralGlbBuilder | None = None
         self.artifact_store: SceneArtifactStore | None = None
+        self.photo_store = photo_store
+        self.preview_store = preview_store
+        self.photo_preview_builder = PhotoPreviewBuilder()
         self.load_error: str | None = None
         try:
             self.runtime = BootstrapModelRuntime.load()
@@ -81,7 +96,16 @@ class RecommendationService:
 
         adapted = self.feature_adapter.transform(request)
         model_signals = self.runtime.predict(adapted.matrix)[0]
-        result = self.scene_builder.build(request, model_signals)
+        package_results = {
+            package_id: self.scene_builder.build(
+                request,
+                model_signals,
+                package_tier=package_id,
+            )
+            for package_id in ("essential", "balanced", "statement")
+        }
+        recommended_package_id = self._recommended_package_id(request)
+        result = package_results[recommended_package_id]
         request_json = json.dumps(
             {
                 "model_version": self.runtime.metadata["model_version"],
@@ -111,21 +135,28 @@ class RecommendationService:
             preview = PreviewAvailability(
                 interactive_3d_ready=True,
                 viewer_3d_url=f"/viewer/{design_id}",
-                viewer_label="Open Interactive 3D View",
+                viewer_label="Open Basic 3D Layout Preview",
                 scene_glb_url=f"/api/v1/designs/{design_id}/scene.glb",
                 ar_supported=None,
                 ar_url=None,
                 fallback_label=None,
             )
             warnings.append(
-                "The interactive 3D view is procedural and does not reconstruct "
-                "the uploaded cake photograph."
+                "The Basic 3D Layout Preview uses procedural placeholders. Use the "
+                "photo-based previews to see the uploaded venue and cake photographs."
             )
         except (KeyError, OSError, OverflowError, ValueError):
             warnings.append(
                 "Interactive 3D generation failed; use Concept preview—not to scale. "
                 "The recommendation and scene specification are still available."
             )
+        packages = self._build_packages(
+            request=request,
+            design_id=design_id,
+            results=package_results,
+            recommended_package_id=recommended_package_id,
+            warnings=warnings,
+        )
         return RecommendationResponse(
             design_id=design_id,
             created_at=datetime.now(timezone.utc),
@@ -138,7 +169,128 @@ class RecommendationService:
             venue_assessment=result.venue_assessment,
             scene=scene,
             preview=preview,
+            packages=packages,
+            recommended_package_id=recommended_package_id,
             warnings=list(dict.fromkeys(warnings)),
+        )
+
+    @staticmethod
+    def _recommended_package_id(request: DesignRequest) -> str:
+        budget = request.decoration_budget_pkr
+        guests = request.event.guest_count
+        area = request.space.dimensions.width_m * (
+            request.space.dimensions.depth_m or 1.0
+        )
+        if budget >= 70_000 and (guests >= 100 or area >= 30):
+            return "statement"
+        if budget <= 30_000 or (guests <= 20 and area <= 10):
+            return "essential"
+        return "balanced"
+
+    def _build_packages(
+        self,
+        *,
+        request: DesignRequest,
+        design_id: str,
+        results: dict[str, SceneBuildResult],
+        recommended_package_id: str,
+        warnings: list[str],
+    ) -> list[DesignPackageRecommendation]:
+        assert self.catalog_store is not None
+        package_names = {
+            "essential": "Essential Focus",
+            "balanced": "Balanced Celebration",
+            "statement": "Statement Experience",
+        }
+        venue_path = None
+        for evidence in sorted(
+            request.space.photo_evidence,
+            key=lambda photo: photo.angle.value != "wide",
+        ):
+            try:
+                venue_path = self.photo_store.existing_path(evidence.photo_id)
+            except ValueError:
+                venue_path = None
+            if venue_path is not None:
+                break
+        try:
+            cake_path = self.photo_store.existing_path(
+                request.cake.cake_image_reference
+            )
+        except ValueError:
+            cake_path = None
+        packages: list[DesignPackageRecommendation] = []
+        for package_id in ("essential", "balanced", "statement"):
+            result = results[package_id]
+            preview_url = None
+            if venue_path is not None and cake_path is not None:
+                try:
+                    theme = self.catalog_store.themes[result.selected_theme_id]
+                    image = self.photo_preview_builder.build(
+                        venue_path=venue_path,
+                        cake_path=cake_path,
+                        request=request,
+                        package_id=package_id,
+                        package_name=package_names[package_id],
+                        decorations=result.decorations,
+                        palette_hex=theme["palette_hex"],
+                        decoration_cost_pkr=result.costs.decoration_cost_pkr,
+                    )
+                    preview_id = f"{design_id}-{package_id}"
+                    self.preview_store.write(preview_id, image)
+                    preview_url = (
+                        f"/api/v1/designs/{design_id}/previews/{package_id}.png"
+                    )
+                except (KeyError, OSError, ValueError):
+                    warnings.append(
+                        f"The {package_names[package_id]} photo preview could not "
+                        "be generated."
+                    )
+            packages.append(
+                DesignPackageRecommendation(
+                    package_id=package_id,
+                    name=package_names[package_id],
+                    selected_theme_id=result.selected_theme_id,
+                    rationale=self._package_rationale(request, package_id),
+                    decorations=result.decorations,
+                    decoration_cost_pkr=result.costs.decoration_cost_pkr,
+                    cake_cost_pkr=result.costs.cake_cost_pkr,
+                    total_cost_pkr=result.costs.total_cost_pkr,
+                    budget_pkr=request.decoration_budget_pkr,
+                    remaining_budget_pkr=result.costs.remaining_budget_pkr,
+                    photo_preview_url=preview_url,
+                    recommended=package_id == recommended_package_id,
+                )
+            )
+        if venue_path is None or cake_path is None:
+            warnings.append(
+                "Photo-based previews were unavailable because a temporary venue or "
+                "cake photo had expired or was not uploaded through the Stage 1 API."
+            )
+        return packages
+
+    @staticmethod
+    def _package_rationale(request: DesignRequest, package_id: str) -> str:
+        event = request.event.event_type.value.replace("_", " ")
+        environment = request.space.environment.value.replace("_", " ")
+        colours = (
+            ", ".join(request.event.preferred_colors[:3])
+            or "the theme palette"
+        )
+        if package_id == "essential":
+            return (
+                f"A lower-cost focal setup for this {event}, prioritising the most "
+                f"useful pieces in the measured {environment} space and {colours}."
+            )
+        if package_id == "balanced":
+            return (
+                f"A fuller {event} setup balancing focal, lighting and supporting "
+                f"details for {request.event.guest_count} guests without filling "
+                "every area."
+            )
+        return (
+            f"A high-impact {event} package for a larger visual presence, with more "
+            f"layers and quantities while respecting the confirmed obstacle map."
         )
 
 

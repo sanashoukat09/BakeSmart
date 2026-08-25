@@ -1,4 +1,5 @@
 import base64
+from copy import deepcopy
 from io import BytesIO
 
 import numpy as np
@@ -50,9 +51,11 @@ def test_venue_photo_is_analysed_locally_without_scale_claim(client):
     )
     assert body["exact_scale_available"] is False
     assert body["persisted"] is False
+    assert body["temporarily_stored"] is True
+    assert body["temporary_storage_expires_at"]
     assert body["manual_outlets"] == []
     assert "image_base64" not in body
-    assert any("not persisted" in item for item in body["limitations"])
+    assert any("up to 24 hours" in item for item in body["limitations"])
     assert any("automatically confirmed" in item for item in body["limitations"])
 
 
@@ -84,6 +87,49 @@ def test_declared_media_type_must_match_photo_content(client):
 
     assert response.status_code == 422
     assert "media type" in response.json()["detail"]["message"]
+
+
+def test_stage1_uses_temporary_photos_for_three_concept_previews(
+    client,
+    valid_design_request,
+):
+    encoded = _venue_photo_base64()
+    venue = client.post(
+        "/api/v1/venue-photos/analyze",
+        json={
+            "file_name": "venue.png",
+            "media_type": "image/png",
+            "image_base64": encoded,
+            "angle": "wide",
+        },
+    )
+    cake = client.post(
+        "/api/v1/design-assets/cake",
+        json={
+            "file_name": "cake.png",
+            "media_type": "image/png",
+            "image_base64": encoded,
+        },
+    )
+    assert venue.status_code == cake.status_code == 200
+    assert cake.json()["asset_id"].startswith("cake-photo-")
+    assert cake.json()["persisted_permanently"] is False
+
+    request = deepcopy(valid_design_request)
+    request["space"]["photo_references"] = [venue.json()["photo_id"]]
+    request["space"]["photo_evidence"][0]["photo_id"] = venue.json()["photo_id"]
+    request["cake"]["cake_image_reference"] = cake.json()["asset_id"]
+    response = client.post("/api/v1/recommendations", json=request)
+
+    assert response.status_code == 200
+    packages = response.json()["packages"]
+    assert len(packages) == 3
+    assert all(package["photo_preview_url"] for package in packages)
+    for package in packages:
+        preview = client.get(package["photo_preview_url"])
+        assert preview.status_code == 200
+        assert preview.headers["content-type"] == "image/png"
+        assert preview.content.startswith(b"\x89PNG")
 
 
 def test_reviewed_real_runtime_is_preferred_and_reported_honestly():

@@ -47,6 +47,25 @@ class _EventDesignResultScreenState
     }
   }
 
+  Future<void> _openPhotoPreview(EventDesignPackage package) async {
+    final path = package.photoPreviewPath;
+    if (path == null) {
+      _message(
+        'This temporary photo preview is unavailable. Reanalyse the photos and generate again.',
+      );
+      return;
+    }
+    try {
+      final opened =
+          await ref.read(eventDesignServiceProvider).openResource(path);
+      if (!opened && mounted) {
+        _message('The photo-based concept preview could not be opened.');
+      }
+    } catch (error) {
+      if (mounted) _message(error.toString());
+    }
+  }
+
   Future<void> _openPreview(EventPreviewDecision decision) async {
     final path = decision.resourcePath;
     if (path == null) {
@@ -84,10 +103,19 @@ class _EventDesignResultScreenState
   }
 
   Future<void> _share() async {
+    EventDesignPackage? recommendedPackage;
+    for (final package in _recommendation.packages) {
+      if (package.recommended) {
+        recommendedPackage = package;
+        break;
+      }
+    }
+    final photoPath = recommendedPackage?.photoPreviewPath;
     final viewerPath = _recommendation.viewerPath;
-    if (!_recommendation.interactive3dReady || viewerPath == null) {
+    final resourcePath = photoPath ?? viewerPath;
+    if (resourcePath == null) {
       _message(_recommendation.fallbackLabel ??
-          'Concept preview—not to scale. A shareable 3D link is unavailable.');
+          'Concept preview—not to scale. A shareable preview is unavailable.');
       return;
     }
     final saved = await _save(showConfirmation: false);
@@ -99,7 +127,10 @@ class _EventDesignResultScreenState
       final shared = await ShareUtil.shareEventDesign(
         themeName: _recommendation.themeLabel,
         designId: _recommendation.designId,
-        viewerUrl: service.absoluteResourceUri(viewerPath).toString(),
+        previewUrl: service.absoluteResourceUri(resourcePath).toString(),
+        previewLabel: photoPath == null
+            ? 'Open Basic 3D Layout Preview'
+            : 'Open Photo-Based Preview',
         sharePositionOrigin: renderBox == null
             ? null
             : renderBox.localToGlobal(Offset.zero) & renderBox.size,
@@ -145,7 +176,7 @@ class _EventDesignResultScreenState
         backgroundColor: _canvas,
         foregroundColor: _ink,
         elevation: 0,
-        title: const Text('Your 3D Design'),
+        title: const Text('Your Design Options'),
         actions: [
           IconButton(
             tooltip: 'Saved designs',
@@ -185,6 +216,10 @@ class _EventDesignResultScreenState
             Icons.cake_outlined,
           ),
           const SizedBox(height: 18),
+          if (_recommendation.packages.isNotEmpty) ...[
+            _packageOptions(money),
+            const SizedBox(height: 18),
+          ],
           _deviceCompatibilityCard(capabilities),
           const SizedBox(height: 12),
           if (_recommendation.venueAssessment != null) ...[
@@ -194,7 +229,7 @@ class _EventDesignResultScreenState
           _actionButtons(capabilities),
           const SizedBox(height: 22),
           _detailsCard(
-            title: 'Recommended decorations',
+            title: 'Top recommended package details',
             icon: Icons.celebration_outlined,
             child: _recommendation.decorations.isEmpty
                 ? const Text('No decoration package was selected.')
@@ -239,12 +274,20 @@ class _EventDesignResultScreenState
                   _recommendation.venueAssessment?.clearanceVerified == true &&
                           _recommendation.venueAssessment?.scaleSource ==
                               'user_confirmed_measurements'
-                      ? 'This procedural layout uses customer-confirmed measurements '
-                          'and the confirmed obstacle map. Verify the physical setup '
-                          'again before installation; the cake photo is still a reference.'
-                      : 'This is a procedural Concept preview—not to scale. The cake '
-                          'picture is a reference and is not reconstructed into 3D.',
+                      ? 'The photo previews use your real venue and cake pictures. They '
+                          'are visual concepts, not scale-accurate installation plans. '
+                          'The Basic 3D preview remains a measured placeholder layout.'
+                      : 'The photo previews use your real venue and cake pictures, but '
+                          'remain Concept previews—not to scale. Recheck all physical '
+                          'clearances before installation.',
                   style: const TextStyle(color: _muted, height: 1.45),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Stage 1 does not include photorealistic 3D catalogue assets. '
+                  'The Basic 3D Layout Preview uses placeholders; real GLB decor '
+                  'assets and material textures belong to Stage 2.',
+                  style: TextStyle(color: _muted, height: 1.45),
                 ),
                 if (_recommendation.warnings.isNotEmpty) ...[
                   const SizedBox(height: 12),
@@ -314,7 +357,7 @@ class _EventDesignResultScreenState
           ),
           const SizedBox(height: 6),
           const Text(
-            'Cake, dessert table and decorations combined in one scene',
+            'Three varied decoration packages using your venue and cake photos',
             style: TextStyle(color: Color(0xFFFFE8D5), height: 1.4),
           ),
           const SizedBox(height: 14),
@@ -322,14 +365,135 @@ class _EventDesignResultScreenState
             spacing: 8,
             runSpacing: 8,
             children: const [
-              _Badge(label: 'Procedural GLB'),
-              _Badge(label: 'Interactive 3D'),
-              _Badge(label: 'No AR required'),
+              _Badge(label: 'Real-photo preview'),
+              _Badge(label: '3 varied packages'),
+              _Badge(label: 'Local processing'),
             ],
           ),
         ],
       ),
     );
+  }
+
+  Widget _packageOptions(NumberFormat money) {
+    final packages = [..._recommendation.packages]
+      ..sort((left, right) {
+        if (left.recommended == right.recommended) return 0;
+        return left.recommended ? -1 : 1;
+      });
+    return _detailsCard(
+      title: 'Choose a decoration direction',
+      icon: Icons.photo_library_outlined,
+      child: Column(
+        children: packages.map((package) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: package.recommended
+                  ? const Color(0xFFFFF3E8)
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: package.recommended
+                    ? _brown
+                    : const Color(0xFFE8DDD6),
+              ),
+            ),
+            child: ExpansionTile(
+              tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+              childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              initiallyExpanded: package.recommended,
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      package.name,
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                  if (package.recommended)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _brown,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Text(
+                        'Top pick',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              subtitle: Text(
+                '${package.decorations.length} decor types • PKR ${money.format(package.totalCostPkr)} total',
+                style: const TextStyle(color: _muted),
+              ),
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    package.rationale,
+                    style: const TextStyle(color: _muted, height: 1.4),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...package.decorations.map(
+                  (decoration) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.check_circle_outline, size: 19, color: _brown),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${decoration.name} × ${decoration.quantity}\n'
+                            '${_decorationDescription(decoration)}',
+                            style: const TextStyle(height: 1.35),
+                          ),
+                        ),
+                        Text(
+                          'PKR ${money.format(decoration.unitCostPkr * decoration.quantity)}',
+                          style: const TextStyle(
+                            color: _brown,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: package.photoPreviewPath == null
+                        ? null
+                        : () => _openPhotoPreview(package),
+                    style: FilledButton.styleFrom(backgroundColor: _brown),
+                    icon: const Icon(Icons.photo_outlined),
+                    label: const Text('Open Photo-Based Preview'),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(growable: false),
+      ),
+    );
+  }
+
+  static String _decorationDescription(EventDecoration decoration) {
+    final reason = decoration.reason ?? decoration.category;
+    final safety = decoration.safetyNote;
+    return safety == null ? reason : '$reason\nSafety: $safety';
   }
 
   Widget _actionButtons(

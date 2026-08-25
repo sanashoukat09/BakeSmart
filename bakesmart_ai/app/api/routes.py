@@ -2,11 +2,13 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.schemas.design import (
     AreaType,
+    CakePhotoUploadRequest,
     CapabilitiesResponse,
     DesignRequest,
     EnvironmentType,
     EventType,
     RecommendationResponse,
+    TemporaryPhotoAsset,
     ValidationResponse,
     VenuePhotoAnalysis,
     VenuePhotoAnalysisRequest,
@@ -90,6 +92,26 @@ async def analyze_venue_photo(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "code": "invalid_venue_photo",
+                "message": str(exc),
+            },
+        ) from exc
+
+
+@router.post(
+    "/design-assets/cake",
+    response_model=TemporaryPhotoAsset,
+    tags=["venue evidence"],
+)
+async def upload_cake_photo(
+    request: CakePhotoUploadRequest,
+) -> TemporaryPhotoAsset:
+    try:
+        return venue_photo_analyzer.store_cake_photo(request)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "invalid_cake_photo",
                 "message": str(exc),
             },
         ) from exc

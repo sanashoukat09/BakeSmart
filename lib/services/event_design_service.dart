@@ -137,6 +137,58 @@ class EventDesignService {
     }
   }
 
+  Future<String> uploadCakePhoto({
+    required Uint8List bytes,
+    required String fileName,
+  }) async {
+    if (bytes.isEmpty || bytes.length > 8000000) {
+      throw const EventDesignServiceException(
+        'Cake photos must be non-empty and no larger than 8 MB.',
+      );
+    }
+    final mediaType = _photoMediaType(bytes);
+    if (mediaType == null) {
+      throw const EventDesignServiceException(
+        'Select a JPEG or PNG cake photo.',
+      );
+    }
+    final uri = absoluteResourceUri('/api/v1/design-assets/cake');
+    try {
+      final response = await _client
+          .post(
+            uri,
+            headers: const {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'file_name': fileName,
+              'media_type': mediaType,
+              'image_base64': base64Encode(bytes),
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+      final decoded = _decodeObject(response.body);
+      if (response.statusCode != 200) {
+        throw EventDesignServiceException(
+          _errorMessage(decoded, response.statusCode),
+        );
+      }
+      return decoded['asset_id'] as String;
+    } on TimeoutException {
+      throw const EventDesignServiceException(
+        'The cake photo upload took too long. Check the local Python service.',
+      );
+    } on EventDesignServiceException {
+      rethrow;
+    } on FormatException {
+      throw const EventDesignServiceException(
+        'The cake photo service returned an unreadable response.',
+      );
+    } on http.ClientException {
+      throw EventDesignServiceException(
+        'Could not reach the local BakeSmart model at $baseUrl.',
+      );
+    }
+  }
+
   Future<void> openViewer(EventDesignRecommendation recommendation) async {
     final path = recommendation.viewerPath;
     if (!recommendation.interactive3dReady || path == null) {

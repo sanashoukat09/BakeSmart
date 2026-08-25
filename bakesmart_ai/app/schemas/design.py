@@ -268,6 +268,8 @@ class DecorRecommendation(StrictModel):
     quantity: int = Field(ge=1)
     unit_cost_pkr: int = Field(ge=0)
     placements: list[ObjectPlacement] = Field(min_length=1)
+    reason: str | None = Field(default=None, max_length=300)
+    safety_note: str | None = Field(default=None, max_length=500)
 
 
 class CakePlacement(StrictModel):
@@ -302,6 +304,20 @@ class VenuePhotoAnalysisRequest(StrictModel):
     angle: PhotoAngle
 
 
+class CakePhotoUploadRequest(StrictModel):
+    file_name: str = Field(min_length=1, max_length=180)
+    media_type: Literal["image/jpeg", "image/png"]
+    image_base64: str = Field(min_length=4, max_length=11_000_000)
+
+
+class TemporaryPhotoAsset(StrictModel):
+    asset_id: str = Field(pattern=r"^cake-photo-[a-f0-9]{20}$")
+    pixel_width: int = Field(ge=1, le=20_000)
+    pixel_height: int = Field(ge=1, le=20_000)
+    expires_at: datetime
+    persisted_permanently: Literal[False] = False
+
+
 class VenuePhotoAnalysis(StrictModel):
     photo_id: str = Field(pattern=r"^venue-photo-[a-f0-9]{20}$")
     angle: PhotoAngle
@@ -321,6 +337,8 @@ class VenuePhotoAnalysis(StrictModel):
     limitations: list[str]
     exact_scale_available: Literal[False] = False
     persisted: Literal[False] = False
+    temporarily_stored: bool = False
+    temporary_storage_expires_at: datetime | None = None
 
 
 class VenueAssessment(StrictModel):
@@ -344,11 +362,29 @@ class VenueAssessment(StrictModel):
 class PreviewAvailability(StrictModel):
     interactive_3d_ready: bool
     viewer_3d_url: str | None = None
-    viewer_label: Literal["Open Interactive 3D View"] | None = None
+    viewer_label: Literal[
+        "Open Interactive 3D View",
+        "Open Basic 3D Layout Preview",
+    ] | None = None
     scene_glb_url: str | None = None
     ar_supported: bool | None = None
     ar_url: str | None = None
     fallback_label: Literal["Concept preview—not to scale"] | None = None
+
+
+class DesignPackageRecommendation(StrictModel):
+    package_id: Literal["essential", "balanced", "statement"]
+    name: str = Field(min_length=1, max_length=80)
+    selected_theme_id: str
+    rationale: str = Field(min_length=1, max_length=500)
+    decorations: list[DecorRecommendation]
+    decoration_cost_pkr: int = Field(ge=0)
+    cake_cost_pkr: int = Field(ge=0)
+    total_cost_pkr: int = Field(ge=0)
+    budget_pkr: int = Field(gt=0)
+    remaining_budget_pkr: int = Field(ge=0)
+    photo_preview_url: str | None = None
+    recommended: bool = False
 
 
 class SceneSpecification(StrictModel):
@@ -385,6 +421,10 @@ class RecommendationResponse(StrictModel):
     venue_assessment: VenueAssessment
     scene: SceneSpecification
     preview: PreviewAvailability
+    packages: list[DesignPackageRecommendation] = Field(default_factory=list)
+    recommended_package_id: (
+        Literal["essential", "balanced", "statement"] | None
+    ) = None
     warnings: list[str] = Field(default_factory=list)
 
 

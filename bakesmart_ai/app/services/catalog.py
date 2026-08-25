@@ -43,11 +43,14 @@ class CatalogStore:
         event_type: str,
         environment: str,
     ) -> list[dict[str, str]]:
-        candidates = [
+        theme_candidates = [
             row
             for row in self.decorations
-            if row["theme_id"] == theme_id and _event_matches(row, event_type)
+            if row["theme_id"] == theme_id
         ]
+        candidates = [
+            row for row in theme_candidates if _event_matches(row, event_type)
+        ] or theme_candidates
         compatible: list[dict[str, str]] = []
         for row in candidates:
             allowed = row["indoor_outdoor"]

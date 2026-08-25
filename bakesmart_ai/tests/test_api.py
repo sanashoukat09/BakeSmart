@@ -5,7 +5,7 @@ def test_health_reports_ready_local_model(client):
     assert response.json() == {
         "status": "ok",
         "service": "BakeSmart AI",
-        "version": "0.5.0",
+        "version": "0.6.0",
         "model_status": "ready",
     }
 
@@ -33,7 +33,7 @@ def test_valid_design_request_is_normalized(client, valid_design_request):
     assert len(body["warnings"]) == 1
 
 
-def test_recommendation_returns_one_budget_aware_scene(client, valid_design_request):
+def test_recommendation_returns_three_budget_aware_packages(client, valid_design_request):
     response = client.post("/api/v1/recommendations", json=valid_design_request)
 
     assert response.status_code == 200
@@ -54,18 +54,16 @@ def test_recommendation_returns_one_budget_aware_scene(client, valid_design_requ
     )
 
     roles = {item["role"] for item in body["scene"]["objects"]}
-    assert {"cake", "cake_table", "backdrop", "decoration", "lighting"} <= roles
-    assert body["scene"]["layers"] == [
+    assert {"cake", "cake_table", "backdrop"} <= roles
+    assert body["scene"]["layers"][:2] == [
         "cake_and_baked_items",
         "dessert_table",
-        "decorations",
-        "backdrop",
-        "lighting",
     ]
+    assert "backdrop" in body["scene"]["layers"]
     assert body["preview"] == {
         "interactive_3d_ready": True,
         "viewer_3d_url": f"/viewer/{body['design_id']}",
-        "viewer_label": "Open Interactive 3D View",
+        "viewer_label": "Open Basic 3D Layout Preview",
         "scene_glb_url": f"/api/v1/designs/{body['design_id']}/scene.glb",
         "ar_supported": None,
         "ar_url": None,
@@ -78,6 +76,18 @@ def test_recommendation_returns_one_budget_aware_scene(client, valid_design_requ
     assert body["venue_assessment"]["evidence_confidence"] == "medium"
     assert body["venue_assessment"]["available_front_clearance_m"] == 1.575
     assert body["venue_assessment"]["obstacle_map_confirmed"] is True
+    assert [item["package_id"] for item in body["packages"]] == [
+        "essential",
+        "balanced",
+        "statement",
+    ]
+    assert body["recommended_package_id"] == "balanced"
+    assert sum(item["recommended"] for item in body["packages"]) == 1
+    assert len({len(item["decorations"]) for item in body["packages"]}) >= 2
+    assert all(
+        item["decoration_cost_pkr"] <= item["budget_pkr"]
+        for item in body["packages"]
+    )
 
 
 def test_recommendation_id_is_deterministic(client, valid_design_request):
@@ -118,7 +128,11 @@ def test_unknown_viewer_scene_returns_not_found(client):
     viewer = client.get("/viewer/design-00000000000000000000")
     glb = client.get("/api/v1/designs/design-00000000000000000000/scene.glb")
     invalid = client.get("/viewer/not-a-design")
+    preview = client.get(
+        "/api/v1/designs/design-00000000000000000000/previews/unknown.png"
+    )
 
     assert viewer.status_code == 404
     assert glb.status_code == 404
     assert invalid.status_code == 404
+    assert preview.status_code == 404

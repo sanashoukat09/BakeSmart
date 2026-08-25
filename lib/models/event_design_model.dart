@@ -179,6 +179,8 @@ class VenuePhotoAnalysis {
   final List<ManualOutletMark> manualOutlets;
   final List<String> observations;
   final List<String> limitations;
+  final bool temporarilyStored;
+  final DateTime? temporaryStorageExpiresAt;
 
   const VenuePhotoAnalysis({
     required this.photoId,
@@ -197,6 +199,8 @@ class VenuePhotoAnalysis {
     this.manualOutlets = const [],
     required this.observations,
     required this.limitations,
+    this.temporarilyStored = false,
+    this.temporaryStorageExpiresAt,
   });
 
   factory VenuePhotoAnalysis.fromJson(Map<String, dynamic> json) {
@@ -229,6 +233,9 @@ class VenuePhotoAnalysis {
           List<String>.from(json['observations'] as List? ?? const []),
       limitations:
           List<String>.from(json['limitations'] as List? ?? const []),
+      temporarilyStored: json['temporarily_stored'] as bool? ?? false,
+      temporaryStorageExpiresAt:
+          DateTime.tryParse(json['temporary_storage_expires_at'] as String? ?? ''),
     );
   }
 
@@ -269,6 +276,8 @@ class VenuePhotoAnalysis {
       manualOutlets: List.unmodifiable(marks),
       observations: observations,
       limitations: limitations,
+      temporarilyStored: temporarilyStored,
+      temporaryStorageExpiresAt: temporaryStorageExpiresAt,
     );
   }
 }
@@ -422,12 +431,7 @@ class EventDesignRequest {
         'theme_id': themeId,
         'preferred_colors': preferredColors,
         'excluded_colors': <String>[],
-        'required_decor_categories': [
-          'backdrop',
-          'table-setting',
-          'lighting',
-          'signage',
-        ],
+        'required_decor_categories': <String>[],
         'excluded_decor_categories': <String>[],
       },
       'cake': cake,
@@ -497,12 +501,16 @@ class EventDecoration {
   final String category;
   final int quantity;
   final int unitCostPkr;
+  final String? reason;
+  final String? safetyNote;
 
   const EventDecoration({
     required this.name,
     required this.category,
     required this.quantity,
     required this.unitCostPkr,
+    this.reason,
+    this.safetyNote,
   });
 
   factory EventDecoration.fromJson(Map<String, dynamic> json) {
@@ -511,6 +519,61 @@ class EventDecoration {
       category: json['category'] as String? ?? 'decor',
       quantity: (json['quantity'] as num? ?? 1).toInt(),
       unitCostPkr: (json['unit_cost_pkr'] as num? ?? 0).toInt(),
+      reason: json['reason'] as String?,
+      safetyNote: json['safety_note'] as String?,
+    );
+  }
+}
+
+class EventDesignPackage {
+  final String packageId;
+  final String name;
+  final String themeId;
+  final String rationale;
+  final List<EventDecoration> decorations;
+  final int decorationCostPkr;
+  final int cakeCostPkr;
+  final int totalCostPkr;
+  final int budgetPkr;
+  final int remainingBudgetPkr;
+  final String? photoPreviewPath;
+  final bool recommended;
+
+  const EventDesignPackage({
+    required this.packageId,
+    required this.name,
+    required this.themeId,
+    required this.rationale,
+    required this.decorations,
+    required this.decorationCostPkr,
+    required this.cakeCostPkr,
+    required this.totalCostPkr,
+    required this.budgetPkr,
+    required this.remainingBudgetPkr,
+    required this.photoPreviewPath,
+    required this.recommended,
+  });
+
+  factory EventDesignPackage.fromJson(Map<String, dynamic> json) {
+    return EventDesignPackage(
+      packageId: json['package_id'] as String,
+      name: json['name'] as String,
+      themeId: json['selected_theme_id'] as String,
+      rationale: json['rationale'] as String,
+      decorations: (json['decorations'] as List? ?? const [])
+          .map((item) => EventDecoration.fromJson(
+                Map<String, dynamic>.from(item as Map),
+              ))
+          .toList(growable: false),
+      decorationCostPkr:
+          (json['decoration_cost_pkr'] as num? ?? 0).toInt(),
+      cakeCostPkr: (json['cake_cost_pkr'] as num? ?? 0).toInt(),
+      totalCostPkr: (json['total_cost_pkr'] as num? ?? 0).toInt(),
+      budgetPkr: (json['budget_pkr'] as num? ?? 0).toInt(),
+      remainingBudgetPkr:
+          (json['remaining_budget_pkr'] as num? ?? 0).toInt(),
+      photoPreviewPath: json['photo_preview_url'] as String?,
+      recommended: json['recommended'] as bool? ?? false,
     );
   }
 }
@@ -534,6 +597,8 @@ class EventDesignRecommendation {
   final String? arPath;
   final String? fallbackLabel;
   final List<String> warnings;
+  final List<EventDesignPackage> packages;
+  final String? recommendedPackageId;
   final Map<String, dynamic> rawJson;
 
   const EventDesignRecommendation({
@@ -555,6 +620,8 @@ class EventDesignRecommendation {
     required this.arPath,
     required this.fallbackLabel,
     required this.warnings,
+    this.packages = const [],
+    this.recommendedPackageId,
     required this.rawJson,
   });
 
@@ -594,6 +661,12 @@ class EventDesignRecommendation {
       arPath: preview['ar_url'] as String?,
       fallbackLabel: preview['fallback_label'] as String?,
       warnings: List<String>.from(json['warnings'] as List? ?? const []),
+      packages: (json['packages'] as List? ?? const [])
+          .map((item) => EventDesignPackage.fromJson(
+                Map<String, dynamic>.from(item as Map),
+              ))
+          .toList(growable: false),
+      recommendedPackageId: json['recommended_package_id'] as String?,
       rawJson: Map<String, dynamic>.from(json),
     );
   }

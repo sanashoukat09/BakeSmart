@@ -93,7 +93,7 @@ abstract final class EventPreviewPolicy {
     if (interactiveAvailable) {
       return EventPreviewDecision(
         mode: EventPreviewMode.interactive3d,
-        label: 'Open Interactive 3D View',
+        label: 'Open Basic 3D Layout Preview',
         resourcePath: recommendation.viewerPath,
         explanation: _interactiveExplanation(capabilities, recommendation),
       );

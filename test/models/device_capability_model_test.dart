@@ -42,7 +42,7 @@ void main() {
       );
 
       expect(decision.mode, EventPreviewMode.interactive3d);
-      expect(decision.label, 'Open Interactive 3D View');
+      expect(decision.label, 'Open Basic 3D Layout Preview');
       expect(decision.explanation, contains('without Google Play Services'));
     });
 

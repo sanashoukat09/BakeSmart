@@ -37,14 +37,15 @@ class ShareUtil {
   static Future<bool> shareEventDesign({
     required String themeName,
     required String designId,
-    required String viewerUrl,
+    required String previewUrl,
+    required String previewLabel,
     Rect? sharePositionOrigin,
   }) async {
     final message = 'See my $themeName event concept from BakeSmart. '
-        'The cake and decorations are shown together in an interactive 3D view.\n\n'
-        'Open Interactive 3D View: $viewerUrl\n\n'
+        'The concept combines my venue and cake photos with a decoration package.\n\n'
+        '$previewLabel: $previewUrl\n\n'
         'Design: $designId\n'
-        'Procedural concept preview—not to scale.';
+        'Concept preview—not to scale.';
     final result = await Share.share(
       message,
       sharePositionOrigin: sharePositionOrigin,

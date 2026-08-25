@@ -30,6 +30,12 @@ seven-class venue segmentation model trained locally from random NumPy weights.
 Its synthetic-bootstrap candidates are unconfirmed and never override measured
 geometry or the customer-confirmed obstacle map.
 
+Stage 1 photo previews add temporary local venue/cake photo storage, three
+budget-and-density decoration packages, and shareable concept PNGs composed
+from the customer's real photos. Temporary photos and previews expire after 24
+hours and stay under the ignored `runtime/` directory. The procedural GLB is
+retained only as an explicitly labelled Basic 3D Layout Preview.
+
 Phase 12 adds an offline, provenance-first Commons collection tool. Its frozen
 source audit contains 176 CC0/public-domain/CC BY candidates, but all remain
 blocked from training until the image is visually approved, manually masked and
@@ -149,9 +155,11 @@ The current recommendation labels are synthetic and pending expert review. See
 |---|---|---|
 | `GET` | `/health` | Service and model readiness |
 | `GET` | `/api/v1/capabilities` | Supported input values |
-| `POST` | `/api/v1/venue-photos/analyze` | Analyse one JPEG/PNG in memory and return non-scale photo evidence |
+| `POST` | `/api/v1/venue-photos/analyze` | Analyse one JPEG/PNG and keep a temporary local copy for photo previews |
+| `POST` | `/api/v1/design-assets/cake` | Keep a validated cake photo locally for up to 24 hours |
 | `POST` | `/api/v1/designs/validate` | Validate and normalize a design request |
-| `POST` | `/api/v1/recommendations` | Run local inference and return one budget-aware scene specification |
+| `POST` | `/api/v1/recommendations` | Return Essential, Balanced and Statement packages plus the top recommendation |
+| `GET` | `/api/v1/designs/{design_id}/previews/{package_id}.png` | Open a real-photo concept preview |
 | `GET` | `/viewer/{design_id}` | Open the local interactive 3D viewer |
 | `GET` | `/api/v1/designs/{design_id}/scene.glb` | Download the generated combined GLB scene |
 
@@ -159,7 +167,7 @@ The recommendation endpoint now loads the verified local Phase 5 checkpoint and
 returns the cake, cake table, decorations, backdrop, lighting and coordinates in
 one response. Phase 7 procedurally builds those layers into one glTF 2.0 binary
 scene, stores it under the ignored runtime directory, and returns a real local
-`Open Interactive 3D View` link plus a direct GLB link. The viewer uses no CDN or
+`Open Basic 3D Layout Preview` link plus a direct GLB link. The viewer uses no CDN or
 external service.
 
 The current geometry is a colored procedural representation, not a reconstruction
@@ -178,7 +186,9 @@ walkway candidates, but never confirms those candidates or physical scale.
 When a frozen and locked-test-evaluated real checkpoint is available locally,
 the endpoint instead uses its six semantic classes and derives Walkway from
 predicted Floor. It still never confirms obstacles or scale automatically.
-The raw JPEG/PNG is decoded in memory and discarded. Placement safety uses only
+The raw JPEG/PNG is resized and stored locally for at most 24 hours so the Stage
+1 concept renderer can use the customer's venue and cake pixels. It is not sent
+to an external inference service. Placement safety uses only
 customer-confirmed dimensions and obstacle coordinates, keeps a minimum 0.90 m
 front circulation target, and exposes unknowns in `venue_assessment.assumptions`.
 
@@ -208,7 +218,7 @@ bakesmart_ai/
 │   ├── raw/          # Local source workbooks; ignored by Git
 │   └── processed/    # Future generated model inputs; ignored by Git
 ├── models/           # Recommendation and venue-vision bootstrap checkpoints
-├── runtime/scenes/   # Generated customer GLB scenes; ignored by Git
+├── runtime/          # Temporary photos/previews and generated GLBs; ignored by Git
 ├── training/         # Dataset preparation, training, metrics and local runtime
 └── tests/            # Automated API and schema tests
 ```
