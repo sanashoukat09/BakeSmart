@@ -50,6 +50,7 @@ def test_venue_photo_is_analysed_locally_without_scale_claim(client):
     )
     assert body["exact_scale_available"] is False
     assert body["persisted"] is False
+    assert body["manual_outlets"] == []
     assert "image_base64" not in body
     assert any("not persisted" in item for item in body["limitations"])
     assert any("automatically confirmed" in item for item in body["limitations"])

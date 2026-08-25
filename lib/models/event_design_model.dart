@@ -137,6 +137,31 @@ class VenueVisionCandidate {
   }
 }
 
+class ManualOutletMark {
+  final double xFraction;
+  final double yFraction;
+
+  const ManualOutletMark({
+    required this.xFraction,
+    required this.yFraction,
+  });
+
+  factory ManualOutletMark.fromJson(Map<String, dynamic> json) {
+    return ManualOutletMark(
+      xFraction: (json['x_fraction'] as num).toDouble(),
+      yFraction: (json['y_fraction'] as num).toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'x_fraction': xFraction,
+      'y_fraction': yFraction,
+      'source': 'customer_manual',
+    };
+  }
+}
+
 class VenuePhotoAnalysis {
   final String photoId;
   final String angle;
@@ -151,6 +176,7 @@ class VenuePhotoAnalysis {
   final double horizontalStructureScore;
   final String? visionModelVersion;
   final List<VenueVisionCandidate> unconfirmedCandidates;
+  final List<ManualOutletMark> manualOutlets;
   final List<String> observations;
   final List<String> limitations;
 
@@ -168,6 +194,7 @@ class VenuePhotoAnalysis {
     required this.horizontalStructureScore,
     this.visionModelVersion,
     this.unconfirmedCandidates = const [],
+    this.manualOutlets = const [],
     required this.observations,
     required this.limitations,
   });
@@ -193,6 +220,11 @@ class VenuePhotoAnalysis {
                     Map<String, dynamic>.from(item as Map),
                   ))
               .toList(growable: false),
+      manualOutlets: (json['manual_outlets'] as List? ?? const [])
+          .map((item) => ManualOutletMark.fromJson(
+                Map<String, dynamic>.from(item as Map),
+              ))
+          .toList(growable: false),
       observations:
           List<String>.from(json['observations'] as List? ?? const []),
       limitations:
@@ -215,7 +247,29 @@ class VenuePhotoAnalysis {
       'vision_model_version': visionModelVersion,
       'unconfirmed_candidates':
           unconfirmedCandidates.map((candidate) => candidate.toJson()).toList(),
+      'manual_outlets': manualOutlets.map((mark) => mark.toJson()).toList(),
     };
+  }
+
+  VenuePhotoAnalysis withManualOutlets(List<ManualOutletMark> marks) {
+    return VenuePhotoAnalysis(
+      photoId: photoId,
+      angle: angle,
+      pixelWidth: pixelWidth,
+      pixelHeight: pixelHeight,
+      fileSizeBytes: fileSizeBytes,
+      orientation: orientation,
+      quality: quality,
+      brightnessScore: brightnessScore,
+      contrastScore: contrastScore,
+      sharpnessScore: sharpnessScore,
+      horizontalStructureScore: horizontalStructureScore,
+      visionModelVersion: visionModelVersion,
+      unconfirmedCandidates: unconfirmedCandidates,
+      manualOutlets: List.unmodifiable(marks),
+      observations: observations,
+      limitations: limitations,
+    );
   }
 }
 

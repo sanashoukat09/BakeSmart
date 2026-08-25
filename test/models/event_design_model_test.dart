@@ -26,6 +26,7 @@ void main() {
       expect(evidence['vision_model_version'], 'venue-vision-bootstrap-v1');
       expect((evidence['unconfirmed_candidates'] as List).single['confirmed'],
           isFalse);
+      expect((evidence['manual_outlets'] as List).single['x_fraction'], 0.72);
     });
 
     test('round trips through the persisted request map', () {
@@ -42,6 +43,7 @@ void main() {
       expect(restored.venuePhotos.single.quality, 'high');
       expect(restored.venuePhotos.single.unconfirmedCandidates.single.label,
           'door');
+      expect(restored.venuePhotos.single.manualOutlets.single.yFraction, 0.61);
       expect(restored.obstacles.single.label, 'main door');
       expect(restored.obstacleMapConfirmed, isTrue);
       expect(restored.knownReferenceM, 1.5);
@@ -146,6 +148,9 @@ EventDesignRequest _request() {
             confirmed: false,
             source: 'synthetic_bootstrap_model',
           ),
+        ],
+        manualOutlets: [
+          ManualOutletMark(xFraction: 0.72, yFraction: 0.61),
         ],
         observations: ['Landscape venue photo supplied.'],
         limitations: ['No automatic object confirmation.'],

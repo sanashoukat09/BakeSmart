@@ -145,6 +145,155 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
     }
   }
 
+  Future<void> _markOutlets(String angle) async {
+    final isWide = angle == 'wide';
+    final bytes = isWide ? _wideVenueImageBytes : _secondVenueImageBytes;
+    final analysis = isWide ? _wideVenueAnalysis : _secondVenueAnalysis;
+    if (bytes == null || analysis == null) {
+      _showMessage('Select and analyse this venue photo first.');
+      return;
+    }
+    final draft = List<ManualOutletMark>.from(analysis.manualOutlets);
+    final result = await showDialog<List<ManualOutletMark>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          insetPadding: const EdgeInsets.all(16),
+          scrollable: true,
+          title: const Text('Mark visible outlets'),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Tap the centre of each visible electrical outlet. These are '
+                  'photo markers, not exact measurements.',
+                  style: TextStyle(color: Color(0xFF8C6D5F)),
+                ),
+                const SizedBox(height: 12),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final aspect =
+                        analysis.pixelWidth / analysis.pixelHeight;
+                    final imageHeight = constraints.maxWidth / aspect;
+                    return AspectRatio(
+                      aspectRatio: aspect,
+                      child: GestureDetector(
+                        onTapDown: (details) {
+                          if (draft.length >= 20) {
+                            _showMessage('You can mark up to 20 outlets per photo.');
+                            return;
+                          }
+                          setDialogState(() {
+                            draft.add(
+                              ManualOutletMark(
+                                xFraction: (details.localPosition.dx /
+                                        constraints.maxWidth)
+                                    .clamp(0.0, 1.0)
+                                    .toDouble(),
+                                yFraction:
+                                    (details.localPosition.dy / imageHeight)
+                                        .clamp(0.0, 1.0)
+                                        .toDouble(),
+                              ),
+                            );
+                          });
+                        },
+                        child: Stack(
+                          clipBehavior: Clip.hardEdge,
+                          fit: StackFit.expand,
+                          children: [
+                            Image.memory(bytes, fit: BoxFit.fill),
+                            ...draft.asMap().entries.map(
+                                  (entry) => Positioned(
+                                    left: entry.value.xFraction *
+                                            constraints.maxWidth -
+                                        12,
+                                    top: entry.value.yFraction * imageHeight - 12,
+                                    child: Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFE91E63),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        '${entry.key + 1}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${draft.length} outlet${draft.length == 1 ? '' : 's'} marked',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                const Text(
+                  'For exact clearance, also add relevant outlets as measured '
+                  'obstacles in the form.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFF9A5A14),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: draft.isEmpty
+                  ? null
+                  : () => setDialogState(() => draft.removeLast()),
+              child: const Text('Undo'),
+            ),
+            TextButton(
+              onPressed: draft.isEmpty
+                  ? null
+                  : () => setDialogState(draft.clear),
+              child: const Text('Clear'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(draft),
+              child: const Text('Save marks'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || result == null) return;
+    setState(() {
+      final updated = analysis.withManualOutlets(result);
+      if (isWide) {
+        _wideVenueAnalysis = updated;
+      } else {
+        _secondVenueAnalysis = updated;
+      }
+      _obstacleMapConfirmed = false;
+    });
+  }
+
   void _addObstacle() {
     if (_obstacles.length >= 10) {
       _showMessage('You can add up to 10 major obstacles in this form.');
@@ -301,6 +450,10 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
                   analysing: _analysingWidePhoto,
                   onTap: () => _pickVenueImage('wide'),
                 ),
+                _manualOutletControl(
+                  angle: 'wide',
+                  analysis: _wideVenueAnalysis,
+                ),
                 _venuePhotoPicker(
                   title: 'Second angle (recommended)',
                   subtitle: 'Reduces blind spots outside the first photo.',
@@ -308,6 +461,10 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
                   analysis: _secondVenueAnalysis,
                   analysing: _analysingSecondPhoto,
                   onTap: () => _pickVenueImage('second_angle'),
+                ),
+                _manualOutletControl(
+                  angle: 'second_angle',
+                  analysis: _secondVenueAnalysis,
                 ),
                 _optionalDecimalField(
                   'Known reference length (m)',
@@ -648,6 +805,25 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
                                   ),
                                 ),
                               ),
+                        if (analysis != null)
+                          ...analysis.manualOutlets.map(
+                            (mark) => Positioned(
+                              left: mark.xFraction * 88 - 6,
+                              top: mark.yFraction * 78 - 6,
+                              child: Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE91E63),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 1.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
             ),
@@ -716,6 +892,25 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
               color: analysis == null ? _brown : const Color(0xFF287A50),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _manualOutletControl({
+    required String angle,
+    required VenuePhotoAnalysis? analysis,
+  }) {
+    final count = analysis?.manualOutlets.length ?? 0;
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: OutlinedButton.icon(
+        onPressed: analysis == null ? null : () => _markOutlets(angle),
+        icon: const Icon(Icons.power_outlined),
+        label: Text(
+          count == 0
+              ? 'Mark visible outlets (optional)'
+              : 'Edit outlet marks ($count)',
         ),
       ),
     );

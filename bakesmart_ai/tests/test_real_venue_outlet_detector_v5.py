@@ -4,6 +4,7 @@ import torch
 from training.train_real_venue_outlet_detector_v5 import (
     _box_iou,
     _validate_target,
+    object_boxes,
     outlet_boxes,
 )
 
@@ -33,3 +34,10 @@ def test_outlet_boxes_expand_single_pixel_component_only_when_not_noise():
 def test_target_validation_accepts_empty_negative_scene():
     target = {"boxes": torch.zeros((0, 4), dtype=torch.float32)}
     _validate_target(target, 100, 80, "negative-scene")
+
+
+def test_generic_box_extraction_supports_door_class():
+    labels = np.zeros((30, 40), dtype=np.uint8)
+    labels[4:25, 10:22] = 2
+    boxes = object_boxes(labels, 2)
+    assert boxes.tolist() == [[10.0, 4.0, 22.0, 25.0]]

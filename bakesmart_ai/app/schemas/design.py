@@ -93,6 +93,12 @@ class VenueVisionCandidate(StrictModel):
         return self
 
 
+class ManualOutletMark(StrictModel):
+    x_fraction: float = Field(ge=0, le=1)
+    y_fraction: float = Field(ge=0, le=1)
+    source: Literal["customer_manual"] = "customer_manual"
+
+
 class CakeShape(str, Enum):
     ROUND = "round"
     SQUARE = "square"
@@ -135,6 +141,10 @@ class VenuePhotoEvidence(StrictModel):
     unconfirmed_candidates: list[VenueVisionCandidate] = Field(
         default_factory=list,
         max_length=10,
+    )
+    manual_outlets: list[ManualOutletMark] = Field(
+        default_factory=list,
+        max_length=20,
     )
 
 
@@ -305,6 +315,7 @@ class VenuePhotoAnalysis(StrictModel):
     horizontal_structure_score: float = Field(ge=0, le=1)
     vision_model_version: str | None = None
     unconfirmed_candidates: list[VenueVisionCandidate] = Field(default_factory=list)
+    manual_outlets: list[ManualOutletMark] = Field(default_factory=list)
     observations: list[str]
     limitations: list[str]
     exact_scale_available: Literal[False] = False

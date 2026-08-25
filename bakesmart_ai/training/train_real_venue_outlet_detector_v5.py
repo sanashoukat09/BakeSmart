@@ -13,6 +13,7 @@ import math
 import os
 import random
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 import cv2
@@ -29,7 +30,7 @@ try:
     from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 except ImportError as exc:  # pragma: no cover
     raise SystemExit(
-        "PyTorch and torchvision are required for the v5 Outlet detector. "
+        "PyTorch and torchvision are required for the v5 object detector. "
         "Run: pip install -r requirements.txt"
     ) from exc
 
@@ -55,9 +56,28 @@ MIN_COMPONENT_AREA = 4
 MIN_BOX_SIDE = 4
 
 
-def outlet_boxes(labels: np.ndarray) -> np.ndarray:
+@dataclass(frozen=True)
+class ObjectDetectorProfile:
+    class_id: int
+    class_key: str
+    display_name: str
+    model_name: str
+    title: str
+    minimum_training_scenes: int = 1
+
+
+OUTLET_PROFILE = ObjectDetectorProfile(
+    class_id=OUTLET_ID,
+    class_key="outlet",
+    display_name="Outlet",
+    model_name="BakeSmartOutletDetector",
+    title="BakeSmart Step 4 v5 — Dedicated Outlet Detector",
+)
+
+
+def object_boxes(labels: np.ndarray, class_id: int) -> np.ndarray:
     count, _components, stats, _centroids = cv2.connectedComponentsWithStats(
-        (labels == OUTLET_ID).astype(np.uint8), connectivity=8
+        (labels == class_id).astype(np.uint8), connectivity=8
     )
     boxes: list[list[float]] = []
     for component in range(1, count):
@@ -84,6 +104,11 @@ def outlet_boxes(labels: np.ndarray) -> np.ndarray:
     return np.asarray(boxes, dtype=np.float32)
 
 
+def outlet_boxes(labels: np.ndarray) -> np.ndarray:
+    """Backward-compatible Outlet box helper used by tests and audits."""
+    return object_boxes(labels, OUTLET_ID)
+
+
 def _load_pair(sample: SplitSample) -> tuple[Image.Image, Image.Image]:
     with Image.open(sample.image_path) as opened:
         image = ImageOps.exif_transpose(opened).convert("RGB")
@@ -99,8 +124,9 @@ def _focus_crop(
     mask: Image.Image,
     *,
     rng: random.Random,
+    class_id: int = OUTLET_ID,
 ) -> tuple[Image.Image, Image.Image]:
-    boxes = outlet_boxes(np.asarray(mask, dtype=np.uint8))
+    boxes = object_boxes(np.asarray(mask, dtype=np.uint8), class_id)
     if not len(boxes):
         return image, mask
     box = boxes[rng.randrange(len(boxes))]
@@ -109,8 +135,12 @@ def _focus_crop(
     extent = max(int(box[2] - box[0]), int(box[3] - box[1]))
     width, height = image.size
     minimum_side = min(width, height)
-    crop_size = max(128, int(round(extent * rng.uniform(7.0, 11.0))))
-    crop_size = min(crop_size, max(128, int(round(minimum_side * 0.45))))
+    if class_id == 2:
+        crop_size = max(192, int(round(extent * rng.uniform(1.4, 2.2))))
+        crop_size = min(crop_size, max(192, int(round(minimum_side * 0.85))))
+    else:
+        crop_size = max(128, int(round(extent * rng.uniform(7.0, 11.0))))
+        crop_size = min(crop_size, max(128, int(round(minimum_side * 0.45))))
     crop_size = min(crop_size, minimum_side)
     jitter = max(2, crop_size // 12)
     center_x += rng.randint(-jitter, jitter)
@@ -129,17 +159,21 @@ class OutletDetectionDataset(Dataset):
         training: bool,
         seed: int,
         focus_repeats: int = 8,
+        class_id: int = OUTLET_ID,
+        display_name: str = "Outlet",
     ) -> None:
         self.samples = list(samples)
         self.training = training
         self.seed = seed
         self.epoch = 0
+        self.class_id = class_id
+        self.display_name = display_name
         self.views: list[tuple[int, bool, int]] = []
         self.positive_scene_count = 0
         for index, sample in enumerate(self.samples):
             self.views.append((index, False, 0))
             with Image.open(sample.mask_path) as opened:
-                positive = bool(np.any(np.asarray(opened.convert("L")) == OUTLET_ID))
+                positive = bool(np.any(np.asarray(opened.convert("L")) == class_id))
             if positive:
                 self.positive_scene_count += 1
                 if training:
@@ -158,14 +192,18 @@ class OutletDetectionDataset(Dataset):
         rng = random.Random(self.seed + self.epoch * 1_000_003 + index * 10_007 + repeat)
         image, mask = _load_pair(sample)
         if focus:
-            image, mask = _focus_crop(image, mask, rng=rng)
+            image, mask = _focus_crop(
+                image, mask, rng=rng, class_id=self.class_id
+            )
         if self.training and rng.random() < 0.5:
             image = ImageOps.mirror(image)
             mask = ImageOps.mirror(mask)
         if self.training:
             image = ImageEnhance.Brightness(image).enhance(rng.uniform(0.85, 1.15))
             image = ImageEnhance.Contrast(image).enhance(rng.uniform(0.90, 1.10))
-        boxes_array = outlet_boxes(np.asarray(mask, dtype=np.uint8))
+        boxes_array = object_boxes(
+            np.asarray(mask, dtype=np.uint8), self.class_id
+        )
         boxes = torch.as_tensor(boxes_array, dtype=torch.float32)
         labels = torch.ones((len(boxes),), dtype=torch.int64)
         area = (
@@ -182,7 +220,13 @@ class OutletDetectionDataset(Dataset):
             "area": area,
             "iscrowd": torch.zeros((len(boxes),), dtype=torch.int64),
         }
-        _validate_target(target, image.width, image.height, sample.scene_id)
+        _validate_target(
+            target,
+            image.width,
+            image.height,
+            sample.scene_id,
+            display_name=self.display_name,
+        )
         return tensor, target, sample.scene_id
 
 
@@ -195,24 +239,32 @@ def _validate_target(
     width: int,
     height: int,
     scene_id: str,
+    *,
+    display_name: str = "Outlet",
 ) -> None:
     boxes = target["boxes"]
     if boxes.ndim != 2 or boxes.shape[1:] != (4,):
-        raise ValueError(f"invalid Outlet box shape for {scene_id}: {tuple(boxes.shape)}")
+        raise ValueError(
+            f"invalid {display_name} box shape for {scene_id}: {tuple(boxes.shape)}"
+        )
     if not torch.isfinite(boxes).all():
-        raise ValueError(f"non-finite Outlet box for {scene_id}")
+        raise ValueError(f"non-finite {display_name} box for {scene_id}")
     if len(boxes):
         if not torch.all(boxes[:, 2] > boxes[:, 0]) or not torch.all(
             boxes[:, 3] > boxes[:, 1]
         ):
-            raise ValueError(f"degenerate Outlet box for {scene_id}: {boxes.tolist()}")
+            raise ValueError(
+                f"degenerate {display_name} box for {scene_id}: {boxes.tolist()}"
+            )
         if (
             torch.any(boxes[:, 0] < 0)
             or torch.any(boxes[:, 1] < 0)
             or torch.any(boxes[:, 2] > width)
             or torch.any(boxes[:, 3] > height)
         ):
-            raise ValueError(f"Outlet box is outside the image for {scene_id}")
+            raise ValueError(
+                f"{display_name} box is outside the image for {scene_id}"
+            )
 
 
 def _box_iou(box_a: torch.Tensor, box_b: torch.Tensor) -> float:
@@ -271,7 +323,11 @@ def validate(
     }
 
 
-def train(args: argparse.Namespace) -> dict[str, object]:
+def train(
+    args: argparse.Namespace,
+    *,
+    profile: ObjectDetectorProfile = OUTLET_PROFILE,
+) -> dict[str, object]:
     set_seed(args.seed)
     device = choose_device(args.device)
     manifest_path = Path(args.manifest).resolve()
@@ -289,15 +345,26 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         training=True,
         seed=args.seed,
         focus_repeats=args.focus_repeats,
+        class_id=profile.class_id,
+        display_name=profile.display_name,
     )
     validation_dataset = OutletDetectionDataset(
         validation_samples,
         training=False,
         seed=args.seed,
         focus_repeats=0,
+        class_id=profile.class_id,
+        display_name=profile.display_name,
     )
-    if train_dataset.positive_scene_count < 1 or validation_dataset.positive_scene_count < 1:
-        raise ValueError("v5 Outlet detector requires positive train and validation scenes")
+    if (
+        train_dataset.positive_scene_count < profile.minimum_training_scenes
+        or validation_dataset.positive_scene_count < 1
+    ):
+        raise ValueError(
+            f"v5 {profile.display_name} detector requires at least "
+            f"{profile.minimum_training_scenes} positive training scene(s) and one "
+            "positive validation scene"
+        )
     generator = torch.Generator().manual_seed(args.seed)
     train_loader = DataLoader(
         train_dataset,
@@ -325,8 +392,8 @@ def train(args: argparse.Namespace) -> dict[str, object]:
     features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(features, 2)
     model.to(device)
-    # With only three positive training scenes, updating the full detector is
-    # both unstable and unnecessary. Preserve pretrained visual features and
+    # With a small positive training set, updating the full detector is both
+    # unstable and unnecessary. Preserve pretrained visual features and
     # fine-tune only proposal scoring plus the new two-class predictor.
     for parameter in model.parameters():
         parameter.requires_grad = False
@@ -348,14 +415,23 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         optimizer, mode="max", factor=0.5, patience=2, min_lr=1e-6
     )
 
-    print("BakeSmart Step 4 v5 — Dedicated Outlet Detector")
+    print(profile.title)
     print(f"Device:                    {device}")
     print(f"Training scenes:           {len(train_samples)}")
-    print(f"Training Outlet scenes:    {train_dataset.positive_scene_count}")
+    print(
+        f"Training {profile.display_name} scenes:    "
+        f"{train_dataset.positive_scene_count}"
+    )
     print(f"Validation scenes:         {len(validation_samples)}")
-    print(f"Validation Outlet scenes:  {validation_dataset.positive_scene_count}")
+    print(
+        f"Validation {profile.display_name} scenes:  "
+        f"{validation_dataset.positive_scene_count}"
+    )
     print(f"Training views per epoch:  {len(train_dataset)}")
-    print("Fine-tuning:               RPN + new Outlet predictor (backbone frozen)")
+    print(
+        f"Fine-tuning:               RPN + new {profile.display_name} predictor "
+        "(backbone frozen)"
+    )
     print(f"Locked test used:          NO ({manifest['counts']['test']} remain untouched)")
     print("Training...\n")
 
@@ -386,7 +462,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
                     for name, value in losses.items()
                 )
                 raise ValueError(
-                    "Outlet detector loss became non-finite for "
+                    f"{profile.display_name} detector loss became non-finite for "
                     f"{', '.join(_scene_ids)} ({details})"
                 )
             optimizer.zero_grad(set_to_none=True)
@@ -416,14 +492,14 @@ def train(args: argparse.Namespace) -> dict[str, object]:
             torch.save(
                 {
                     "schema_version": 5,
-                    "model_name": "BakeSmartOutletDetector",
+                    "model_name": profile.model_name,
                     "architecture": "fasterrcnn_mobilenet_v3_large_320_fpn",
                     "pretrained": True,
                     "pretrained_weights": (
                         "FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.DEFAULT"
                     ),
                     "num_classes": 2,
-                    "class_names": ["background", "outlet"],
+                    "class_names": ["background", profile.class_key],
                     "test_data_used": False,
                     "manifest_sha256": sha256_file(manifest_path),
                     "epoch": epoch,
@@ -458,11 +534,13 @@ def train(args: argparse.Namespace) -> dict[str, object]:
             break
 
     if best_metrics is None or not best_path.is_file():
-        raise ValueError("Outlet detector training finished without a valid checkpoint")
+        raise ValueError(
+            f"{profile.display_name} detector training finished without a valid checkpoint"
+        )
     report = {
         "schema_version": 5,
         "created_at_utc": utc_now(),
-        "model_name": "BakeSmartOutletDetector",
+        "model_name": profile.model_name,
         "architecture": "fasterrcnn_mobilenet_v3_large_320_fpn",
         "checkpoint": str(best_path.relative_to(PROJECT_DIR)),
         "checkpoint_sha256": sha256_file(best_path),
@@ -478,6 +556,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         "best_validation_metrics": best_metrics,
         "history": history,
         "production_ready": False,
+        "detected_class": profile.class_key,
         "next_step": "combine with the v5 room model after validation review",
     }
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -485,7 +564,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
     temporary = report_path.with_suffix(".json.part")
     temporary.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     temporary.replace(report_path)
-    print("\nBest v5 Outlet detector validation result")
+    print(f"\nBest v5 {profile.display_name} detector validation result")
     print(f"Epoch:     {best_epoch}")
     print(f"Precision: {best_metrics['precision']:.4f}")
     print(f"Recall:    {best_metrics['recall']:.4f}")
@@ -521,7 +600,7 @@ def main() -> int:
     if "BAKESMART_TORCH_THREADS" in os.environ:
         torch.set_num_threads(max(1, int(os.environ["BAKESMART_TORCH_THREADS"])))
     try:
-        train(build_parser().parse_args())
+        train(build_parser().parse_args(), profile=OUTLET_PROFILE)
     except (OSError, ValueError, RuntimeError, KeyError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1

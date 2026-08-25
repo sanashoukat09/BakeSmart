@@ -166,6 +166,18 @@ class SceneBuilder:
                 "No locally analysed venue photo evidence was supplied; placement "
                 "uses measurements only."
             )
+        manual_outlet_count = sum(
+            len(photo.manual_outlets) for photo in request.space.photo_evidence
+        )
+        measured_outlet_count = sum(
+            obstacle.obstacle_type.value == "outlet"
+            for obstacle in request.space.obstacles
+        )
+        if manual_outlet_count and not measured_outlet_count:
+            warnings.append(
+                "Manual Outlet marks identify photo positions only. Add each relevant "
+                "Outlet as a measured obstacle before relying on exact clearance."
+            )
 
         table_dimensions = self._table_dimensions(request)
         geometry_verified = self._geometry_is_plausible(
@@ -548,6 +560,11 @@ class SceneBuilder:
                 f"{angle_label.title()}: {observation}"
                 for observation in photo.observations
             )
+            if photo.manual_outlets:
+                observed_facts.append(
+                    f"{angle_label.title()}: the customer manually marked "
+                    f"{len(photo.manual_outlets)} visible Outlet position(s)."
+                )
         assumptions: list[str] = []
         if not photos:
             assumptions.append("The venue appearance was not checked from a photo.")
@@ -565,6 +582,16 @@ class SceneBuilder:
                 "Synthetic vision suggested possible "
                 f"{', '.join(candidate_labels)} region(s); none were used as "
                 "confirmed obstacles."
+            )
+        manual_outlet_count = sum(len(photo.manual_outlets) for photo in photos)
+        measured_outlet_count = sum(
+            obstacle.obstacle_type.value == "outlet"
+            for obstacle in request.space.obstacles
+        )
+        if manual_outlet_count and not measured_outlet_count:
+            assumptions.append(
+                "Manual Outlet marks are normalized photo positions, not measured 3D "
+                "obstacles; exact Outlet clearance remains unverified."
             )
         if not request.space.obstacle_map_confirmed:
             assumptions.append(

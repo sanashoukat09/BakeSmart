@@ -127,6 +127,37 @@ def test_vision_candidate_is_reported_but_not_used_as_obstacle(
     )
 
 
+def test_manual_outlet_marks_are_preserved_without_false_scale_claim(
+    client,
+    valid_design_request,
+):
+    request = deepcopy(valid_design_request)
+    request["space"]["photo_evidence"][0]["manual_outlets"] = [
+        {
+            "x_fraction": 0.72,
+            "y_fraction": 0.61,
+            "source": "customer_manual",
+        }
+    ]
+
+    response = client.post("/api/v1/recommendations", json=request)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert any(
+        "manually marked 1 visible Outlet" in fact
+        for fact in body["venue_assessment"]["observed_facts"]
+    )
+    assert any(
+        "not measured 3D obstacles" in assumption
+        for assumption in body["venue_assessment"]["assumptions"]
+    )
+    assert any(
+        "Add each relevant Outlet as a measured obstacle" in warning
+        for warning in body["warnings"]
+    )
+
+
 def test_unknown_theme_uses_model_guided_catalog_fallback(client, valid_design_request):
     request = deepcopy(valid_design_request)
     request["event"]["theme_id"] = "not-in-catalog"

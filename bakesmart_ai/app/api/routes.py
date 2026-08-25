@@ -59,6 +59,18 @@ async def validate_design(request: DesignRequest) -> ValidationResponse:
         warnings.append(
             "Only one venue angle was supplied; objects outside the frame remain unknown."
         )
+    manual_outlets = sum(
+        len(photo.manual_outlets) for photo in request.space.photo_evidence
+    )
+    measured_outlets = sum(
+        obstacle.obstacle_type.value == "outlet"
+        for obstacle in request.space.obstacles
+    )
+    if manual_outlets and not measured_outlets:
+        warnings.append(
+            "Manual Outlet photo marks have no verified scale; add measured Outlet "
+            "obstacles when exact 3D clearance is required."
+        )
 
     return ValidationResponse(valid=True, normalized_request=request, warnings=warnings)
 
