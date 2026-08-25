@@ -3,6 +3,7 @@ import torch
 
 from training.train_real_venue_outlet_detector_v5 import (
     _box_iou,
+    _model_parameters_are_finite,
     _score_predictions,
     _validate_target,
     object_boxes,
@@ -62,3 +63,11 @@ def test_prediction_scoring_exposes_low_confidence_true_positive():
 
     assert hidden["f1"] == 0.0
     assert visible["f1"] == 1.0
+
+
+def test_nonfinite_parameter_guard_detects_corruption():
+    model = torch.nn.Linear(2, 1)
+    assert _model_parameters_are_finite(model)
+    with torch.no_grad():
+        model.weight[0, 0] = float("nan")
+    assert not _model_parameters_are_finite(model)

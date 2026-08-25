@@ -283,6 +283,10 @@ def _box_iou(box_a: torch.Tensor, box_b: torch.Tensor) -> float:
     return intersection / max(area_a + area_b - intersection, 1e-9)
 
 
+def _model_parameters_are_finite(model: torch.nn.Module) -> bool:
+    return all(torch.isfinite(parameter).all() for parameter in model.parameters())
+
+
 def _score_predictions(
     predictions: list[tuple[torch.Tensor, torch.Tensor]],
     actual_boxes: list[torch.Tensor],
@@ -395,6 +399,7 @@ def train(
     device = choose_device(args.device)
     manifest_path = Path(args.manifest).resolve()
     output_dir = Path(args.output_dir).resolve()
+    best_path = output_dir / "best_model.pt"
     manifest = load_locked_split_manifest(
         manifest_path,
         project_dir=PROJECT_DIR,
@@ -492,6 +497,35 @@ def train(
     features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(features, 2)
     model.to(device)
+    resume_payload: dict[str, object] | None = None
+    starting_epoch = 0
+    if args.resume_checkpoint:
+        resume_path = Path(args.resume_checkpoint).resolve()
+        if not resume_path.is_file():
+            raise ValueError(f"resume checkpoint is missing: {resume_path}")
+        loaded = torch.load(resume_path, map_location=device, weights_only=False)
+        if not isinstance(loaded, dict):
+            raise ValueError("resume checkpoint root must be a dictionary")
+        if loaded.get("model_name") != profile.model_name:
+            raise ValueError(
+                f"resume checkpoint model mismatch: {loaded.get('model_name')!r}"
+            )
+        if loaded.get("test_data_used") is not False:
+            raise ValueError("resume checkpoint must confirm test_data_used=false")
+        if loaded.get("manifest_sha256") != sha256_file(manifest_path):
+            raise ValueError("resume checkpoint does not match the current split manifest")
+        state = loaded.get("model_state_dict")
+        if not isinstance(state, dict):
+            raise ValueError("resume checkpoint has no model state")
+        model.load_state_dict(state, strict=True)
+        if not _model_parameters_are_finite(model):
+            raise ValueError("resume checkpoint contains non-finite model parameters")
+        starting_epoch = int(loaded.get("epoch") or 0)
+        if starting_epoch < 1 or starting_epoch >= args.epochs:
+            raise ValueError(
+                f"resume epoch {starting_epoch} must be below target epoch {args.epochs}"
+            )
+        resume_payload = loaded
     if profile.adaptive_fine_tuning:
         # TorchVision's pretrained factory already freezes early MobileNet
         # stages. Warm up the new predictor, then adapt every remaining
@@ -502,8 +536,9 @@ def train(
             if parameter.requires_grad and not name.startswith("roi_heads.box_predictor.")
         ]
         predictor_parameters = list(model.roi_heads.box_predictor.parameters())
-        for parameter in adaptation_parameters:
-            parameter.requires_grad = False
+        if resume_payload is None:
+            for parameter in adaptation_parameters:
+                parameter.requires_grad = False
         optimizer = torch.optim.SGD(
             [
                 {
@@ -568,6 +603,11 @@ def train(
             f"Failure guard:             training-positive probe at epoch "
             f"{args.probe_epoch}"
         )
+        if resume_payload is not None:
+            print(
+                f"Resume:                    valid epoch {starting_epoch} checkpoint; "
+                "warmup already completed"
+            )
     else:
         print(
             f"Fine-tuning:               RPN + new {profile.display_name} predictor "
@@ -576,15 +616,29 @@ def train(
     print(f"Locked test used:          NO ({manifest['counts']['test']} remain untouched)")
     print("Training...\n")
 
-    best_f1 = -math.inf
-    best_epoch = 0
-    best_metrics: dict[str, object] | None = None
+    if resume_payload is None:
+        best_f1 = -math.inf
+        best_epoch = 0
+        best_metrics: dict[str, object] | None = None
+    else:
+        loaded_metrics = resume_payload.get("validation_metrics")
+        if not isinstance(loaded_metrics, dict):
+            raise ValueError("resume checkpoint has no validation metrics")
+        best_metrics = loaded_metrics
+        best_epoch = starting_epoch
+        best_f1 = float(
+            best_metrics.get(
+                "calibrated_f1" if profile.adaptive_fine_tuning else "f1",
+                -math.inf,
+            )
+        )
     patience_left = args.patience
     history: list[dict[str, object]] = []
-    best_path = output_dir / "best_model.pt"
-    for epoch in range(1, args.epochs + 1):
+    skipped_nonfinite_batches = 0
+    for epoch in range(starting_epoch + 1, args.epochs + 1):
         if (
             profile.adaptive_fine_tuning
+            and resume_payload is None
             and epoch == args.warmup_epochs + 1
         ):
             for parameter in adaptation_parameters:
@@ -610,14 +664,45 @@ def train(
                     f"{name}={float(value.detach().cpu()):.6g}"
                     for name, value in losses.items()
                 )
-                raise ValueError(
-                    f"{profile.display_name} detector loss became non-finite for "
-                    f"{', '.join(_scene_ids)} ({details})"
+                if not _model_parameters_are_finite(model):
+                    raise ValueError(
+                        f"{profile.display_name} detector parameters became non-finite "
+                        f"before {', '.join(_scene_ids)} ({details}); resume from the "
+                        "last valid checkpoint with the v6 resume command"
+                    )
+                skipped_nonfinite_batches += 1
+                optimizer.zero_grad(set_to_none=True)
+                print(
+                    f"WARNING: skipped non-finite batch {', '.join(_scene_ids)} "
+                    f"({details})",
+                    flush=True,
                 )
+                if skipped_nonfinite_batches > args.max_nonfinite_skips:
+                    raise ValueError(
+                        f"more than {args.max_nonfinite_skips} non-finite batches were "
+                        "encountered; stopping safely"
+                    )
+                continue
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             if args.grad_clip > 0:
-                torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
+                gradient_norm = torch.nn.utils.clip_grad_norm_(
+                    model.parameters(), args.grad_clip
+                )
+                if not torch.isfinite(gradient_norm):
+                    skipped_nonfinite_batches += 1
+                    optimizer.zero_grad(set_to_none=True)
+                    print(
+                        f"WARNING: skipped non-finite gradients for "
+                        f"{', '.join(_scene_ids)}",
+                        flush=True,
+                    )
+                    if skipped_nonfinite_batches > args.max_nonfinite_skips:
+                        raise ValueError(
+                            f"more than {args.max_nonfinite_skips} non-finite batches "
+                            "were encountered; stopping safely"
+                        )
+                    continue
             optimizer.step()
             total_loss += float(loss.detach().cpu())
             batches += 1
@@ -676,6 +761,7 @@ def train(
                 "rpn_learning_rate": float(optimizer.param_groups[0]["lr"]),
                 "predictor_learning_rate": float(optimizer.param_groups[1]["lr"]),
                 "best_so_far": improved,
+                "nonfinite_batches_skipped_total": skipped_nonfinite_batches,
             }
         )
         star = " *BEST*" if improved else ""
@@ -743,6 +829,8 @@ def train(
         "locked_test_scene_count": int(manifest["counts"]["test"]),
         "test_split_used": False,
         "best_epoch": best_epoch,
+        "resumed_from_epoch": starting_epoch if resume_payload is not None else None,
+        "nonfinite_batches_skipped": skipped_nonfinite_batches,
         "best_validation_metrics": best_metrics,
         "history": history,
         "production_ready": False,
@@ -796,6 +884,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--warmup-epochs", type=int, default=2)
     parser.add_argument("--probe-epoch", type=int, default=5)
     parser.add_argument("--probe-scenes", type=int, default=3)
+    parser.add_argument("--resume-checkpoint")
+    parser.add_argument("--max-nonfinite-skips", type=int, default=3)
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
     return parser
 
