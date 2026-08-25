@@ -15,6 +15,7 @@ import json
 import math
 import os
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 try:
@@ -64,6 +65,19 @@ DEFAULT_MANIFEST = (
 )
 DEFAULT_OUTPUT_DIR = PROJECT_DIR / "models" / "venue_vision_real_v3"
 DEFAULT_SEED = 260825
+
+
+@dataclass(frozen=True)
+class TrainingProfile:
+    title: str = "BakeSmart Step 4 v3 — Balanced Rare-Class Venue Segmentation"
+    expected_dataset: str = "real_v2"
+    schema_version: int = 3
+    training_variant: str = "balanced_rare_class_crops_v3"
+    training_data: str = "reviewed_real_v2_train_split_only"
+    validation_data: str = "reviewed_real_v2_validation_split_only"
+    result_heading: str = "Best v3 validation result"
+    prior_outputs_message: str = "v1 and v2 outputs remain untouched."
+    next_step: str = "compare v3 with v1/v2 on validation before locked-test evaluation"
 
 
 def balanced_class_weights(
@@ -155,22 +169,23 @@ def save_checkpoint(
     config: dict[str, object],
     manifest_sha256: str,
     class_weights: list[float],
+    profile: TrainingProfile = TrainingProfile(),
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(".pt.part")
     torch.save(
         {
-            "schema_version": 3,
+            "schema_version": profile.schema_version,
             "model_name": "BakeSmartVenueUNet",
-            "training_variant": "balanced_rare_class_crops_v3",
+            "training_variant": profile.training_variant,
             "num_classes": len(CLASS_NAMES),
             "class_names": list(CLASS_NAMES),
             "pretrained": False,
             "random_initialization": True,
             "v1_checkpoint_loaded": False,
             "v2_checkpoint_loaded": False,
-            "training_data": "reviewed_real_v2_train_split_only",
-            "validation_data": "reviewed_real_v2_validation_split_only",
+            "training_data": profile.training_data,
+            "validation_data": profile.validation_data,
             "test_data_used": False,
             "manifest_sha256": manifest_sha256,
             "epoch": epoch,
@@ -186,7 +201,11 @@ def save_checkpoint(
     temporary.replace(path)
 
 
-def train(args: argparse.Namespace) -> dict[str, object]:
+def train(
+    args: argparse.Namespace,
+    *,
+    profile: TrainingProfile = TrainingProfile(),
+) -> dict[str, object]:
     set_seed(args.seed)
     device = choose_device(args.device)
     manifest_path = Path(args.manifest).resolve()
@@ -194,7 +213,11 @@ def train(args: argparse.Namespace) -> dict[str, object]:
     if not manifest_path.is_file():
         raise ValueError("locked Step-3 split manifest is missing")
 
-    manifest = load_locked_split_manifest(manifest_path, project_dir=PROJECT_DIR)
+    manifest = load_locked_split_manifest(
+        manifest_path,
+        project_dir=PROJECT_DIR,
+        expected_dataset=profile.expected_dataset,
+    )
     train_samples = samples_for_split(
         manifest, "train", project_dir=PROJECT_DIR, verify_hashes=True
     )
@@ -291,7 +314,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         "test_split_loaded": False,
     }
 
-    print("BakeSmart Step 4 v3 — Balanced Rare-Class Venue Segmentation")
+    print(profile.title)
     print(f"Device:             {device}")
     print(f"Training scenes:    {len(train_samples)}")
     print(f"Validation scenes:  {len(validation_samples)}")
@@ -366,6 +389,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
                 config=config,
                 manifest_sha256=manifest_sha,
                 class_weights=[float(value) for value in balanced_weights_cpu.tolist()],
+                profile=profile,
             )
         else:
             patience_left -= 1
@@ -402,10 +426,12 @@ def train(args: argparse.Namespace) -> dict[str, object]:
 
     output_dir.mkdir(parents=True, exist_ok=True)
     report = {
-        "schema_version": 3,
+        "schema_version": profile.schema_version,
         "created_at_utc": utc_now(),
         "model_name": "BakeSmartVenueUNet",
-        "training_variant": "balanced_rare_class_crops_v3",
+        "training_variant": profile.training_variant,
+        "training_data": profile.training_data,
+        "validation_data": profile.validation_data,
         "checkpoint": str(best_path.relative_to(PROJECT_DIR)),
         "checkpoint_sha256": sha256_file(best_path),
         "split_manifest": str(manifest_path.relative_to(PROJECT_DIR)),
@@ -432,7 +458,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         "config": config,
         "history": history,
         "production_ready": False,
-        "next_step": "compare v3 with v1/v2 on validation before locked-test evaluation",
+        "next_step": profile.next_step,
     }
     report_path = output_dir / "validation_report.json"
     temporary = report_path.with_suffix(".json.part")
@@ -442,7 +468,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
     )
     temporary.replace(report_path)
 
-    print("\nBest v3 validation result")
+    print(f"\n{profile.result_heading}")
     print(f"Epoch:          {best_epoch}")
     print(f"Balanced score: {best_score:.4f}")
     print(f"Mean IoU:       {best_metrics['mean_iou']:.4f}")
@@ -454,7 +480,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         print(f"  {name:<10} {text}")
     print(f"\nCheckpoint: {best_path.relative_to(PROJECT_DIR)}")
     print(f"Report:     {report_path.relative_to(PROJECT_DIR)}")
-    print("v1 and v2 outputs remain untouched.")
+    print(profile.prior_outputs_message)
     print("Locked test set remains untouched.")
     return report
 

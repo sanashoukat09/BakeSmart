@@ -1,9 +1,11 @@
 import torch
 
 from training.train_real_venue_segmentation_v3 import (
+    TrainingProfile,
     balanced_class_weights,
     balanced_validation_score,
 )
+from training.train_real_venue_segmentation_repaired import PROFILE
 
 
 def _metrics(miou: float, door: float, outlet: float) -> dict[str, object]:
@@ -48,3 +50,10 @@ def test_balanced_weights_reject_invalid_multiplier():
         assert "positive" in str(exc)
     else:
         raise AssertionError("expected invalid multiplier to be rejected")
+
+
+def test_repaired_profile_requires_repaired_manifest_and_new_variant():
+    assert isinstance(PROFILE, TrainingProfile)
+    assert PROFILE.expected_dataset == "real_v2_repaired"
+    assert PROFILE.training_variant == "balanced_corrected_labels_v4"
+    assert PROFILE.schema_version == 4

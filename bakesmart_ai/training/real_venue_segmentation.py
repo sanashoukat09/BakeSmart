@@ -61,6 +61,7 @@ def load_locked_split_manifest(
     manifest_path: Path,
     *,
     project_dir: Path = PROJECT_DIR,
+    expected_dataset: str = "real_v2",
 ) -> dict[str, object]:
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -68,8 +69,10 @@ def load_locked_split_manifest(
         raise ValueError(f"split manifest is unreadable: {manifest_path}") from exc
     if not isinstance(manifest, dict):
         raise ValueError("split manifest must be a JSON object")
-    if manifest.get("dataset") != "real_v2":
-        raise ValueError("Step 4 requires the locked real_v2 split")
+    if manifest.get("dataset") != expected_dataset:
+        raise ValueError(
+            f"Step 4 requires the locked {expected_dataset} split"
+        )
     if manifest.get("test_set_locked") is not True:
         raise ValueError("Step 4 requires test_set_locked=true")
     if manifest.get("semantic_class_ids") != list(SEMANTIC_LABEL_IDS):
