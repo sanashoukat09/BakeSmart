@@ -3,6 +3,7 @@ import torch
 
 from training.train_real_venue_outlet_detector_v5 import (
     _box_iou,
+    _score_predictions,
     _validate_target,
     object_boxes,
     outlet_boxes,
@@ -41,3 +42,23 @@ def test_generic_box_extraction_supports_door_class():
     labels[4:25, 10:22] = 2
     boxes = object_boxes(labels, 2)
     assert boxes.tolist() == [[10.0, 4.0, 22.0, 25.0]]
+
+
+def test_prediction_scoring_exposes_low_confidence_true_positive():
+    predictions = [
+        (
+            torch.tensor([[1.0, 1.0, 9.0, 9.0]]),
+            torch.tensor([0.12]),
+        )
+    ]
+    actual = [torch.tensor([[1.0, 1.0, 9.0, 9.0]])]
+
+    hidden = _score_predictions(
+        predictions, actual, score_threshold=0.30, iou_threshold=0.30
+    )
+    visible = _score_predictions(
+        predictions, actual, score_threshold=0.10, iou_threshold=0.30
+    )
+
+    assert hidden["f1"] == 0.0
+    assert visible["f1"] == 1.0

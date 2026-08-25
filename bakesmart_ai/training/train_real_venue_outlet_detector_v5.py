@@ -54,6 +54,7 @@ DEFAULT_SEED = 260829
 OUTLET_ID = 5
 MIN_COMPONENT_AREA = 4
 MIN_BOX_SIDE = 4
+CALIBRATION_SCORE_THRESHOLDS = (0.01, 0.03, 0.05, 0.10, 0.15, 0.20, 0.30, 0.40, 0.50)
 
 
 @dataclass(frozen=True)
@@ -64,6 +65,8 @@ class ObjectDetectorProfile:
     model_name: str
     title: str
     minimum_training_scenes: int = 1
+    adaptive_fine_tuning: bool = False
+    forbidden_positive_scene_ids: tuple[str, ...] = ()
 
 
 OUTLET_PROFILE = ObjectDetectorProfile(
@@ -170,12 +173,14 @@ class OutletDetectionDataset(Dataset):
         self.display_name = display_name
         self.views: list[tuple[int, bool, int]] = []
         self.positive_scene_count = 0
+        self.positive_samples: list[SplitSample] = []
         for index, sample in enumerate(self.samples):
             self.views.append((index, False, 0))
             with Image.open(sample.mask_path) as opened:
                 positive = bool(np.any(np.asarray(opened.convert("L")) == class_id))
             if positive:
                 self.positive_scene_count += 1
+                self.positive_samples.append(sample)
                 if training:
                     for repeat in range(focus_repeats):
                         self.views.append((index, True, repeat))
@@ -278,38 +283,31 @@ def _box_iou(box_a: torch.Tensor, box_b: torch.Tensor) -> float:
     return intersection / max(area_a + area_b - intersection, 1e-9)
 
 
-@torch.no_grad()
-def validate(
-    model: torch.nn.Module,
-    loader: DataLoader,
-    device: torch.device,
+def _score_predictions(
+    predictions: list[tuple[torch.Tensor, torch.Tensor]],
+    actual_boxes: list[torch.Tensor],
     *,
     score_threshold: float,
     iou_threshold: float,
-) -> dict[str, float | int]:
-    model.eval()
+) -> dict[str, object]:
     true_positive = false_positive = false_negative = 0
-    for images, targets, _scene_ids in loader:
-        outputs = model([image.to(device) for image in images])
-        for output, target in zip(outputs, targets):
-            scores = output["scores"].detach().cpu()
-            predicted = output["boxes"].detach().cpu()[scores >= score_threshold]
-            actual = target["boxes"]
-            unmatched = set(range(len(actual)))
-            for prediction in predicted:
-                matches = sorted(
-                    (
-                        (_box_iou(prediction, actual[index]), index)
-                        for index in unmatched
-                    ),
-                    reverse=True,
-                )
-                if matches and matches[0][0] >= iou_threshold:
-                    true_positive += 1
-                    unmatched.remove(matches[0][1])
-                else:
-                    false_positive += 1
-            false_negative += len(unmatched)
+    for (boxes, scores), actual in zip(predictions, actual_boxes):
+        predicted = boxes[scores >= score_threshold]
+        unmatched = set(range(len(actual)))
+        for prediction in predicted:
+            matches = sorted(
+                (
+                    (_box_iou(prediction, actual[index]), index)
+                    for index in unmatched
+                ),
+                reverse=True,
+            )
+            if matches and matches[0][0] >= iou_threshold:
+                true_positive += 1
+                unmatched.remove(matches[0][1])
+            else:
+                false_positive += 1
+        false_negative += len(unmatched)
     precision = true_positive / max(true_positive + false_positive, 1)
     recall = true_positive / max(true_positive + false_negative, 1)
     f1 = 2 * precision * recall / max(precision + recall, 1e-9)
@@ -320,6 +318,71 @@ def validate(
         "precision": round(precision, 6),
         "recall": round(recall, 6),
         "f1": round(f1, 6),
+    }
+
+
+@torch.no_grad()
+def validate(
+    model: torch.nn.Module,
+    loader: DataLoader,
+    device: torch.device,
+    *,
+    score_threshold: float,
+    iou_threshold: float,
+) -> dict[str, object]:
+    model.eval()
+    predictions: list[tuple[torch.Tensor, torch.Tensor]] = []
+    actual_boxes: list[torch.Tensor] = []
+    top_scores: list[float] = []
+    best_ious: list[float] = []
+    for images, targets, _scene_ids in loader:
+        outputs = model([image.to(device) for image in images])
+        for output, target in zip(outputs, targets):
+            scores = output["scores"].detach().cpu()
+            boxes = output["boxes"].detach().cpu()
+            actual = target["boxes"]
+            predictions.append((boxes, scores))
+            actual_boxes.append(actual)
+            if len(scores):
+                top_scores.append(float(scores.max()))
+            for ground_truth in actual:
+                best_ious.append(
+                    max((_box_iou(box, ground_truth) for box in boxes), default=0.0)
+                )
+
+    fixed = _score_predictions(
+        predictions,
+        actual_boxes,
+        score_threshold=score_threshold,
+        iou_threshold=iou_threshold,
+    )
+    threshold_metrics: dict[str, dict[str, object]] = {}
+    for threshold in CALIBRATION_SCORE_THRESHOLDS:
+        threshold_metrics[f"{threshold:.2f}"] = _score_predictions(
+            predictions,
+            actual_boxes,
+            score_threshold=threshold,
+            iou_threshold=iou_threshold,
+        )
+    best_threshold_key, calibrated = max(
+        threshold_metrics.items(),
+        key=lambda item: (
+            float(item[1]["f1"]),
+            float(item[1]["recall"]),
+            float(item[0]),
+        ),
+    )
+    return {
+        **fixed,
+        "fixed_score_threshold": score_threshold,
+        "calibrated_score_threshold": float(best_threshold_key),
+        "calibrated_precision": calibrated["precision"],
+        "calibrated_recall": calibrated["recall"],
+        "calibrated_f1": calibrated["f1"],
+        "maximum_score": round(max(top_scores, default=0.0), 6),
+        "mean_top_score": round(sum(top_scores) / max(len(top_scores), 1), 6),
+        "mean_best_iou": round(sum(best_ious) / max(len(best_ious), 1), 6),
+        "threshold_metrics": threshold_metrics,
     }
 
 
@@ -356,6 +419,20 @@ def train(
         class_id=profile.class_id,
         display_name=profile.display_name,
     )
+    forbidden = sorted(
+        set(profile.forbidden_positive_scene_ids)
+        & {
+            sample.scene_id
+            for sample in train_dataset.positive_samples
+            + validation_dataset.positive_samples
+        }
+    )
+    if forbidden:
+        raise ValueError(
+            f"invalid {profile.display_name} detector labels remain in "
+            f"{', '.join(forbidden)}; run: "
+            "python -m training.correct_real_v2_door_labels_v6"
+        )
     if (
         train_dataset.positive_scene_count < profile.minimum_training_scenes
         or validation_dataset.positive_scene_count < 1
@@ -381,6 +458,24 @@ def train(
         num_workers=0,
         collate_fn=_collate,
     )
+    probe_loader = None
+    if profile.adaptive_fine_tuning:
+        probe_samples = train_dataset.positive_samples[: args.probe_scenes]
+        probe_dataset = OutletDetectionDataset(
+            probe_samples,
+            training=False,
+            seed=args.seed,
+            focus_repeats=0,
+            class_id=profile.class_id,
+            display_name=profile.display_name,
+        )
+        probe_loader = DataLoader(
+            probe_dataset,
+            batch_size=1,
+            shuffle=False,
+            num_workers=0,
+            collate_fn=_collate,
+        )
 
     print("Loading free pretrained Faster R-CNN/MobileNetV3 weights...")
     weights = FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.DEFAULT
@@ -388,29 +483,62 @@ def train(
         weights=weights,
         min_size=args.minimum_image_size,
         max_size=args.maximum_image_size,
+        box_score_thresh=(
+            min(CALIBRATION_SCORE_THRESHOLDS)
+            if profile.adaptive_fine_tuning
+            else 0.05
+        ),
     )
     features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(features, 2)
     model.to(device)
-    # With a small positive training set, updating the full detector is both
-    # unstable and unnecessary. Preserve pretrained visual features and
-    # fine-tune only proposal scoring plus the new two-class predictor.
-    for parameter in model.parameters():
-        parameter.requires_grad = False
-    for parameter in model.rpn.parameters():
-        parameter.requires_grad = True
-    for parameter in model.roi_heads.box_predictor.parameters():
-        parameter.requires_grad = True
-    optimizer = torch.optim.AdamW(
-        [
-            {"params": model.rpn.parameters(), "lr": args.rpn_learning_rate},
-            {
-                "params": model.roi_heads.box_predictor.parameters(),
-                "lr": args.learning_rate,
-            },
-        ],
-        weight_decay=args.weight_decay,
-    )
+    if profile.adaptive_fine_tuning:
+        # TorchVision's pretrained factory already freezes early MobileNet
+        # stages. Warm up the new predictor, then adapt every remaining
+        # trainable detector layer as in the official fine-tuning recipe.
+        adaptation_parameters = [
+            parameter
+            for name, parameter in model.named_parameters()
+            if parameter.requires_grad and not name.startswith("roi_heads.box_predictor.")
+        ]
+        predictor_parameters = list(model.roi_heads.box_predictor.parameters())
+        for parameter in adaptation_parameters:
+            parameter.requires_grad = False
+        optimizer = torch.optim.SGD(
+            [
+                {
+                    "params": adaptation_parameters,
+                    "lr": args.rpn_learning_rate,
+                    "name": "adaptation",
+                },
+                {
+                    "params": predictor_parameters,
+                    "lr": args.learning_rate,
+                    "name": "predictor",
+                },
+            ],
+            momentum=args.momentum,
+            weight_decay=args.weight_decay,
+        )
+    else:
+        # Retain the stabilized Outlet behavior for backward compatibility.
+        adaptation_parameters = []
+        for parameter in model.parameters():
+            parameter.requires_grad = False
+        for parameter in model.rpn.parameters():
+            parameter.requires_grad = True
+        for parameter in model.roi_heads.box_predictor.parameters():
+            parameter.requires_grad = True
+        optimizer = torch.optim.AdamW(
+            [
+                {"params": model.rpn.parameters(), "lr": args.rpn_learning_rate},
+                {
+                    "params": model.roi_heads.box_predictor.parameters(),
+                    "lr": args.learning_rate,
+                },
+            ],
+            weight_decay=args.weight_decay,
+        )
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode="max", factor=0.5, patience=2, min_lr=1e-6
     )
@@ -428,24 +556,45 @@ def train(
         f"{validation_dataset.positive_scene_count}"
     )
     print(f"Training views per epoch:  {len(train_dataset)}")
-    print(
-        f"Fine-tuning:               RPN + new {profile.display_name} predictor "
-        "(backbone frozen)"
-    )
+    if profile.adaptive_fine_tuning:
+        print(
+            f"Fine-tuning:               new {profile.display_name} predictor for "
+            f"{args.warmup_epochs} warmup epoch(s), then pretrained detector layers"
+        )
+        print(
+            "Validation:                confidence sweep 0.01-0.50 + fixed F1@0.30"
+        )
+        print(
+            f"Failure guard:             training-positive probe at epoch "
+            f"{args.probe_epoch}"
+        )
+    else:
+        print(
+            f"Fine-tuning:               RPN + new {profile.display_name} predictor "
+            "(backbone frozen)"
+        )
     print(f"Locked test used:          NO ({manifest['counts']['test']} remain untouched)")
     print("Training...\n")
 
     best_f1 = -math.inf
     best_epoch = 0
-    best_metrics: dict[str, float | int] | None = None
+    best_metrics: dict[str, object] | None = None
     patience_left = args.patience
     history: list[dict[str, object]] = []
     best_path = output_dir / "best_model.pt"
     for epoch in range(1, args.epochs + 1):
+        if (
+            profile.adaptive_fine_tuning
+            and epoch == args.warmup_epochs + 1
+        ):
+            for parameter in adaptation_parameters:
+                parameter.requires_grad = True
+            print("Pretrained detector layers unfrozen for low-rate adaptation.")
         train_dataset.set_epoch(epoch)
         model.train()
-        model.backbone.eval()
-        model.roi_heads.box_head.eval()
+        if not profile.adaptive_fine_tuning:
+            model.backbone.eval()
+            model.roi_heads.box_head.eval()
         total_loss = 0.0
         batches = 0
         for images, targets, _scene_ids in train_loader:
@@ -479,11 +628,15 @@ def train(
             score_threshold=args.score_threshold,
             iou_threshold=args.iou_threshold,
         )
-        f1 = float(metrics["f1"])
-        scheduler.step(f1)
-        improved = f1 > best_f1 + args.min_delta
+        fixed_f1 = float(metrics["f1"])
+        calibrated_f1 = float(metrics["calibrated_f1"])
+        selection_f1 = (
+            calibrated_f1 if profile.adaptive_fine_tuning else fixed_f1
+        )
+        scheduler.step(selection_f1)
+        improved = selection_f1 > best_f1 + args.min_delta
         if improved:
-            best_f1 = f1
+            best_f1 = selection_f1
             best_epoch = epoch
             best_metrics = metrics
             patience_left = args.patience
@@ -491,7 +644,7 @@ def train(
             temporary = best_path.with_suffix(".pt.part")
             torch.save(
                 {
-                    "schema_version": 5,
+                    "schema_version": 6 if profile.adaptive_fine_tuning else 5,
                     "model_name": profile.model_name,
                     "architecture": "fasterrcnn_mobilenet_v3_large_320_fpn",
                     "pretrained": True,
@@ -504,6 +657,9 @@ def train(
                     "manifest_sha256": sha256_file(manifest_path),
                     "epoch": epoch,
                     "validation_metrics": metrics,
+                    "model_selection_metric": (
+                        "calibrated_f1" if profile.adaptive_fine_tuning else "f1"
+                    ),
                     "model_state_dict": model.state_dict(),
                 },
                 temporary,
@@ -523,12 +679,46 @@ def train(
             }
         )
         star = " *BEST*" if improved else ""
-        print(
-            f"Epoch {epoch:03d}/{args.epochs} | loss {average_loss:.4f} | "
-            f"precision {metrics['precision']:.4f} | recall {metrics['recall']:.4f} | "
-            f"F1 {f1:.4f}{star}",
-            flush=True,
-        )
+        if profile.adaptive_fine_tuning:
+            print(
+                f"Epoch {epoch:03d}/{args.epochs} | loss {average_loss:.4f} | "
+                f"F1@.30 {fixed_f1:.4f} | bestF1 {calibrated_f1:.4f} "
+                f"@{metrics['calibrated_score_threshold']:.2f} | "
+                f"max score {metrics['maximum_score']:.3f} | "
+                f"best IoU {metrics['mean_best_iou']:.3f}{star}",
+                flush=True,
+            )
+        else:
+            print(
+                f"Epoch {epoch:03d}/{args.epochs} | loss {average_loss:.4f} | "
+                f"precision {metrics['precision']:.4f} | recall {metrics['recall']:.4f} | "
+                f"F1 {fixed_f1:.4f}{star}",
+                flush=True,
+            )
+        if (
+            profile.adaptive_fine_tuning
+            and probe_loader is not None
+            and epoch == args.probe_epoch
+        ):
+            probe = validate(
+                model,
+                probe_loader,
+                device,
+                score_threshold=args.score_threshold,
+                iou_threshold=args.iou_threshold,
+            )
+            print(
+                f"Training-positive probe | bestF1 {probe['calibrated_f1']:.4f} "
+                f"@{probe['calibrated_score_threshold']:.2f} | "
+                f"max score {probe['maximum_score']:.3f} | "
+                f"best IoU {probe['mean_best_iou']:.3f}"
+            )
+            if float(probe["calibrated_f1"]) <= 0.0:
+                raise ValueError(
+                    f"{profile.display_name} detector failed its epoch-"
+                    f"{args.probe_epoch} training-positive probe; stopping before "
+                    "a long zero-result run. Check the printed score and IoU diagnostics."
+                )
         if patience_left <= 0:
             print(f"Early stopping after epoch {epoch}; best epoch was {best_epoch}.")
             break
@@ -538,7 +728,7 @@ def train(
             f"{profile.display_name} detector training finished without a valid checkpoint"
         )
     report = {
-        "schema_version": 5,
+        "schema_version": 6 if profile.adaptive_fine_tuning else 5,
         "created_at_utc": utc_now(),
         "model_name": profile.model_name,
         "architecture": "fasterrcnn_mobilenet_v3_large_320_fpn",
@@ -557,6 +747,9 @@ def train(
         "history": history,
         "production_ready": False,
         "detected_class": profile.class_key,
+        "model_selection_metric": (
+            "calibrated_f1" if profile.adaptive_fine_tuning else "f1"
+        ),
         "next_step": "combine with the v5 room model after validation review",
     }
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -569,6 +762,13 @@ def train(
     print(f"Precision: {best_metrics['precision']:.4f}")
     print(f"Recall:    {best_metrics['recall']:.4f}")
     print(f"F1:        {best_metrics['f1']:.4f}")
+    if profile.adaptive_fine_tuning:
+        print(
+            f"Best calibrated F1: {best_metrics['calibrated_f1']:.4f} "
+            f"at score >= {best_metrics['calibrated_score_threshold']:.2f}"
+        )
+        print(f"Maximum score:      {best_metrics['maximum_score']:.4f}")
+        print(f"Mean best IoU:      {best_metrics['mean_best_iou']:.4f}")
     print(f"Checkpoint: {best_path.relative_to(PROJECT_DIR)}")
     print("Locked test set remains untouched.")
     return report
@@ -585,6 +785,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--learning-rate", type=float, default=1e-4)
     parser.add_argument("--rpn-learning-rate", type=float, default=2e-5)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
+    parser.add_argument("--momentum", type=float, default=0.9)
     parser.add_argument("--grad-clip", type=float, default=1.0)
     parser.add_argument("--min-delta", type=float, default=1e-4)
     parser.add_argument("--focus-repeats", type=int, default=8)
@@ -592,6 +793,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--maximum-image-size", type=int, default=768)
     parser.add_argument("--score-threshold", type=float, default=0.30)
     parser.add_argument("--iou-threshold", type=float, default=0.30)
+    parser.add_argument("--warmup-epochs", type=int, default=2)
+    parser.add_argument("--probe-epoch", type=int, default=5)
+    parser.add_argument("--probe-scenes", type=int, default=3)
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
     return parser
 
