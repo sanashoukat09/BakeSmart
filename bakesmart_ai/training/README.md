@@ -402,3 +402,27 @@ A later approved phase will add:
 - independently reviewed, rights-cleared real venue masks for domain-gap evaluation;
 - actual live-camera AR scenes on supported devices; and
 - production deployment and physical-device verification.
+
+## Stage 2: validate the real-decoration catalogue
+
+The real-decoration catalogue is isolated from the earlier synthetic training
+manifest and from the live recommendation endpoint. Validate its file hashes,
+relationships, dimensions, prices, licensing and safety references with:
+
+```powershell
+python -m training.real_decor_catalog_v1 validate
+```
+
+The optional rights-safe collector rechecks each Wikimedia Commons file through
+live `imageinfo/extmetadata` before downloading a 1600-pixel reference into the
+ignored runtime directory:
+
+```powershell
+python -m training.real_decor_catalog_v1 collect
+```
+
+The collector is safe to rerun after a network interruption. It rechecks live
+rights metadata and reuses already collected local files before continuing.
+
+Vendor images are never downloaded. Collected files are inspiration references
+for a later Stage 4 compositor, not training data and not exact products.

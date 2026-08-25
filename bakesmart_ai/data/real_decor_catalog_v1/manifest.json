@@ -1,0 +1,48 @@
+{
+  "dataset_id": "bakesmart-real-decor-catalog-v1",
+  "version": "1.0.0",
+  "stage": 2,
+  "generated_at_utc": "2026-08-25T13:00:00Z",
+  "region": "Pakistan",
+  "currency": "PKR",
+  "status": "catalog_ready",
+  "training_approved": false,
+  "recommendation_integration": "stage_3_pending",
+  "customer_output_changed": false,
+  "vendor_endorsement": false,
+  "price_status": "market_observations_and_planning_ranges_not_quotes",
+  "photo_policy": "commons_candidates_only_vendor_images_not_redistributed",
+  "allowed_photo_licenses": [
+    "CC0 1.0",
+    "CC BY 2.0",
+    "CC BY-SA 3.0",
+    "CC BY-SA 4.0"
+  ],
+  "files": [
+    {
+      "path": "decor_items.csv",
+      "records": 30,
+      "sha256": "2d7275c452f4703e903e4d8905f6d1ec6520dafabf71a256657098ec72f400cc"
+    },
+    {
+      "path": "market_sources.csv",
+      "records": 12,
+      "sha256": "cd15b2662eab789309041f34841612949fcea305dd66bcbe568d0f7de16f2563"
+    },
+    {
+      "path": "photo_candidates.csv",
+      "records": 10,
+      "sha256": "eca001e24eb4258925b7a82a3ef6e8d43860fdcc636df5fb81b13b22ffc4c017"
+    },
+    {
+      "path": "safety_profiles.csv",
+      "records": 5,
+      "sha256": "af89f97d5a6af1c0cf1613a7a49017f91e2c285202b49a27629b8c8472c94271"
+    },
+    {
+      "path": "authoritative_sources.csv",
+      "records": 6,
+      "sha256": "381b5592d4d811af47245422da4de92ea0f8836ebe16868993627eda60b9e91a"
+    }
+  ]
+}
