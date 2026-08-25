@@ -51,6 +51,8 @@ DEFAULT_MANIFEST = (
 DEFAULT_OUTPUT_DIR = PROJECT_DIR / "models" / "venue_vision_outlet_detector_v5"
 DEFAULT_SEED = 260829
 OUTLET_ID = 5
+MIN_COMPONENT_AREA = 4
+MIN_BOX_SIDE = 4
 
 
 def outlet_boxes(labels: np.ndarray) -> np.ndarray:
@@ -64,9 +66,19 @@ def outlet_boxes(labels: np.ndarray) -> np.ndarray:
         width = int(stats[component, cv2.CC_STAT_WIDTH])
         height = int(stats[component, cv2.CC_STAT_HEIGHT])
         area = int(stats[component, cv2.CC_STAT_AREA])
-        if area <= 0 or width <= 0 or height <= 0:
+        if area < MIN_COMPONENT_AREA or width <= 0 or height <= 0:
             continue
-        boxes.append([float(x), float(y), float(x + width), float(y + height)])
+        center_x = x + width / 2.0
+        center_y = y + height / 2.0
+        box_width = max(width, MIN_BOX_SIDE)
+        box_height = max(height, MIN_BOX_SIDE)
+        left = max(0.0, center_x - box_width / 2.0)
+        top = max(0.0, center_y - box_height / 2.0)
+        right = min(float(labels.shape[1]), left + box_width)
+        bottom = min(float(labels.shape[0]), top + box_height)
+        left = max(0.0, right - box_width)
+        top = max(0.0, bottom - box_height)
+        boxes.append([left, top, right, bottom])
     if not boxes:
         return np.zeros((0, 4), dtype=np.float32)
     return np.asarray(boxes, dtype=np.float32)
@@ -170,11 +182,37 @@ class OutletDetectionDataset(Dataset):
             "area": area,
             "iscrowd": torch.zeros((len(boxes),), dtype=torch.int64),
         }
+        _validate_target(target, image.width, image.height, sample.scene_id)
         return tensor, target, sample.scene_id
 
 
 def _collate(batch):
     return tuple(zip(*batch))
+
+
+def _validate_target(
+    target: dict[str, torch.Tensor],
+    width: int,
+    height: int,
+    scene_id: str,
+) -> None:
+    boxes = target["boxes"]
+    if boxes.ndim != 2 or boxes.shape[1:] != (4,):
+        raise ValueError(f"invalid Outlet box shape for {scene_id}: {tuple(boxes.shape)}")
+    if not torch.isfinite(boxes).all():
+        raise ValueError(f"non-finite Outlet box for {scene_id}")
+    if len(boxes):
+        if not torch.all(boxes[:, 2] > boxes[:, 0]) or not torch.all(
+            boxes[:, 3] > boxes[:, 1]
+        ):
+            raise ValueError(f"degenerate Outlet box for {scene_id}: {boxes.tolist()}")
+        if (
+            torch.any(boxes[:, 0] < 0)
+            or torch.any(boxes[:, 1] < 0)
+            or torch.any(boxes[:, 2] > width)
+            or torch.any(boxes[:, 3] > height)
+        ):
+            raise ValueError(f"Outlet box is outside the image for {scene_id}")
 
 
 def _box_iou(box_a: torch.Tensor, box_b: torch.Tensor) -> float:
@@ -287,9 +325,23 @@ def train(args: argparse.Namespace) -> dict[str, object]:
     features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(features, 2)
     model.to(device)
+    # With only three positive training scenes, updating the full detector is
+    # both unstable and unnecessary. Preserve pretrained visual features and
+    # fine-tune only proposal scoring plus the new two-class predictor.
+    for parameter in model.parameters():
+        parameter.requires_grad = False
+    for parameter in model.rpn.parameters():
+        parameter.requires_grad = True
+    for parameter in model.roi_heads.box_predictor.parameters():
+        parameter.requires_grad = True
     optimizer = torch.optim.AdamW(
-        [parameter for parameter in model.parameters() if parameter.requires_grad],
-        lr=args.learning_rate,
+        [
+            {"params": model.rpn.parameters(), "lr": args.rpn_learning_rate},
+            {
+                "params": model.roi_heads.box_predictor.parameters(),
+                "lr": args.learning_rate,
+            },
+        ],
         weight_decay=args.weight_decay,
     )
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -303,6 +355,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
     print(f"Validation scenes:         {len(validation_samples)}")
     print(f"Validation Outlet scenes:  {validation_dataset.positive_scene_count}")
     print(f"Training views per epoch:  {len(train_dataset)}")
+    print("Fine-tuning:               RPN + new Outlet predictor (backbone frozen)")
     print(f"Locked test used:          NO ({manifest['counts']['test']} remain untouched)")
     print("Training...\n")
 
@@ -315,6 +368,8 @@ def train(args: argparse.Namespace) -> dict[str, object]:
     for epoch in range(1, args.epochs + 1):
         train_dataset.set_epoch(epoch)
         model.train()
+        model.backbone.eval()
+        model.roi_heads.box_head.eval()
         total_loss = 0.0
         batches = 0
         for images, targets, _scene_ids in train_loader:
@@ -326,7 +381,14 @@ def train(args: argparse.Namespace) -> dict[str, object]:
             losses = model(images_device, targets_device)
             loss = sum(losses.values())
             if not torch.isfinite(loss):
-                raise ValueError("Outlet detector loss became non-finite")
+                details = ", ".join(
+                    f"{name}={float(value.detach().cpu()):.6g}"
+                    for name, value in losses.items()
+                )
+                raise ValueError(
+                    "Outlet detector loss became non-finite for "
+                    f"{', '.join(_scene_ids)} ({details})"
+                )
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             if args.grad_clip > 0:
@@ -379,7 +441,8 @@ def train(args: argparse.Namespace) -> dict[str, object]:
                 "epoch": epoch,
                 "train_loss": round(average_loss, 6),
                 "validation": metrics,
-                "learning_rate": float(optimizer.param_groups[0]["lr"]),
+                "rpn_learning_rate": float(optimizer.param_groups[0]["lr"]),
+                "predictor_learning_rate": float(optimizer.param_groups[1]["lr"]),
                 "best_so_far": improved,
             }
         )
@@ -440,7 +503,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--epochs", type=int, default=25)
     parser.add_argument("--patience", type=int, default=8)
-    parser.add_argument("--learning-rate", type=float, default=2e-4)
+    parser.add_argument("--learning-rate", type=float, default=1e-4)
+    parser.add_argument("--rpn-learning-rate", type=float, default=2e-5)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--grad-clip", type=float, default=1.0)
     parser.add_argument("--min-delta", type=float, default=1e-4)
