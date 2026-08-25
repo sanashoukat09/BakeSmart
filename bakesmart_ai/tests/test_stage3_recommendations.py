@@ -1,0 +1,78 @@
+from copy import deepcopy
+
+from app.schemas.design import DesignRequest
+from app.services.stage3_recommendation import Stage3RecommendationEngine
+
+
+def _plans(payload: dict):
+    request = DesignRequest.model_validate(payload)
+    return Stage3RecommendationEngine().build_plans(
+        request, request.event.theme_id
+    )
+
+
+def test_stage3_packages_are_varied_and_within_their_budget_shares(
+    valid_design_request,
+):
+    plans = _plans(valid_design_request)
+
+    identities = []
+    counts = []
+    for plan in plans.values():
+        cost = sum(quantity * unit_cost for _, quantity, unit_cost in plan.selected)
+        assert cost <= plan.budget_limit_pkr
+        assert all(
+            row["item_id"].startswith(
+                ("backdrop-", "floor-", "lighting-", "table-", "sign-")
+            )
+            for row, _, _ in plan.selected
+        )
+        identities.append(tuple(row["item_id"] for row, _, _ in plan.selected))
+        counts.append(len(plan.selected))
+
+    assert len(set(identities)) == 3
+    assert counts[0] < counts[1] < counts[2]
+
+
+def test_stage3_respects_excluded_categories_and_colours(valid_design_request):
+    payload = deepcopy(valid_design_request)
+    payload["event"]["required_decor_categories"] = []
+    payload["event"]["excluded_decor_categories"] = ["backdrop", "lighting"]
+    payload["event"]["excluded_colors"] = ["black", "neon", "blush"]
+
+    for plan in _plans(payload).values():
+        for row, _, _ in plan.selected:
+            assert row["category"] not in {"backdrop", "lighting"}
+            assert "blush" not in row["color_tags"].split(";")
+
+
+def test_stage3_rejects_components_that_do_not_fit_the_room(valid_design_request):
+    payload = deepcopy(valid_design_request)
+    payload["space"]["dimensions"] = {
+        "width_m": 1.2,
+        "depth_m": 1.2,
+        "height_m": 1.5,
+    }
+    payload["event"]["required_decor_categories"] = []
+
+    request = DesignRequest.model_validate(payload)
+    for plan in Stage3RecommendationEngine().build_plans(
+        request, request.event.theme_id
+    ).values():
+        for row, _, _ in plan.selected:
+            assert int(row["width_cm"]) / 100 <= 1.2
+            assert int(row["height_cm"]) / 100 <= 1.5
+
+
+def test_stage3_is_deterministic(valid_design_request):
+    first = _plans(valid_design_request)
+    second = _plans(valid_design_request)
+    assert first == second
+
+
+def test_stage3_explanations_name_real_price_evidence(valid_design_request):
+    plan = _plans(valid_design_request)["balanced"]
+    assert plan.selected
+    for row, _, _ in plan.selected:
+        assert "Price range evidence:" in row["reason"]
+        assert row["safety_notes"]

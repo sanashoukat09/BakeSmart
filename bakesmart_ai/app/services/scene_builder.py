@@ -338,6 +338,74 @@ class SceneBuilder:
             tuple(dict.fromkeys(warnings)),
         )
 
+    def apply_real_catalogue_plan(
+        self,
+        request: DesignRequest,
+        result: SceneBuildResult,
+        selected: tuple[tuple[dict[str, str], int, int], ...],
+        plan_warnings: tuple[str, ...],
+    ) -> SceneBuildResult:
+        """Replace bootstrap decor with a validated Stage 3 catalogue plan."""
+
+        table_dimensions = self._table_dimensions(request)
+        decorations, decor_objects, decoration_cost = self._place_decor(
+            request,
+            list(selected),
+            result.venue_assessment.selected_focal_center_x_m,
+            table_dimensions,
+        )
+        cake_objects = [
+            item for item in result.scene.objects
+            if item.role in {"cake", "cake_table"}
+        ]
+        roles = {item.role for item in decor_objects}
+        layers = ["cake_and_baked_items", "dessert_table"]
+        if roles & {"decoration", "signage"}:
+            layers.append("decorations")
+        if "backdrop" in roles:
+            layers.append("backdrop")
+        if "lighting" in roles:
+            layers.append("lighting")
+        costs = result.costs.model_copy(
+            update={
+                "decoration_cost_pkr": decoration_cost,
+                "total_cost_pkr": decoration_cost + result.costs.cake_cost_pkr,
+                "remaining_budget_pkr": (
+                    request.decoration_budget_pkr - decoration_cost
+                ),
+                "pricing_basis": "real_catalogue_planning_range_not_vendor_quote",
+            }
+        )
+        scene = result.scene.model_copy(
+            update={"objects": [*cake_objects, *decor_objects], "layers": layers}
+        )
+        stale_prefixes = (
+            "The bootstrap model was trained",
+            "All prices are synthetic",
+            "Safety for ",
+            "No compatible decoration package",
+        )
+        warnings = [
+            warning for warning in result.warnings
+            if not warning.startswith(stale_prefixes)
+        ]
+        warnings.insert(
+            0,
+            "Stage 3 uses real catalogue price ranges and safety evidence; "
+            "confirm current vendor availability and quotations before purchase.",
+        )
+        warnings.extend(plan_warnings)
+        return SceneBuildResult(
+            result.selected_theme_id,
+            decorations,
+            result.cake,
+            costs,
+            result.venue_assessment,
+            scene,
+            result.preview,
+            tuple(dict.fromkeys(warnings)),
+        )
+
     def _select_theme(
         self,
         request: DesignRequest,
@@ -800,7 +868,7 @@ class SceneBuilder:
                     quantity=quantity,
                     unit_cost_pkr=unit_cost,
                     placements=placements,
-                    reason=SceneBuilder._decor_reason(row["category"], request),
+                    reason=row.get("reason") or SceneBuilder._decor_reason(row["category"], request),
                     safety_note=row["safety_notes"],
                 )
             )
@@ -843,10 +911,8 @@ class SceneBuilder:
         if category == "backdrop":
             role = "backdrop"
             position = Position3D(x_m=center, y_m=0.05, z_m=0)
-            dimensions = Dimensions(
-                width_m=min(2.2, max(0.01, space_width - 0.01)),
-                depth_m=0.2,
-                height_m=min(2.2, request.space.dimensions.height_m),
+            dimensions = SceneBuilder._row_dimensions(
+                row, request, (2.2, 0.2, 2.2)
             )
         elif category == "floor-arrangement":
             role = "decoration"
@@ -856,7 +922,9 @@ class SceneBuilder:
                 offset = table_dimensions.width_m / 2 + 0.25
             x_position = min(max(center + offset, 0), space_width)
             position = Position3D(x_m=x_position, y_m=0.55, z_m=0)
-            dimensions = Dimensions(width_m=0.4, depth_m=0.4, height_m=0.8)
+            dimensions = SceneBuilder._row_dimensions(
+                row, request, (0.4, 0.4, 0.8)
+            )
         elif category == "lighting":
             role = "lighting"
             spread = (index - (quantity - 1) / 2) * min(
@@ -867,7 +935,9 @@ class SceneBuilder:
                 y_m=0.1,
                 z_m=max(0.1, request.space.dimensions.height_m - 0.3),
             )
-            dimensions = Dimensions(width_m=0.2, depth_m=0.2, height_m=0.3)
+            dimensions = SceneBuilder._row_dimensions(
+                row, request, (0.2, 0.2, 0.3)
+            )
         elif category == "signage":
             role = "signage"
             position = Position3D(
@@ -878,7 +948,9 @@ class SceneBuilder:
                 y_m=0.5,
                 z_m=0,
             )
-            dimensions = Dimensions(width_m=0.4, depth_m=0.3, height_m=1.2)
+            dimensions = SceneBuilder._row_dimensions(
+                row, request, (0.4, 0.3, 1.2)
+            )
         else:
             role = "decoration"
             position = Position3D(
@@ -886,11 +958,31 @@ class SceneBuilder:
                 y_m=0.45,
                 z_m=table_dimensions.height_m,
             )
-            dimensions = Dimensions(width_m=0.6, depth_m=0.3, height_m=0.1)
+            dimensions = SceneBuilder._row_dimensions(
+                row, request, (0.6, 0.3, 0.1)
+            )
         return ObjectPlacement(
             asset_id=row["ar_asset_key"],
             role=role,
             catalog_id=row["decor_id"],
             position=position,
             dimensions=dimensions,
+        )
+
+    @staticmethod
+    def _row_dimensions(
+        row: dict[str, str],
+        request: DesignRequest,
+        fallback: tuple[float, float, float],
+    ) -> Dimensions:
+        if not all(key in row for key in ("width_cm", "depth_cm", "height_cm")):
+            width, depth, height = fallback
+        else:
+            width = int(row["width_cm"]) / 100
+            depth = int(row["depth_cm"]) / 100
+            height = int(row["height_cm"]) / 100
+        return Dimensions(
+            width_m=min(width, request.space.dimensions.width_m),
+            depth_m=depth,
+            height_m=min(height, request.space.dimensions.height_m),
         )

@@ -38,7 +38,7 @@ def test_recommendation_returns_three_budget_aware_packages(client, valid_design
 
     assert response.status_code == 200
     body = response.json()
-    assert body["model_version"] == "bootstrap-v1"
+    assert body["model_version"] == "stage3-real-catalog-v1"
     assert body["selected_theme_id"] == "floral-romantic"
     assert body["cake"]["source_image_reference"] == "cake-photo-001"
     assert body["cake"]["shape"] == "round"
@@ -50,7 +50,7 @@ def test_recommendation_returns_three_budget_aware_packages(client, valid_design
     )
     assert body["costs"]["budget_scope"] == "decorations_only"
     assert body["costs"]["pricing_basis"] == (
-        "synthetic_planning_estimate_not_vendor_quote"
+        "real_catalogue_planning_range_not_vendor_quote"
     )
 
     roles = {item["role"] for item in body["scene"]["objects"]}
@@ -71,7 +71,7 @@ def test_recommendation_returns_three_budget_aware_packages(client, valid_design
     }
     assert body["scene"]["asset_status"] == "generated_procedural_glb"
     assert body["scene"]["concept_not_to_scale"] is False
-    assert any("synthetic labels" in warning for warning in body["warnings"])
+    assert any("real catalogue price ranges" in warning for warning in body["warnings"])
     assert body["venue_assessment"]["placement_status"] == "clearance_verified"
     assert body["venue_assessment"]["evidence_confidence"] == "medium"
     assert body["venue_assessment"]["available_front_clearance_m"] == 1.575

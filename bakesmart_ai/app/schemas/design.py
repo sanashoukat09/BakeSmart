@@ -289,7 +289,10 @@ class CostBreakdown(StrictModel):
     budget_pkr: int = Field(gt=0)
     remaining_budget_pkr: int = Field(ge=0)
     budget_scope: Literal["decorations_only"] = "decorations_only"
-    pricing_basis: Literal["synthetic_planning_estimate_not_vendor_quote"]
+    pricing_basis: Literal[
+        "synthetic_planning_estimate_not_vendor_quote",
+        "real_catalogue_planning_range_not_vendor_quote",
+    ]
 
 
 class ModelSignal(StrictModel):

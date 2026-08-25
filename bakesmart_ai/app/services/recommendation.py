@@ -25,7 +25,10 @@ from app.services.photo_artifacts import (
 from app.services.photo_preview_builder import PhotoPreviewBuilder
 from app.services.scene_artifacts import SceneArtifactStore
 from app.services.scene_builder import SceneBuilder, SceneBuildResult
+from app.services.stage3_recommendation import Stage3RecommendationEngine
 from training.model_runtime import BootstrapModelRuntime
+
+STAGE3_MODEL_VERSION = "stage3-real-catalog-v1"
 
 
 class RecommendationService:
@@ -40,6 +43,7 @@ class RecommendationService:
         self.feature_adapter: RequestFeatureAdapter | None = None
         self.catalog_store: CatalogStore | None = None
         self.scene_builder: SceneBuilder | None = None
+        self.stage3_engine: Stage3RecommendationEngine | None = None
         self.glb_builder: ProceduralGlbBuilder | None = None
         self.artifact_store: SceneArtifactStore | None = None
         self.photo_store = photo_store
@@ -55,6 +59,7 @@ class RecommendationService:
                 )
             self.catalog_store = CatalogStore()
             self.scene_builder = SceneBuilder(self.catalog_store)
+            self.stage3_engine = Stage3RecommendationEngine()
             self.glb_builder = ProceduralGlbBuilder()
             self.artifact_store = SceneArtifactStore()
         except FileNotFoundError as exc:
@@ -71,6 +76,7 @@ class RecommendationService:
                 self.feature_adapter,
                 self.catalog_store,
                 self.scene_builder,
+                self.stage3_engine,
                 self.glb_builder,
                 self.artifact_store,
             )
@@ -91,12 +97,13 @@ class RecommendationService:
         assert self.feature_adapter is not None
         assert self.catalog_store is not None
         assert self.scene_builder is not None
+        assert self.stage3_engine is not None
         assert self.glb_builder is not None
         assert self.artifact_store is not None
 
         adapted = self.feature_adapter.transform(request)
         model_signals = self.runtime.predict(adapted.matrix)[0]
-        package_results = {
+        bootstrap_results = {
             package_id: self.scene_builder.build(
                 request,
                 model_signals,
@@ -104,11 +111,22 @@ class RecommendationService:
             )
             for package_id in ("essential", "balanced", "statement")
         }
+        selected_theme_id = bootstrap_results["balanced"].selected_theme_id
+        stage3_plans = self.stage3_engine.build_plans(request, selected_theme_id)
+        package_results = {
+            package_id: self.scene_builder.apply_real_catalogue_plan(
+                request,
+                bootstrap_results[package_id],
+                stage3_plans[package_id].selected,
+                stage3_plans[package_id].warnings,
+            )
+            for package_id in ("essential", "balanced", "statement")
+        }
         recommended_package_id = self._recommended_package_id(request)
         result = package_results[recommended_package_id]
         request_json = json.dumps(
             {
-                "model_version": self.runtime.metadata["model_version"],
+                "model_version": STAGE3_MODEL_VERSION,
                 "request": request.model_dump(mode="json"),
             },
             sort_keys=True,
@@ -160,7 +178,7 @@ class RecommendationService:
         return RecommendationResponse(
             design_id=design_id,
             created_at=datetime.now(timezone.utc),
-            model_version=str(self.runtime.metadata["model_version"]),
+            model_version=STAGE3_MODEL_VERSION,
             model_signals=model_signals,
             selected_theme_id=result.selected_theme_id,
             decorations=result.decorations,
