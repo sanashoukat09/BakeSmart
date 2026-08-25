@@ -111,7 +111,7 @@ class EventDesignService {
               'angle': angle,
             }),
           )
-          .timeout(const Duration(seconds: 30));
+          .timeout(const Duration(seconds: 90));
       final decoded = _decodeObject(response.body);
       if (response.statusCode != 200) {
         throw EventDesignServiceException(
@@ -121,7 +121,8 @@ class EventDesignService {
       return VenuePhotoAnalysis.fromJson(decoded);
     } on TimeoutException {
       throw const EventDesignServiceException(
-        'Venue photo analysis took too long. Check the local Python service.',
+        'Venue photo analysis took longer than 90 seconds. Check that the '
+        'local Python service is still running.',
       );
     } on EventDesignServiceException {
       rethrow;

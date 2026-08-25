@@ -92,6 +92,8 @@ def test_finalize_creates_validation_only_bundle_without_optimizer(tmp_path):
     assert manifest["production_ready"] is False
     assert manifest["locked_test_used"] is False
     assert manifest["manual_classes"] == ["outlet"]
+    assert manifest["runtime_policy"]["segmentation_inference"] == "single_pass"
+    assert manifest["runtime_policy"]["segmentation_canvas_size"] == 320
     compact = torch.load(
         output_dir / "segmentation_model.pt", map_location="cpu", weights_only=False
     )

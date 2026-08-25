@@ -198,6 +198,8 @@ def finalize(
             "maximum_reported_confidence": 0.49,
             "door_score_threshold": threshold,
             "outlet_mode": "customer_manual",
+            "segmentation_inference": "single_pass",
+            "segmentation_canvas_size": 320,
         },
         "segmentation": {
             "checkpoint": segmentation_output.name,
@@ -218,6 +220,7 @@ def finalize(
         "limitations": [
             "The Door validation result is based on two positive scenes.",
             "Outlet detection is disabled because only three positive training scenes were available.",
+            "Runtime segmentation uses one 320-pixel pass; reported v5 metrics came from offline tiled validation.",
             "No candidate is a measured or confirmed 3D obstacle.",
             "The locked test split remains untouched.",
         ],

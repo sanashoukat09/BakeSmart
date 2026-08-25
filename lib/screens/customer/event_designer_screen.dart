@@ -98,8 +98,8 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
   Future<void> _pickVenueImage(String angle) async {
     final image = await ImagePicker().pickImage(
       source: ImageSource.gallery,
-      imageQuality: 88,
-      maxWidth: 2200,
+      imageQuality: 85,
+      maxWidth: 1600,
     );
     if (image == null) return;
     final bytes = await image.readAsBytes();

@@ -19,7 +19,6 @@ except ImportError as exc:  # pragma: no cover
 from training.annotation_workspace import PROJECT_DIR
 from training.finalize_real_venue_v6_bundle import DEFAULT_OUTPUT_DIR, MODEL_VERSION
 from training.real_venue_segmentation import CLASS_NAMES, sha256_file
-from training.real_venue_segmentation_v2 import tiled_logits
 from training.train_real_venue_segmentation_v5 import BakeSmartLRASPP
 from training.venue_vision_runtime import VenueVisionCandidate
 
@@ -43,7 +42,6 @@ class VenueVisionBundleV6Runtime:
         segmentation_model: torch.nn.Module,
         door_model: torch.nn.Module,
         manifest: dict[str, object],
-        segmentation_config: dict[str, object],
         device: torch.device,
     ) -> None:
         self.segmentation_model = segmentation_model.eval()
@@ -57,9 +55,13 @@ class VenueVisionBundleV6Runtime:
         self.door_score_threshold = float(
             manifest["runtime_policy"]["door_score_threshold"]
         )
-        self.canvas_size = int(segmentation_config.get("validation_canvas_size", 640))
-        self.tile_size = int(segmentation_config.get("validation_tile_size", 320))
-        self.tile_stride = int(segmentation_config.get("validation_tile_stride", 240))
+        # v5 was trained on 320x320 views. The validation-only runtime needs
+        # responsive CPU inference, so use one training-sized forward pass
+        # instead of the nine overlapping tiles used for offline validation.
+        policy = manifest["runtime_policy"]
+        self.canvas_size = int(policy.get("segmentation_canvas_size", 320))
+        if self.canvas_size < 256 or self.canvas_size > 640:
+            raise ValueError("v6 runtime segmentation canvas must be 256-640 pixels")
 
     @classmethod
     def load(
@@ -142,7 +144,6 @@ class VenueVisionBundleV6Runtime:
             segmentation_model=segmentation_model,
             door_model=door_model,
             manifest=manifest,
-            segmentation_config=segmentation_payload.get("config") or {},
             device=device,
         )
 
@@ -172,12 +173,9 @@ class VenueVisionBundleV6Runtime:
             pixels - np.asarray([0.485, 0.456, 0.406], dtype=np.float32)
         ) / np.asarray([0.229, 0.224, 0.225], dtype=np.float32)
         tensor = torch.from_numpy(pixels.transpose(2, 0, 1)).unsqueeze(0).to(self.device)
-        logits = tiled_logits(
-            self.segmentation_model,
-            tensor,
-            tile_size=self.tile_size,
-            stride=self.tile_stride,
-        )
+        logits = self.segmentation_model(tensor)
+        if not isinstance(logits, torch.Tensor) or logits.ndim != 4:
+            raise ValueError("v6 segmentation model returned invalid logits")
         probabilities = torch.softmax(logits, dim=1).squeeze(0).cpu().numpy()
         probabilities = probabilities[
             :, top : top + resized_height, left : left + resized_width
@@ -268,7 +266,7 @@ class VenueVisionBundleV6Runtime:
         return result
 
     def _door_candidates(self, image: Image.Image) -> list[VenueVisionCandidate]:
-        pixels = np.asarray(image, dtype=np.float32) / 255.0
+        pixels = np.array(image, dtype=np.float32, copy=True) / 255.0
         tensor = torch.from_numpy(pixels.transpose(2, 0, 1)).float().to(self.device)
         output = self.door_model([tensor])[0]
         width, height = image.size
@@ -302,4 +300,3 @@ class VenueVisionBundleV6Runtime:
             if len(candidates) >= 2:
                 break
         return candidates
-
