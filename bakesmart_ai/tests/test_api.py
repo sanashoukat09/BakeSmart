@@ -102,6 +102,7 @@ def test_viewer_and_glb_urls_are_real_local_resources(client, valid_design_reque
     assert "default-src 'self'" in viewer.headers["content-security-policy"]
     assert b'id="scene-canvas"' in viewer.content
     assert b"https://" not in viewer.content
+    assert b'/static/viewer.js?v=20260825-1' in viewer.content
     assert glb.status_code == 200
     assert glb.headers["content-type"] == "model/gltf-binary"
     assert glb.headers["cache-control"] == "private, no-cache"
@@ -110,6 +111,7 @@ def test_viewer_and_glb_urls_are_real_local_resources(client, valid_design_reque
     assert b"pointermove" in viewer_script.content
     assert b"wheel" in viewer_script.content
     assert b"distanceBetweenPointers" in viewer_script.content
+    assert viewer_script.content.count(b"precision mediump float;") == 2
 
 
 def test_unknown_viewer_scene_returns_not_found(client):
