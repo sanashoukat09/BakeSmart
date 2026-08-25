@@ -155,9 +155,18 @@ def _to_tensors(
     image: Image.Image,
     mask: Image.Image,
     scene_id: str,
+    *,
+    normalization: str = "half",
 ) -> tuple[torch.Tensor, torch.Tensor]:
     image_array = np.asarray(image, dtype=np.float32) / 255.0
-    image_array = (image_array - 0.5) / 0.5
+    if normalization == "half":
+        image_array = (image_array - 0.5) / 0.5
+    elif normalization == "imagenet":
+        image_array = (
+            image_array - np.asarray([0.485, 0.456, 0.406], dtype=np.float32)
+        ) / np.asarray([0.229, 0.224, 0.225], dtype=np.float32)
+    else:
+        raise ValueError(f"unsupported image normalization: {normalization}")
     mask_array = np.asarray(mask, dtype=np.uint8).copy()
     _validate_mask_values(mask_array, scene_id)
     return (
@@ -178,11 +187,13 @@ class RareClassTrainingDataset(Dataset):
         random_crops_per_scene: int = 1,
         door_crops_per_scene: int = 2,
         outlet_crops_per_scene: int = 5,
+        normalization: str = "half",
     ) -> None:
         self.samples = list(samples)
         self.image_size = image_size
         self.seed = seed
         self.epoch = 0
+        self.normalization = normalization
         self.views: list[TrainingView] = []
         self.presence = {"door_scenes": 0, "outlet_scenes": 0}
 
@@ -259,17 +270,32 @@ class RareClassTrainingDataset(Dataset):
             mask = ImageOps.mirror(mask)
         image = ImageEnhance.Brightness(image).enhance(rng.uniform(0.82, 1.18))
         image = ImageEnhance.Contrast(image).enhance(rng.uniform(0.88, 1.12))
-        return (*_to_tensors(image, mask, sample.scene_id), sample.scene_id)
+        return (
+            *_to_tensors(
+                image,
+                mask,
+                sample.scene_id,
+                normalization=self.normalization,
+            ),
+            sample.scene_id,
+        )
 
 
 class TiledValidationDataset(Dataset):
     """Deterministic higher-resolution validation images; no augmentation."""
 
-    def __init__(self, samples: list[SplitSample], *, canvas_size: int = 512) -> None:
+    def __init__(
+        self,
+        samples: list[SplitSample],
+        *,
+        canvas_size: int = 512,
+        normalization: str = "half",
+    ) -> None:
         if canvas_size < 256 or canvas_size % 16 != 0:
             raise ValueError("validation canvas size must be >=256 and divisible by 16")
         self.samples = list(samples)
         self.canvas_size = canvas_size
+        self.normalization = normalization
 
     def __len__(self) -> int:
         return len(self.samples)
@@ -278,7 +304,15 @@ class TiledValidationDataset(Dataset):
         sample = self.samples[index]
         image, mask = _load_pair(sample)
         image, mask = _letterbox_high_resolution(image, mask, self.canvas_size)
-        return (*_to_tensors(image, mask, sample.scene_id), sample.scene_id)
+        return (
+            *_to_tensors(
+                image,
+                mask,
+                sample.scene_id,
+                normalization=self.normalization,
+            ),
+            sample.scene_id,
+        )
 
 
 def _letterbox_high_resolution(

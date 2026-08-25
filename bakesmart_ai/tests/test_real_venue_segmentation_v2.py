@@ -9,6 +9,7 @@ from training.real_venue_segmentation_v2 import (
     DOOR_ID,
     OUTLET_ID,
     RareClassTrainingDataset,
+    _to_tensors,
     boosted_class_weights,
     tile_positions,
     tiled_logits,
@@ -65,3 +66,19 @@ def test_tiled_logits_returns_full_canvas():
     image = torch.zeros((1, 3, 512, 512))
     output = tiled_logits(Tiny(), image, tile_size=256, stride=192)
     assert output.shape == (1, 6, 512, 512)
+
+
+def test_imagenet_normalization_matches_pretrained_encoder_expectation():
+    image = Image.new("RGB", (4, 4), (255, 255, 255))
+    mask = Image.new("L", (4, 4), 0)
+    tensor, _labels = _to_tensors(
+        image, mask, "scene", normalization="imagenet"
+    )
+    expected = torch.tensor(
+        [
+            (1.0 - 0.485) / 0.229,
+            (1.0 - 0.456) / 0.224,
+            (1.0 - 0.406) / 0.225,
+        ]
+    )
+    assert torch.allclose(tensor[:, 0, 0], expected, atol=1e-5)
