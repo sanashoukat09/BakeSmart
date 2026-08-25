@@ -579,7 +579,7 @@ class SceneBuilder:
         )
         if candidate_labels:
             assumptions.append(
-                "Synthetic vision suggested possible "
+                "Local vision suggested possible "
                 f"{', '.join(candidate_labels)} region(s); none were used as "
                 "confirmed obstacles."
             )

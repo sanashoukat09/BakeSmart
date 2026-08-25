@@ -28,6 +28,11 @@ try:
 except ImportError:  # pragma: no cover - synthetic fallback remains available
     RealVenueSegmentationRuntime = None  # type: ignore[assignment,misc]
 
+try:
+    from training.venue_vision_bundle_v6_runtime import VenueVisionBundleV6Runtime
+except ImportError:  # pragma: no cover - older/synthetic runtimes remain available
+    VenueVisionBundleV6Runtime = None  # type: ignore[assignment,misc]
+
 
 MAX_PHOTO_BYTES = 8_000_000
 MAX_PHOTO_PIXELS = 24_000_000
@@ -41,8 +46,22 @@ class VenuePhotoAnalyzer:
     """Extract reproducible image-quality signals without a pretrained model."""
 
     def __init__(self) -> None:
+        self.final_vision_runtime = None
+        if VenueVisionBundleV6Runtime is not None:
+            try:
+                self.final_vision_runtime = VenueVisionBundleV6Runtime.load()
+            except (
+                FileNotFoundError,
+                ImportError,
+                KeyError,
+                TypeError,
+                ValueError,
+                OSError,
+                RuntimeError,
+            ):
+                self.final_vision_runtime = None
         self.real_vision_runtime = None
-        if RealVenueSegmentationRuntime is not None:
+        if self.final_vision_runtime is None and RealVenueSegmentationRuntime is not None:
             try:
                 self.real_vision_runtime = RealVenueSegmentationRuntime.load()
             except (
@@ -77,7 +96,7 @@ class VenuePhotoAnalyzer:
                 oriented_rgb = ImageOps.exif_transpose(source).convert("RGB")
                 width, height = oriented_rgb.size
                 vision_pixels = None
-                if self.real_vision_runtime is None:
+                if self.final_vision_runtime is None and self.real_vision_runtime is None:
                     vision_size = (
                         self.vision_runtime.image_size if self.vision_runtime else 48
                     )
@@ -125,7 +144,21 @@ class VenuePhotoAnalyzer:
         candidates: list[VenueVisionCandidate] = []
         vision_model_version: str | None = None
         active_model_source: str | None = None
-        if self.real_vision_runtime is not None:
+        if self.final_vision_runtime is not None:
+            vision_model_version = self.final_vision_runtime.model_version
+            candidates = [
+                VenueVisionCandidate(
+                    label=candidate.label,
+                    confidence=candidate.confidence,
+                    bounding_box=candidate.bounding_box,
+                    area_fraction=candidate.area_fraction,
+                    confirmed=False,
+                    source="validation_only_v6_bundle",
+                )
+                for candidate in self.final_vision_runtime.candidates(oriented_rgb)
+            ]
+            active_model_source = "validation-only v5 room plus v6 Door bundle"
+        elif self.real_vision_runtime is not None:
             vision_model_version = self.real_vision_runtime.model_version
             candidates = [
                 VenueVisionCandidate(
@@ -177,13 +210,19 @@ class VenuePhotoAnalyzer:
             limitations=[
                 "No doors, windows, furniture, outlets, or walkways are automatically confirmed.",
                 (
-                    "Vision candidates use the frozen reviewed-real six-class checkpoint; "
-                    "Walkway is derived separately from predicted Floor and all confidence "
-                    "values remain capped below 0.50."
-                    if self.real_vision_runtime is not None
+                    "The validation-only v6 bundle uses v5 for room regions and v6 for "
+                    "Door suggestions; Outlet marking remains manual and every candidate "
+                    "must be customer-confirmed."
+                    if self.final_vision_runtime is not None
                     else (
-                        "Vision candidates come from synthetic training only and are "
-                        "capped below 0.50 confidence."
+                        "Vision candidates use the frozen reviewed-real six-class checkpoint; "
+                        "Walkway is derived separately from predicted Floor and all confidence "
+                        "values remain capped below 0.50."
+                        if self.real_vision_runtime is not None
+                        else (
+                            "Vision candidates come from synthetic training only and are "
+                            "capped below 0.50 confidence."
+                        )
                     )
                 ),
                 "Exact scale comes only from customer-confirmed measurements, not photo pixels.",

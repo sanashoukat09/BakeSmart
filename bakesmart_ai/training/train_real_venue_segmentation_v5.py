@@ -68,10 +68,19 @@ DEFAULT_SEED = 260828
 class BakeSmartLRASPP(nn.Module):
     """Six-class LR-ASPP with a pretrained MobileNetV3 feature extractor."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, pretrained: bool = True) -> None:
         super().__init__()
-        weights = LRASPP_MobileNet_V3_Large_Weights.DEFAULT
-        self.network = lraspp_mobilenet_v3_large(weights=weights)
+        if pretrained:
+            self.network = lraspp_mobilenet_v3_large(
+                weights=LRASPP_MobileNet_V3_Large_Weights.DEFAULT
+            )
+        else:
+            # Runtime checkpoints contain the complete network state. Explicitly
+            # disable both weight sources so API startup never downloads a model.
+            self.network = lraspp_mobilenet_v3_large(
+                weights=None,
+                weights_backbone=None,
+            )
         low = self.network.classifier.low_classifier
         high = self.network.classifier.high_classifier
         self.network.classifier.low_classifier = nn.Conv2d(

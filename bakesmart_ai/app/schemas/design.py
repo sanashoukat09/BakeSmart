@@ -81,6 +81,7 @@ class VenueVisionCandidate(StrictModel):
     source: Literal[
         "synthetic_bootstrap_model",
         "reviewed_real_six_class_model",
+        "validation_only_v6_bundle",
     ] = "synthetic_bootstrap_model"
 
     @model_validator(mode="after")

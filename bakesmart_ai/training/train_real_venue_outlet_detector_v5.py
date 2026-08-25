@@ -845,7 +845,8 @@ def train(
     temporary = report_path.with_suffix(".json.part")
     temporary.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     temporary.replace(report_path)
-    print(f"\nBest v5 {profile.display_name} detector validation result")
+    detector_version = "v6" if profile.adaptive_fine_tuning else "v5"
+    print(f"\nBest {detector_version} {profile.display_name} detector validation result")
     print(f"Epoch:     {best_epoch}")
     print(f"Precision: {best_metrics['precision']:.4f}")
     print(f"Recall:    {best_metrics['recall']:.4f}")

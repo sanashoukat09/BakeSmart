@@ -102,6 +102,7 @@ def test_reviewed_real_runtime_is_preferred_and_reported_honestly():
             ]
 
     analyzer = VenuePhotoAnalyzer()
+    analyzer.final_vision_runtime = None
     analyzer.real_vision_runtime = FakeRealRuntime()
     result = analyzer.analyze(
         VenuePhotoAnalysisRequest(
@@ -116,3 +117,36 @@ def test_reviewed_real_runtime_is_preferred_and_reported_honestly():
     assert result.unconfirmed_candidates[0].confirmed is False
     assert result.exact_scale_available is False
     assert any("Walkway is derived" in line for line in result.limitations)
+
+
+def test_validation_only_v6_bundle_is_preferred_and_keeps_outlets_manual():
+    class FakeFinalRuntime:
+        model_version = "venue-vision-v6-validation-bundle"
+
+        @staticmethod
+        def candidates(_image):
+            return [
+                RuntimeCandidate(
+                    label="door",
+                    confidence=0.49,
+                    bounding_box=(0.1, 0.1, 0.2, 0.6),
+                    area_fraction=0.12,
+                )
+            ]
+
+    analyzer = VenuePhotoAnalyzer()
+    analyzer.final_vision_runtime = FakeFinalRuntime()
+    analyzer.real_vision_runtime = None
+    result = analyzer.analyze(
+        VenuePhotoAnalysisRequest(
+            file_name="room.png",
+            media_type="image/png",
+            image_base64=_venue_photo_base64(),
+            angle="wide",
+        )
+    )
+    assert result.vision_model_version == "venue-vision-v6-validation-bundle"
+    assert result.unconfirmed_candidates[0].source == "validation_only_v6_bundle"
+    assert result.unconfirmed_candidates[0].confirmed is False
+    assert result.manual_outlets == []
+    assert any("Outlet marking remains manual" in line for line in result.limitations)
