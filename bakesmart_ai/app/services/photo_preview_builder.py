@@ -24,13 +24,67 @@ V5_1_ASSET_FILES = {
     for category in ("backdrop", "floor", "table")
     for style in ("romantic", "modern", "playful")
 }
-PLAYFUL_THEMES = {
-    "whimsical-kids", "rainbow-bright-pop", "retro-70s", "sports-hobby",
-    "tropical", "pastel-dreamy",
+V5_2_STYLES = (
+    "rustic", "tropical", "coastal", "mehndi", "wedding", "majlis",
+    "winter", "celestial", "retro",
+)
+V5_2_ASSET_FILES = {
+    (category, style): f"v5_2/{category}-{style}.webp"
+    for category in ("backdrop", "floor", "table")
+    for style in V5_2_STYLES
 }
-MODERN_THEMES = {
-    "modern-minimalist", "industrial", "art-deco", "dark-moody",
-    "classic-elegant", "glam-gold", "corporate-modern",
+for _category in ("lighting", "signage"):
+    for _family in (
+        "romantic", "modern", "playful", "natural", "cultural", "seasonal"
+    ):
+        V5_2_ASSET_FILES[(_category, _family)] = (
+            f"v5_2/{_category}-{_family}.webp"
+        )
+
+# Every public catalogue theme has an explicit visual treatment. This prevents
+# an unknown or newly selected celebration from silently becoming the same
+# generic romantic setup.
+THEME_VISUAL_STYLE = {
+    "rustic-boho": "rustic",
+    "modern-minimalist": "modern",
+    "classic-elegant": "romantic",
+    "tropical": "tropical",
+    "vintage-garden": "romantic",
+    "glam-gold": "modern",
+    "pastel-dreamy": "playful",
+    "dark-moody": "celestial",
+    "whimsical-kids": "playful",
+    "beach-coastal": "coastal",
+    "industrial": "modern",
+    "floral-romantic": "romantic",
+    "retro-70s": "retro",
+    "winter-wonderland": "winter",
+    "south-asian-mehndi": "mehndi",
+    "south-asian-wedding": "wedding",
+    "arabian-majlis": "majlis",
+    "sports-hobby": "playful",
+    "rainbow-bright-pop": "playful",
+    "farmhouse": "rustic",
+    "art-deco": "modern",
+    "enchanted-forest": "tropical",
+    "celestial-night": "celestial",
+    "corporate-brand": "modern",
+    "baby-safari": "rustic",
+    "candy-pop": "playful",
+}
+STYLE_FAMILY = {
+    "romantic": "romantic",
+    "modern": "modern",
+    "playful": "playful",
+    "rustic": "natural",
+    "tropical": "natural",
+    "coastal": "natural",
+    "mehndi": "cultural",
+    "wedding": "cultural",
+    "majlis": "cultural",
+    "winter": "seasonal",
+    "celestial": "seasonal",
+    "retro": "seasonal",
 }
 
 
@@ -55,7 +109,10 @@ class PreviewAssetStore:
         self.asset_dir = asset_dir
 
     def load(self, category: str, style: str | None = None) -> Image.Image | None:
-        filename = V5_1_ASSET_FILES.get((category, style)) if style else None
+        filename = V5_2_ASSET_FILES.get((category, style)) if style else None
+        filename = filename or (
+            V5_1_ASSET_FILES.get((category, style)) if style else None
+        )
         filename = filename or ASSET_FILES.get(category)
         if filename is None:
             return None
@@ -99,6 +156,8 @@ class PhotoPreviewBuilder:
         scale = PACKAGE_SCALE[package_id]
         palette = self._palette(palette_hex)
         style = self._style_family(request)
+        family = STYLE_FAMILY[style]
+        composition = self._composition(request, package_id)
         by_category = {item.category: item for item in decorations}
         layout = self._layout(request, decorations, scale)
         focal_x = layout["focal_x"]
@@ -117,13 +176,12 @@ class PhotoPreviewBuilder:
                 shadow=True,
             )
         if "lighting" in by_category:
-            lighting_layers = {"essential": 1, "balanced": 1, "statement": 2}[
-                package_id
-            ]
+            lighting_layers = composition["lighting_layers"]
             for index in range(lighting_layers):
                 self._place_asset(
                     canvas,
                     "lighting",
+                    style=family,
                     centre=(focal_x, 150 + index * 45),
                     maximum=(int(990 * scale), int(300 * scale)),
                     room_light=max(room_light, 1.0),
@@ -131,7 +189,7 @@ class PhotoPreviewBuilder:
                     opacity=0.78 if index else 0.94,
                 )
         if "floor-arrangement" in by_category:
-            count = {"essential": 1, "balanced": 2, "statement": 3}[package_id]
+            count = composition["floor_count"]
             spread = layout["backdrop_width"] * 0.46
             positions = {
                 1: (focal_x + int(spread * 0.72),),
@@ -170,11 +228,15 @@ class PhotoPreviewBuilder:
             shadow=True,
         )
         if "signage" in by_category:
-            sign_x = max(105, focal_x - int(365 * scale))
+            sign_x = focal_x + composition["sign_direction"] * int(
+                layout["backdrop_width"] * 0.56
+            )
+            sign_x = min(1175, max(105, sign_x))
             sign_y = ground_y - int(145 * scale)
             sign_box = self._place_asset(
                 canvas,
                 "signage",
+                style=family,
                 centre=(sign_x, sign_y),
                 maximum=(int(185 * scale), int(330 * scale)),
                 room_light=room_light,
@@ -232,11 +294,38 @@ class PhotoPreviewBuilder:
     def _style_family(request: DesignRequest) -> str:
         theme = request.event.theme_id
         event = request.event.event_type.value
-        if theme in PLAYFUL_THEMES or event == "kids-birthday":
+        if theme in THEME_VISUAL_STYLE:
+            return THEME_VISUAL_STYLE[theme]
+        if event in {"kids_birthday", "baby_shower"}:
             return "playful"
-        if theme in MODERN_THEMES or event == "corporate":
+        if event == "corporate":
             return "modern"
+        if event in {"wedding", "engagement"}:
+            return "wedding"
         return "romantic"
+
+    @staticmethod
+    def _composition(request: DesignRequest, package_id: str) -> dict[str, int]:
+        """Vary density and balance by both package and celebration type."""
+        event = request.event.event_type.value
+        floor_count = {"essential": 1, "balanced": 2, "statement": 3}[package_id]
+        lighting_layers = 2 if package_id == "statement" else 1
+        sign_direction = -1
+        if event == "corporate":
+            floor_count = {"essential": 1, "balanced": 1, "statement": 2}[
+                package_id
+            ]
+            lighting_layers = 1
+            sign_direction = 1
+        elif event in {"wedding", "engagement", "anniversary"}:
+            floor_count = 3 if package_id == "statement" else 2
+        elif event in {"kids_birthday", "baby_shower"}:
+            lighting_layers = 1
+        return {
+            "floor_count": floor_count,
+            "lighting_layers": lighting_layers,
+            "sign_direction": sign_direction,
+        }
 
     @staticmethod
     def _palette(palette_hex: str) -> tuple[int, int, int] | None:

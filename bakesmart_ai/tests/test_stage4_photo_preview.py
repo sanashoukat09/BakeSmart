@@ -1,11 +1,15 @@
+import csv
 from pathlib import Path
 
 from PIL import Image, ImageChops
 
-from app.schemas.design import DecorRecommendation, DesignRequest
+from app.schemas.design import DecorRecommendation, DesignRequest, EventType
 from app.services.photo_preview_builder import (
     ASSET_FILES,
+    STYLE_FAMILY,
+    THEME_VISUAL_STYLE,
     V5_1_ASSET_FILES,
+    V5_2_ASSET_FILES,
     PhotoPreviewBuilder,
     PreviewAssetStore,
 )
@@ -55,6 +59,50 @@ def test_stage4_assets_have_real_transparency():
         low, high = asset.getchannel("A").getextrema()
         assert low == 0
         assert high > 200
+    for (category, style), _filename in V5_2_ASSET_FILES.items():
+        asset = store.load(category, style)
+        assert asset is not None
+        low, high = asset.getchannel("A").getextrema()
+        assert low == 0
+        assert high > 200
+
+
+def test_stage52_maps_every_catalogue_theme_to_available_assets():
+    catalogue = Path(__file__).parents[1] / "data" / "catalogs" / "themes.csv"
+    with catalogue.open(newline="", encoding="utf-8") as source:
+        theme_ids = {row["theme_id"] for row in csv.DictReader(source)}
+    assert theme_ids == set(THEME_VISUAL_STYLE)
+
+    store = PreviewAssetStore()
+    for theme_id, style in THEME_VISUAL_STYLE.items():
+        for category in ("backdrop", "floor", "table"):
+            assert store.load(category, style) is not None, (theme_id, category)
+        family = STYLE_FAMILY[style]
+        for category in ("lighting", "signage"):
+            assert store.load(category, family) is not None, (theme_id, category)
+
+
+def test_stage52_varies_composition_by_event(valid_design_request):
+    request = DesignRequest.model_validate(valid_design_request)
+    builder = PhotoPreviewBuilder()
+
+    def for_event(event_type: str) -> dict[str, int]:
+        changed = request.model_copy(
+            update={
+                "event": request.event.model_copy(
+                    update={"event_type": EventType(event_type)}
+                )
+            }
+        )
+        return builder._composition(changed, "statement")
+
+    assert for_event("corporate") == {
+        "floor_count": 2,
+        "lighting_layers": 1,
+        "sign_direction": 1,
+    }
+    assert for_event("wedding")["floor_count"] == 3
+    assert for_event("kids_birthday")["lighting_layers"] == 1
 
 
 def test_stage51_selects_distinct_theme_families_and_room_relative_scale(
