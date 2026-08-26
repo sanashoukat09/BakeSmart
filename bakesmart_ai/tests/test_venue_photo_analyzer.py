@@ -128,8 +128,17 @@ def test_stage1_uses_temporary_photos_for_three_concept_previews(
     for package in packages:
         preview = client.get(package["photo_preview_url"])
         assert preview.status_code == 200
-        assert preview.headers["content-type"] == "image/png"
-        assert preview.content.startswith(b"\x89PNG")
+        assert preview.headers["content-type"].startswith("text/html")
+        assert "default-src 'self'" in preview.headers["content-security-policy"]
+        assert b'id="preview-image"' in preview.content
+        package_id = package["package_id"]
+        image = client.get(
+            f"/api/v1/designs/{response.json()['design_id']}/previews/"
+            f"{package_id}.png"
+        )
+        assert image.status_code == 200
+        assert image.headers["content-type"] == "image/png"
+        assert image.content.startswith(b"\x89PNG")
 
 
 def test_reviewed_real_runtime_is_preferred_and_reported_honestly():

@@ -131,8 +131,12 @@ def test_unknown_viewer_scene_returns_not_found(client):
     preview = client.get(
         "/api/v1/designs/design-00000000000000000000/previews/unknown.png"
     )
+    preview_page = client.get(
+        "/preview/design-00000000000000000000/unknown"
+    )
 
     assert viewer.status_code == 404
     assert glb.status_code == 404
     assert invalid.status_code == 404
     assert preview.status_code == 404
+    assert preview_page.status_code == 404

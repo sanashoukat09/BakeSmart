@@ -256,8 +256,10 @@ class RecommendationService:
                     )
                     preview_id = f"{design_id}-{package_id}"
                     self.preview_store.write(preview_id, image)
-                    preview_url = (
-                        f"/api/v1/designs/{design_id}/previews/{package_id}.png"
+                    preview_url = f"/preview/{design_id}/{package_id}"
+                    warnings.append(
+                        "Stage 4 cut-outs represent the selected catalogue categories; "
+                        "confirm the exact vendor item before ordering."
                     )
                 except (KeyError, OSError, ValueError):
                     warnings.append(

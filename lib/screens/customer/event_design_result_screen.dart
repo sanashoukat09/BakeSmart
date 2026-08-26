@@ -130,7 +130,7 @@ class _EventDesignResultScreenState
         previewUrl: service.absoluteResourceUri(resourcePath).toString(),
         previewLabel: photoPath == null
             ? 'Open Basic 3D Layout Preview'
-            : 'Open Photo-Based Preview',
+            : 'Open Real-Photo Preview',
         sharePositionOrigin: renderBox == null
             ? null
             : renderBox.localToGlobal(Offset.zero) & renderBox.size,
@@ -284,9 +284,10 @@ class _EventDesignResultScreenState
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Stage 1 does not include photorealistic 3D catalogue assets. '
-                  'The Basic 3D Layout Preview uses placeholders; real GLB decor '
-                  'assets and material textures belong to Stage 2.',
+                  'Stage 4 places photorealistic decoration cut-outs over your real '
+                  'venue photo and matches their brightness, scale and shadows. '
+                  'The Basic 3D Layout Preview still uses measured placeholder '
+                  'geometry and is not a photorealistic room reconstruction.',
                   style: TextStyle(color: _muted, height: 1.45),
                 ),
                 if (_recommendation.warnings.isNotEmpty) ...[
@@ -479,7 +480,7 @@ class _EventDesignResultScreenState
                         : () => _openPhotoPreview(package),
                     style: FilledButton.styleFrom(backgroundColor: _brown),
                     icon: const Icon(Icons.photo_outlined),
-                    label: const Text('Open Photo-Based Preview'),
+                    label: const Text('Open Real-Photo Preview'),
                   ),
                 ),
               ],

@@ -103,7 +103,7 @@ void main() {
     expect(recommendation.venueAssessment?.availableFrontClearanceM, 1.575);
     expect(recommendation.packages.single.name, 'Balanced Celebration');
     expect(recommendation.packages.single.photoPreviewPath,
-        '/api/v1/designs/design-1234567890abcdef1234/previews/balanced.png');
+        '/preview/design-1234567890abcdef1234/balanced');
     expect(recommendation.recommendedPackageId, 'balanced');
   });
 
@@ -247,7 +247,7 @@ Map<String, dynamic> _recommendationJson() {
         'budget_pkr': 50000,
         'remaining_budget_pkr': 8000,
         'photo_preview_url':
-            '/api/v1/designs/design-1234567890abcdef1234/previews/balanced.png',
+            '/preview/design-1234567890abcdef1234/balanced',
         'recommended': true,
       }
     ],
