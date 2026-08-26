@@ -1,4 +1,4 @@
-"""Compose Stage 4 catalogue cut-outs over the customer's real venue photo."""
+"""Compose celebration-specific catalogue cut-outs over a real venue photo."""
 
 from __future__ import annotations
 
@@ -140,6 +140,7 @@ class PhotoPreviewBuilder:
         request: DesignRequest,
         package_id: str,
         package_name: str,
+        selected_theme_id: str | None = None,
         decorations: list[DecorRecommendation],
         palette_hex: str,
         decoration_cost_pkr: int,
@@ -155,7 +156,8 @@ class PhotoPreviewBuilder:
         canvas = self._prepare_room(canvas)
         scale = PACKAGE_SCALE[package_id]
         palette = self._palette(palette_hex)
-        style = self._style_family(request)
+        theme_id = selected_theme_id or request.event.theme_id
+        style = self._style_family(request, theme_id)
         family = STYLE_FAMILY[style]
         composition = self._composition(request, package_id)
         by_category = {item.category: item for item in decorations}
@@ -256,7 +258,7 @@ class PhotoPreviewBuilder:
         self._draw_labels(
             canvas,
             package_name=package_name,
-            theme_id=request.event.theme_id,
+            theme_id=theme_id,
             decoration_cost_pkr=decoration_cost_pkr,
             item_count=len(decorations),
         )
@@ -291,8 +293,8 @@ class PhotoPreviewBuilder:
         return CANVAS_SIZE[0] // 2
 
     @staticmethod
-    def _style_family(request: DesignRequest) -> str:
-        theme = request.event.theme_id
+    def _style_family(request: DesignRequest, theme: str | None = None) -> str:
+        theme = theme or request.event.theme_id
         event = request.event.event_type.value
         if theme in THEME_VISUAL_STYLE:
             return THEME_VISUAL_STYLE[theme]
@@ -345,7 +347,12 @@ class PhotoPreviewBuilder:
         scale: float,
     ) -> dict[str, int]:
         room_width = max(request.space.dimensions.width_m, 1.5)
-        pixels_per_metre = min(520.0, 1160.0 / room_width)
+        room_height = max(request.space.dimensions.height_m, 1.8)
+        pixels_per_metre_x = min(520.0, 1160.0 / room_width)
+        # The visible floor-to-ceiling region occupies about 625 pixels. Use
+        # the customer's height as the second scale axis instead of deriving
+        # every dimension from room width.
+        pixels_per_metre_y = 625.0 / room_height
 
         def dimensions(category: str, default: tuple[float, float]) -> tuple[float, float]:
             for item in decorations:
@@ -357,8 +364,9 @@ class PhotoPreviewBuilder:
 
         backdrop_m = dimensions("backdrop", (min(2.4, room_width * 0.78), 2.1))
         table_m = dimensions("table-setting", (min(1.5, room_width * 0.52), 0.9))
-        setup_width = min(1160, max(520, int(backdrop_m[0] * pixels_per_metre * scale)))
-        setup_height = min(610, max(430, int(backdrop_m[1] * pixels_per_metre * 0.9 * scale)))
+        setup_width = min(1160, max(560, int(backdrop_m[0] * pixels_per_metre_x * scale)))
+        target_height_m = min(room_height * 0.9, max(backdrop_m[1], room_height * 0.76))
+        setup_height = min(610, max(475, int(target_height_m * pixels_per_metre_y * scale)))
         focal_x = self._focal_x(request, decorations)
         half = setup_width // 2
         focal_x = min(CANVAS_SIZE[0] - half - 35, max(half + 35, focal_x))
@@ -367,8 +375,8 @@ class PhotoPreviewBuilder:
             "ground_y": 665,
             "backdrop_width": setup_width,
             "backdrop_height": setup_height,
-            "table_width": min(int(setup_width * 0.58), max(500, int(table_m[0] * pixels_per_metre * scale))),
-            "table_height": min(315, max(235, int(table_m[1] * pixels_per_metre * 0.72 * scale))),
+            "table_width": min(int(setup_width * 0.62), max(500, int(table_m[0] * pixels_per_metre_x * scale))),
+            "table_height": min(330, max(245, int(table_m[1] * pixels_per_metre_y * scale))),
             "floor_width": min(330, max(230, int(setup_width * 0.29))),
             "floor_height": min(260, max(175, int(setup_height * 0.39))),
         }
@@ -390,6 +398,12 @@ class PhotoPreviewBuilder:
         asset = self.asset_store.load(category, style)
         if asset is None:
             return None
+        # Stage 5.2 files intentionally have transparent canvases. Crop that
+        # invisible margin before thumbnailing so the visible décor, rather
+        # than its empty canvas, fills the requested physical dimensions.
+        bounds = asset.getchannel("A").getbbox()
+        if bounds is not None:
+            asset = asset.crop(bounds)
         asset.thumbnail(maximum, Image.Resampling.LANCZOS)
         if mirror:
             asset = ImageOps.mirror(asset)
@@ -432,35 +446,52 @@ class PhotoPreviewBuilder:
         room_light: float,
     ) -> None:
         with Image.open(cake_path) as source:
-            cake = ImageOps.fit(
-                source.convert("RGB"),
-                max_size,
-                method=Image.Resampling.LANCZOS,
-            )
-        cake = ImageEnhance.Brightness(cake).enhance(room_light)
-        mask = Image.new("L", cake.size, 0)
-        ImageDraw.Draw(mask).rounded_rectangle(
-            (0, 0, cake.width - 1, cake.height - 1),
-            radius=max(14, cake.width // 8),
-            fill=255,
+            cake = source.convert("RGBA")
+        # Background extraction is performed on a bounded working copy. Phone
+        # uploads can be several megapixels, while the final cake is about 200
+        # pixels tall; processing the full upload three times would add delay
+        # without improving the preview.
+        cake.thumbnail(
+            (max_size[0] * 3, max_size[1] * 3),
+            Image.Resampling.LANCZOS,
         )
-        card = Image.new(
-            "RGBA", (cake.width + 16, cake.height + 16), (250, 245, 238, 245)
-        )
-        card_mask = Image.new("L", card.size, 0)
-        ImageDraw.Draw(card_mask).rounded_rectangle(
-            (0, 0, card.width - 1, card.height - 1),
-            radius=max(18, cake.width // 7),
-            fill=255,
-        )
-        card.paste(cake, (8, 8), mask)
-        shadow = Image.new("RGBA", card.size, (25, 16, 12, 0))
-        blurred = card_mask.filter(ImageFilter.GaussianBlur(12))
+        cake = PhotoPreviewBuilder._extract_cake(cake)
+        cake.thumbnail(max_size, Image.Resampling.LANCZOS)
+        rgb = ImageEnhance.Brightness(cake.convert("RGB")).enhance(room_light)
+        cake = Image.merge("RGBA", (*rgb.split(), cake.getchannel("A")))
+        mask = cake.getchannel("A")
+        shadow = Image.new("RGBA", cake.size, (25, 16, 12, 0))
+        blurred = mask.filter(ImageFilter.GaussianBlur(12))
         shadow.putalpha(blurred.point(lambda value: int(value * 0.35)))
-        left = centre[0] - card.width // 2
-        top = centre[1] - card.height // 2
+        left = centre[0] - cake.width // 2
+        top = centre[1] - cake.height // 2
         canvas.alpha_composite(shadow, (left + 7, top + 10))
-        canvas.paste(card, (left, top), card_mask)
+        canvas.alpha_composite(cake, (left, top))
+
+    @staticmethod
+    def _extract_cake(source: Image.Image) -> Image.Image:
+        """Remove a mostly uniform photo background without an external model."""
+        rgba = source.convert("RGBA")
+        existing = rgba.getchannel("A")
+        if existing.getextrema()[0] < 245:
+            bounds = existing.getbbox()
+            return rgba.crop(bounds) if bounds else rgba
+        rgb = rgba.convert("RGB")
+        width, height = rgb.size
+        corners = [rgb.getpixel(point) for point in ((0, 0), (width - 1, 0), (0, height - 1), (width - 1, height - 1))]
+        background = tuple(sorted(pixel[channel] for pixel in corners)[len(corners) // 2] for channel in range(3))
+        difference = Image.new("L", rgb.size)
+        difference.putdata([
+            min(255, int(sum((pixel[channel] - background[channel]) ** 2 for channel in range(3)) ** 0.5 * 2.5))
+            for pixel in rgb.getdata()
+        ])
+        mask = difference.point(lambda value: 255 if value >= 48 else 0)
+        mask = mask.filter(ImageFilter.MaxFilter(7)).filter(ImageFilter.GaussianBlur(2.2))
+        bounds = mask.getbbox()
+        if bounds is None or (bounds[2] - bounds[0]) * (bounds[3] - bounds[1]) < width * height * 0.04:
+            return rgba
+        rgba.putalpha(mask)
+        return rgba.crop(bounds)
 
     @staticmethod
     def _draw_sign_text(

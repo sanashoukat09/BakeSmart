@@ -252,6 +252,7 @@ class RecommendationService:
                         request=request,
                         package_id=package_id,
                         package_name=package_names[package_id],
+                        selected_theme_id=result.selected_theme_id,
                         decorations=result.decorations,
                         palette_hex=theme["palette_hex"],
                         decoration_cost_pkr=result.costs.decoration_cost_pkr,
@@ -260,7 +261,7 @@ class RecommendationService:
                     self.preview_store.write(preview_id, image)
                     preview_url = f"/preview/{design_id}/{package_id}"
                     warnings.append(
-                        "Stage 4 cut-outs represent the selected catalogue categories; "
+                        "Stage 5.3 cut-outs represent the selected catalogue categories; "
                         "confirm the exact vendor item before ordering."
                     )
                 except (KeyError, OSError, ValueError):

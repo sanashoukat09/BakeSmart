@@ -284,7 +284,7 @@ class _EventDesignResultScreenState
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Stage 4 places photorealistic decoration cut-outs over your real '
+                  'Stage 5.3 places celebration-specific decoration cut-outs over your real '
                   'venue photo and matches their brightness, scale and shadows. '
                   'The Basic 3D Layout Preview still uses measured placeholder '
                   'geometry and is not a photorealistic room reconstruction.',

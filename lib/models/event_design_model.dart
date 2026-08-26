@@ -87,6 +87,27 @@ abstract final class EventDesignOptions {
     EventDesignOption('candy-pop', 'Candy Pop'),
   ];
 
+  static const Map<String, List<String>> _eventThemeIds = {
+    'birthday': ['retro-70s', 'glam-gold', 'pastel-dreamy', 'floral-romantic', 'tropical', 'sports-hobby'],
+    'kids_birthday': ['whimsical-kids', 'rainbow-bright-pop', 'candy-pop', 'baby-safari', 'sports-hobby'],
+    'wedding': ['south-asian-wedding', 'classic-elegant', 'floral-romantic', 'rustic-boho', 'art-deco'],
+    'engagement': ['floral-romantic', 'south-asian-wedding', 'classic-elegant', 'glam-gold', 'celestial-night'],
+    'baby_shower': ['baby-safari', 'pastel-dreamy', 'whimsical-kids', 'floral-romantic', 'rainbow-bright-pop'],
+    'corporate': ['corporate-brand', 'modern-minimalist', 'industrial', 'art-deco', 'dark-moody'],
+    'anniversary': ['classic-elegant', 'floral-romantic', 'glam-gold', 'art-deco', 'vintage-garden'],
+    'other': ['modern-minimalist', 'rustic-boho', 'tropical', 'winter-wonderland', 'arabian-majlis'],
+  };
+
+  static List<EventDesignOption> themesForEvent(String eventType) {
+    final allowed = _eventThemeIds[eventType] ?? _eventThemeIds['other']!;
+    return allowed
+        .map((id) => themes.firstWhere((theme) => theme.value == id))
+        .toList(growable: false);
+  }
+
+  static String defaultThemeForEvent(String eventType) =>
+      themesForEvent(eventType).first.value;
+
   static String labelFor(List<EventDesignOption> options, String value) {
     for (final option in options) {
       if (option.value == value) return option.label;

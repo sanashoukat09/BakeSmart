@@ -1,7 +1,7 @@
 import csv
 from pathlib import Path
 
-from PIL import Image, ImageChops
+from PIL import Image, ImageChops, ImageDraw
 
 from app.schemas.design import DecorRecommendation, DesignRequest, EventType
 from app.services.photo_preview_builder import (
@@ -139,6 +139,53 @@ def test_stage51_selects_distinct_theme_families_and_room_relative_scale(
     large_layout = builder._layout(larger_space, decorations, 1.0)
     assert compact_layout["backdrop_width"] > large_layout["backdrop_width"]
     assert 0 < compact_layout["focal_x"] < 1280
+
+
+def test_stage53_uses_backend_selected_theme_and_room_height(valid_design_request):
+    request = DesignRequest.model_validate(valid_design_request)
+    builder = PhotoPreviewBuilder()
+    assert builder._style_family(request, "south-asian-mehndi") == "mehndi"
+    assert builder._style_family(request, "corporate-brand") == "modern"
+
+    decorations = [_decor("backdrop", 0), _decor("table-setting", 1)]
+    low_room = request.model_copy(
+        update={
+            "space": request.space.model_copy(
+                update={
+                    "dimensions": request.space.dimensions.model_copy(
+                        update={"height_m": 2.0}
+                    )
+                }
+            )
+        }
+    )
+    tall_room = request.model_copy(
+        update={
+            "space": request.space.model_copy(
+                update={
+                    "dimensions": request.space.dimensions.model_copy(
+                        update={"height_m": 4.0}
+                    )
+                }
+            )
+        }
+    )
+    low_layout = builder._layout(low_room, decorations, 1.0)
+    tall_layout = builder._layout(tall_room, decorations, 1.0)
+    assert 475 <= low_layout["backdrop_height"] <= 610
+    assert 475 <= tall_layout["backdrop_height"] <= 610
+    assert low_layout["table_height"] > tall_layout["table_height"]
+
+
+def test_stage53_extracts_cake_without_square_photo_card():
+    source = Image.new("RGBA", (300, 300), (245, 245, 242, 255))
+    draw = ImageDraw.Draw(source)
+    draw.rectangle((92, 92, 208, 260), fill=(86, 42, 30, 255))
+    draw.ellipse((75, 60, 225, 130), fill=(130, 67, 48, 255))
+    extracted = PhotoPreviewBuilder._extract_cake(source)
+    assert extracted.width < source.width
+    assert extracted.height < source.height
+    assert extracted.getchannel("A").getextrema()[0] == 0
 
 
 def test_stage4_builds_three_visibly_different_real_photo_composites(

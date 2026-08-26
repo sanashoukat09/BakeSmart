@@ -41,7 +41,7 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
   String _venueType = 'living_room';
   String _environment = 'indoor';
   String _eventType = 'birthday';
-  String _themeId = 'floral-romantic';
+  String _themeId = EventDesignOptions.defaultThemeForEvent('birthday');
   String _cakeShape = 'round';
   XFile? _cakeImage;
   Uint8List? _cakeImageBytes;
@@ -569,8 +569,12 @@ class _EventDesignerScreenState extends ConsumerState<EventDesignerScreen> {
               subtitle: 'Choose the style and decoration budget.',
               children: [
                 _dropdown('Event type', _eventType, EventDesignOptions.eventTypes,
-                    (value) => setState(() => _eventType = value)),
-                _dropdown('Theme', _themeId, EventDesignOptions.themes,
+                    (value) => setState(() {
+                          _eventType = value;
+                          _themeId = EventDesignOptions.defaultThemeForEvent(value);
+                        })),
+                _dropdown('Theme', _themeId,
+                    EventDesignOptions.themesForEvent(_eventType),
                     (value) => setState(() => _themeId = value)),
                 Row(
                   children: [
