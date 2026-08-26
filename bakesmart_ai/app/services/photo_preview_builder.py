@@ -11,13 +11,26 @@ from app.schemas.design import DecorRecommendation, DesignRequest
 
 CANVAS_SIZE = (1280, 720)
 ASSET_DIR = Path(__file__).resolve().parents[1] / "assets" / "real_decor"
-PACKAGE_SCALE = {"essential": 0.86, "balanced": 1.0, "statement": 1.1}
+PACKAGE_SCALE = {"essential": 0.9, "balanced": 1.0, "statement": 1.08}
 ASSET_FILES = {
     "backdrop": "backdrop.webp",
     "floor-arrangement": "floor-arrangement.webp",
     "lighting": "lighting.webp",
     "table-setting": "table-setting.webp",
     "signage": "signage.webp",
+}
+V5_1_ASSET_FILES = {
+    (category, style): f"v5_1/{category}-{style}.webp"
+    for category in ("backdrop", "floor", "table")
+    for style in ("romantic", "modern", "playful")
+}
+PLAYFUL_THEMES = {
+    "whimsical-kids", "rainbow-bright-pop", "retro-70s", "sports-hobby",
+    "tropical", "pastel-dreamy",
+}
+MODERN_THEMES = {
+    "modern-minimalist", "industrial", "art-deco", "dark-moody",
+    "classic-elegant", "glam-gold", "corporate-modern",
 }
 
 
@@ -41,8 +54,9 @@ class PreviewAssetStore:
     def __init__(self, asset_dir: Path = ASSET_DIR) -> None:
         self.asset_dir = asset_dir
 
-    def load(self, category: str) -> Image.Image | None:
-        filename = ASSET_FILES.get(category)
+    def load(self, category: str, style: str | None = None) -> Image.Image | None:
+        filename = V5_1_ASSET_FILES.get((category, style)) if style else None
+        filename = filename or ASSET_FILES.get(category)
         if filename is None:
             return None
         path = self.asset_dir / filename
@@ -51,7 +65,7 @@ class PreviewAssetStore:
         with Image.open(path) as source:
             image = source.convert("RGBA")
         if image.getchannel("A").getextrema()[0] == 255:
-            raise ValueError(f"Stage 4 asset '{filename}' has no transparency")
+            raise ValueError(f"preview asset '{filename}' has no transparency")
         return image
 
 
@@ -75,7 +89,6 @@ class PhotoPreviewBuilder:
     ) -> Image.Image:
         if package_id not in PACKAGE_SCALE:
             raise ValueError("unknown design package")
-        del palette_hex  # Real cut-outs retain natural material colours.
         with Image.open(venue_path) as venue_source:
             canvas = ImageOps.fit(
                 venue_source.convert("RGB"),
@@ -84,18 +97,23 @@ class PhotoPreviewBuilder:
             ).convert("RGBA")
         canvas = self._prepare_room(canvas)
         scale = PACKAGE_SCALE[package_id]
+        palette = self._palette(palette_hex)
+        style = self._style_family(request)
         by_category = {item.category: item for item in decorations}
-        focal_x = self._focal_x(request, decorations)
-        ground_y = 660
+        layout = self._layout(request, decorations, scale)
+        focal_x = layout["focal_x"]
+        ground_y = layout["ground_y"]
         room_light = self._room_light(canvas)
 
         if "backdrop" in by_category:
             self._place_asset(
                 canvas,
                 "backdrop",
-                centre=(focal_x, ground_y - 225),
-                maximum=(int(620 * scale), int(520 * scale)),
+                style=style,
+                centre=(focal_x, ground_y - layout["backdrop_height"] // 2),
+                maximum=(layout["backdrop_width"], layout["backdrop_height"]),
                 room_light=room_light,
+                palette=palette,
                 shadow=True,
             )
         if "lighting" in by_category:
@@ -109,27 +127,45 @@ class PhotoPreviewBuilder:
                     centre=(focal_x, 150 + index * 45),
                     maximum=(int(990 * scale), int(300 * scale)),
                     room_light=max(room_light, 1.0),
+                    palette=palette,
                     opacity=0.78 if index else 0.94,
                 )
         if "floor-arrangement" in by_category:
-            self._place_asset(
-                canvas,
-                "floor-arrangement",
-                centre=(focal_x, ground_y - 175),
-                maximum=(int(720 * scale), int(430 * scale)),
-                room_light=room_light,
-                shadow=True,
-            )
+            count = {"essential": 1, "balanced": 2, "statement": 3}[package_id]
+            spread = layout["backdrop_width"] * 0.46
+            positions = {
+                1: (focal_x + int(spread * 0.72),),
+                2: (focal_x - int(spread), focal_x + int(spread)),
+                3: (focal_x - int(spread), focal_x, focal_x + int(spread)),
+            }[count]
+            for index, centre_x in enumerate(positions):
+                cluster_scale = 0.88 if count == 3 and index == 1 else 1.0
+                self._place_asset(
+                    canvas,
+                    "floor",
+                    style=style,
+                    centre=(centre_x, ground_y - int(layout["floor_height"] * 0.42)),
+                    maximum=(
+                        int(layout["floor_width"] * cluster_scale),
+                        int(layout["floor_height"] * cluster_scale),
+                    ),
+                    room_light=room_light,
+                    palette=palette,
+                    mirror=index % 2 == 1,
+                    shadow=True,
+                )
 
         # The real cake always needs a credible support surface. If the selected
         # package has table styling, its catalogue cut-out is used; otherwise a
         # quieter version of the same practical table is shown.
         self._place_asset(
             canvas,
-            "table-setting",
-            centre=(focal_x, ground_y - 90),
-            maximum=(int(535 * scale), int(260 * scale)),
+            "table",
+            style=style,
+            centre=(focal_x, ground_y - layout["table_height"] // 2),
+            maximum=(layout["table_width"], layout["table_height"]),
             room_light=room_light,
+            palette=palette,
             opacity=1.0 if "table-setting" in by_category else 0.82,
             shadow=True,
         )
@@ -142,6 +178,7 @@ class PhotoPreviewBuilder:
                 centre=(sign_x, sign_y),
                 maximum=(int(185 * scale), int(330 * scale)),
                 room_light=room_light,
+                palette=palette,
                 shadow=True,
             )
             if sign_box is not None:
@@ -150,8 +187,8 @@ class PhotoPreviewBuilder:
         self._paste_cake(
             canvas,
             cake_path,
-            centre=(focal_x, ground_y - int(215 * scale)),
-            max_size=(int(175 * scale), int(175 * scale)),
+            centre=(focal_x, ground_y - layout["table_height"] - int(72 * scale)),
+            max_size=(int(205 * scale), int(205 * scale)),
             room_light=room_light,
         )
         self._draw_labels(
@@ -191,22 +228,86 @@ class PhotoPreviewBuilder:
                 return int(min(0.72, max(0.28, ratio)) * CANVAS_SIZE[0])
         return CANVAS_SIZE[0] // 2
 
+    @staticmethod
+    def _style_family(request: DesignRequest) -> str:
+        theme = request.event.theme_id
+        event = request.event.event_type.value
+        if theme in PLAYFUL_THEMES or event == "kids-birthday":
+            return "playful"
+        if theme in MODERN_THEMES or event == "corporate":
+            return "modern"
+        return "romantic"
+
+    @staticmethod
+    def _palette(palette_hex: str) -> tuple[int, int, int] | None:
+        for value in palette_hex.replace(",", ";").split(";"):
+            value = value.strip().lstrip("#")
+            if len(value) == 6:
+                try:
+                    return tuple(int(value[index:index + 2], 16) for index in (0, 2, 4))
+                except ValueError:
+                    continue
+        return None
+
+    def _layout(
+        self,
+        request: DesignRequest,
+        decorations: list[DecorRecommendation],
+        scale: float,
+    ) -> dict[str, int]:
+        room_width = max(request.space.dimensions.width_m, 1.5)
+        pixels_per_metre = min(520.0, 1160.0 / room_width)
+
+        def dimensions(category: str, default: tuple[float, float]) -> tuple[float, float]:
+            for item in decorations:
+                if item.category == category and item.placements:
+                    value = item.placements[0].dimensions
+                    if value is not None:
+                        return value.width_m, value.height_m
+            return default
+
+        backdrop_m = dimensions("backdrop", (min(2.4, room_width * 0.78), 2.1))
+        table_m = dimensions("table-setting", (min(1.5, room_width * 0.52), 0.9))
+        setup_width = min(1160, max(520, int(backdrop_m[0] * pixels_per_metre * scale)))
+        setup_height = min(610, max(430, int(backdrop_m[1] * pixels_per_metre * 0.9 * scale)))
+        focal_x = self._focal_x(request, decorations)
+        half = setup_width // 2
+        focal_x = min(CANVAS_SIZE[0] - half - 35, max(half + 35, focal_x))
+        return {
+            "focal_x": focal_x,
+            "ground_y": 665,
+            "backdrop_width": setup_width,
+            "backdrop_height": setup_height,
+            "table_width": min(int(setup_width * 0.58), max(500, int(table_m[0] * pixels_per_metre * scale))),
+            "table_height": min(315, max(235, int(table_m[1] * pixels_per_metre * 0.72 * scale))),
+            "floor_width": min(330, max(230, int(setup_width * 0.29))),
+            "floor_height": min(260, max(175, int(setup_height * 0.39))),
+        }
+
     def _place_asset(
         self,
         canvas: Image.Image,
         category: str,
         *,
+        style: str | None = None,
         centre: tuple[int, int],
         maximum: tuple[int, int],
         room_light: float,
+        palette: tuple[int, int, int] | None = None,
         opacity: float = 1.0,
+        mirror: bool = False,
         shadow: bool = False,
     ) -> tuple[int, int, int, int] | None:
-        asset = self.asset_store.load(category)
+        asset = self.asset_store.load(category, style)
         if asset is None:
             return None
         asset.thumbnail(maximum, Image.Resampling.LANCZOS)
+        if mirror:
+            asset = ImageOps.mirror(asset)
         rgb = ImageEnhance.Brightness(asset.convert("RGB")).enhance(room_light)
+        if palette is not None:
+            wash = Image.new("RGB", rgb.size, palette)
+            rgb = Image.blend(rgb, wash, 0.1)
         alpha = asset.getchannel("A")
         if opacity < 1:
             alpha = alpha.point(lambda value: int(value * opacity))

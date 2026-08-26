@@ -5,6 +5,7 @@ from PIL import Image, ImageChops
 from app.schemas.design import DecorRecommendation, DesignRequest
 from app.services.photo_preview_builder import (
     ASSET_FILES,
+    V5_1_ASSET_FILES,
     PhotoPreviewBuilder,
     PreviewAssetStore,
 )
@@ -48,6 +49,48 @@ def test_stage4_assets_have_real_transparency():
         low, high = asset.getchannel("A").getextrema()
         assert low == 0
         assert high > 200
+    for (category, style), _filename in V5_1_ASSET_FILES.items():
+        asset = store.load(category, style)
+        assert asset is not None
+        low, high = asset.getchannel("A").getextrema()
+        assert low == 0
+        assert high > 200
+
+
+def test_stage51_selects_distinct_theme_families_and_room_relative_scale(
+    valid_design_request,
+):
+    request = DesignRequest.model_validate(valid_design_request)
+    builder = PhotoPreviewBuilder()
+    romantic = request.model_copy(
+        update={"event": request.event.model_copy(update={"theme_id": "floral-romantic"})}
+    )
+    modern = request.model_copy(
+        update={"event": request.event.model_copy(update={"theme_id": "modern-minimalist"})}
+    )
+    playful = request.model_copy(
+        update={"event": request.event.model_copy(update={"theme_id": "rainbow-bright-pop"})}
+    )
+    assert builder._style_family(romantic) == "romantic"
+    assert builder._style_family(modern) == "modern"
+    assert builder._style_family(playful) == "playful"
+
+    decorations = [_decor("backdrop", 0), _decor("table-setting", 1)]
+    compact_layout = builder._layout(request, decorations, 1.0)
+    larger_space = request.model_copy(
+        update={
+            "space": request.space.model_copy(
+                update={
+                    "dimensions": request.space.dimensions.model_copy(
+                        update={"width_m": request.space.dimensions.width_m * 2}
+                    )
+                }
+            )
+        }
+    )
+    large_layout = builder._layout(larger_space, decorations, 1.0)
+    assert compact_layout["backdrop_width"] > large_layout["backdrop_width"]
+    assert 0 < compact_layout["focal_x"] < 1280
 
 
 def test_stage4_builds_three_visibly_different_real_photo_composites(

@@ -1,8 +1,8 @@
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #1e120f;
-  color: #fff8f2;
+  background: #f8eee8;
+  color: #3b211a;
 }
 
 * { box-sizing: border-box; }
@@ -10,16 +10,16 @@
 body {
   margin: 0;
   min-height: 100svh;
-  background: radial-gradient(circle at top, #64331f 0, #2b1813 42%, #160d0b 100%);
+  background: linear-gradient(180deg, #4b170d 0 190px, #f8eee8 190px 100%);
 }
 
 main {
   width: min(100%, 1280px);
-  min-height: 100svh;
+  min-height: auto;
   margin: 0 auto;
   padding: max(18px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom));
   display: grid;
-  align-content: center;
+  align-content: start;
   gap: 14px;
 }
 
@@ -35,7 +35,9 @@ header, footer { padding-inline: 6px; }
 }
 
 h1 { margin: 0; font-size: clamp(1.45rem, 5vw, 2.4rem); }
-header > p:last-child, footer { color: #e8d2c6; line-height: 1.45; }
+header { color: #fff8f2; }
+header > p:last-child { color: #e8d2c6; line-height: 1.45; }
+footer { color: #6d5046; line-height: 1.45; }
 header > p:last-child { margin: 5px 0 0; }
 
 .frame {
@@ -56,10 +58,11 @@ img {
 }
 
 footer { font-size: 0.82rem; }
-footer strong { color: #fff; }
+footer strong { color: #3b211a; }
 
 @media (max-width: 600px) and (orientation: portrait) {
-  main { align-content: start; padding-inline: 0; }
+  body { background: linear-gradient(180deg, #4b170d 0 220px, #f8eee8 220px 100%); }
+  main { align-content: start; padding-inline: 0; padding-bottom: 22px; }
   header, footer { padding-inline: 18px; }
   .frame { border-radius: 0; border-inline: 0; }
   img { max-height: none; }
