@@ -152,16 +152,18 @@ class RecommendationService:
             )
             preview = PreviewAvailability(
                 interactive_3d_ready=True,
-                viewer_3d_url=f"/viewer/{design_id}",
-                viewer_label="Open Basic 3D Layout Preview",
+                viewer_3d_url=(
+                    f"/viewer/{design_id}?package={recommended_package_id}"
+                ),
+                viewer_label="Open Detailed 3D View",
                 scene_glb_url=f"/api/v1/designs/{design_id}/scene.glb",
                 ar_supported=None,
                 ar_url=None,
                 fallback_label=None,
             )
             warnings.append(
-                "The Basic 3D Layout Preview uses procedural placeholders. Use the "
-                "photo-based previews to see the uploaded venue and cake photographs."
+                "The detailed 3D view uses catalogue-aware generated geometry for "
+                "planning. Use the real-photo preview for photographic appearance."
             )
         except (KeyError, OSError, OverflowError, ValueError):
             warnings.append(

@@ -79,25 +79,27 @@ def test_procedural_glb_is_deterministic_and_structurally_valid(
     document, binary = _parse_glb(first.data)
     assert document["asset"]["version"] == "2.0"
     assert document["asset"]["generator"] == (
-        "BakeSmart procedural GLB exporter"
+        "BakeSmart catalogue-aware GLB exporter v5"
     )
     assert document["asset"]["extras"]["procedural_concept"] is True
+    assert document["asset"]["extras"]["catalogue_aware"] is True
     assert document["scene"] == 0
     primitive = document["meshes"][0]["primitives"][0]
     assert primitive["attributes"] == {
         "COLOR_0": 2,
         "NORMAL": 1,
         "POSITION": 0,
+        "_MATERIAL": 3,
     }
     assert primitive["mode"] == 4
     assert document["accessors"][0]["count"] == first.vertex_count
-    assert document["accessors"][3]["count"] == first.triangle_count * 3
+    assert document["accessors"][4]["count"] == first.triangle_count * 3
     assert document["buffers"][0]["byteLength"] <= len(binary)
     assert all(
         buffer_view["byteOffset"] % 4 == 0
         for buffer_view in document["bufferViews"]
     )
-    assert document["accessors"][3]["max"][0] < first.vertex_count
+    assert document["accessors"][4]["max"][0] < first.vertex_count
 
 
 def test_scene_artifact_store_rejects_path_traversal(tmp_path: Path):

@@ -157,6 +157,10 @@ h1 {
   color: #8c2f3f;
 }
 
+#photo-fallback:not([hidden]) {
+  display: inline-flex;
+}
+
 .spinner {
   width: 10px;
   height: 10px;

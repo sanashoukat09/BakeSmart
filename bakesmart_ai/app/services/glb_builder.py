@@ -19,6 +19,14 @@ from app.schemas.design import (
 
 Color = tuple[float, float, float]
 Vector3 = tuple[float, float, float]
+Material = tuple[float, float, float]  # metallic, roughness, emissive
+
+FABRIC: Material = (0.0, 0.88, 0.0)
+WOOD: Material = (0.0, 0.62, 0.0)
+METAL: Material = (0.92, 0.24, 0.0)
+FOLIAGE: Material = (0.0, 0.72, 0.0)
+FROSTING: Material = (0.0, 0.9, 0.0)
+GLOW: Material = (0.05, 0.28, 1.0)
 
 GLB_MAGIC = b"glTF"
 GLB_VERSION = 2
@@ -44,20 +52,28 @@ class MeshAccumulator:
     positions: list[float] = field(default_factory=list)
     normals: list[float] = field(default_factory=list)
     colors: list[float] = field(default_factory=list)
+    materials: list[float] = field(default_factory=list)
     indices: list[int] = field(default_factory=list)
 
     @property
     def vertex_count(self) -> int:
         return len(self.positions) // 3
 
-    def _vertex(self, position: Vector3, normal: Vector3, color: Color) -> int:
+    def _vertex(
+        self, position: Vector3, normal: Vector3, color: Color,
+        material: Material = FABRIC,
+    ) -> int:
         index = self.vertex_count
         self.positions.extend(position)
         self.normals.extend(normal)
         self.colors.extend(color)
+        self.materials.extend(material)
         return index
 
-    def add_box(self, center: Vector3, size: Vector3, color: Color) -> None:
+    def add_box(
+        self, center: Vector3, size: Vector3, color: Color,
+        material: Material = FABRIC,
+    ) -> None:
         half_x, half_y, half_z = (value / 2 for value in size)
         cx, cy, cz = center
         faces = (
@@ -119,7 +135,7 @@ class MeshAccumulator:
         for normal, offsets in faces:
             start = self.vertex_count
             for x, y, z in offsets:
-                self._vertex((cx + x, cy + y, cz + z), normal, color)
+                self._vertex((cx + x, cy + y, cz + z), normal, color, material)
             self.indices.extend(
                 (start, start + 1, start + 2, start, start + 2, start + 3)
             )
@@ -131,6 +147,7 @@ class MeshAccumulator:
         height: float,
         color: Color,
         segments: int = 24,
+        material: Material = FABRIC,
     ) -> None:
         cx, cy, cz = center
         lower = cy - height / 2
@@ -145,22 +162,22 @@ class MeshAccumulator:
             self._vertex(
                 (cx + radius * x_one, lower, cz + radius * z_one),
                 (x_one, 0.0, z_one),
-                color,
+                color, material,
             )
             self._vertex(
                 (cx + radius * x_two, lower, cz + radius * z_two),
                 (x_two, 0.0, z_two),
-                color,
+                color, material,
             )
             self._vertex(
                 (cx + radius * x_two, upper, cz + radius * z_two),
                 (x_two, 0.0, z_two),
-                color,
+                color, material,
             )
             self._vertex(
                 (cx + radius * x_one, upper, cz + radius * z_one),
                 (x_one, 0.0, z_one),
-                color,
+                color, material,
             )
             self.indices.extend(
                 (
@@ -174,30 +191,30 @@ class MeshAccumulator:
             )
 
             top_start = self.vertex_count
-            self._vertex((cx, upper, cz), (0.0, 1.0, 0.0), color)
+            self._vertex((cx, upper, cz), (0.0, 1.0, 0.0), color, material)
             self._vertex(
                 (cx + radius * x_one, upper, cz + radius * z_one),
                 (0.0, 1.0, 0.0),
-                color,
+                color, material,
             )
             self._vertex(
                 (cx + radius * x_two, upper, cz + radius * z_two),
                 (0.0, 1.0, 0.0),
-                color,
+                color, material,
             )
             self.indices.extend((top_start, top_start + 1, top_start + 2))
 
             bottom_start = self.vertex_count
-            self._vertex((cx, lower, cz), (0.0, -1.0, 0.0), color)
+            self._vertex((cx, lower, cz), (0.0, -1.0, 0.0), color, material)
             self._vertex(
                 (cx + radius * x_two, lower, cz + radius * z_two),
                 (0.0, -1.0, 0.0),
-                color,
+                color, material,
             )
             self._vertex(
                 (cx + radius * x_one, lower, cz + radius * z_one),
                 (0.0, -1.0, 0.0),
-                color,
+                color, material,
             )
             self.indices.extend((bottom_start, bottom_start + 1, bottom_start + 2))
 
@@ -208,6 +225,7 @@ class MeshAccumulator:
         color: Color,
         latitude_segments: int = 8,
         longitude_segments: int = 12,
+        material: Material = FABRIC,
     ) -> None:
         cx, cy, cz = center
         start = self.vertex_count
@@ -229,7 +247,7 @@ class MeshAccumulator:
                         cz + radius * normal[2],
                     ),
                     normal,
-                    color,
+                    color, material,
                 )
         row_length = longitude_segments + 1
         for latitude in range(latitude_segments):
@@ -239,6 +257,65 @@ class MeshAccumulator:
                 self.indices.extend(
                     (first, second, first + 1, second, second + 1, first + 1)
                 )
+
+    def add_torus_arc(
+        self,
+        center: Vector3,
+        radius: float,
+        tube_radius: float,
+        color: Color,
+        start_angle: float = 0.0,
+        end_angle: float = math.pi,
+        arc_segments: int = 28,
+        tube_segments: int = 6,
+        material: Material = METAL,
+    ) -> None:
+        """Add a vertical decorative arch in the XY plane."""
+        start = self.vertex_count
+        for arc in range(arc_segments + 1):
+            angle = start_angle + (end_angle - start_angle) * arc / arc_segments
+            radial = (math.cos(angle), math.sin(angle), 0.0)
+            for tube in range(tube_segments + 1):
+                theta = 2 * math.pi * tube / tube_segments
+                normal = (
+                    radial[0] * math.cos(theta),
+                    radial[1] * math.cos(theta),
+                    math.sin(theta),
+                )
+                self._vertex(
+                    tuple(center[i] + radius * radial[i] + tube_radius * normal[i] for i in range(3)),
+                    normal,
+                    color,
+                    material,
+                )
+        row = tube_segments + 1
+        for arc in range(arc_segments):
+            for tube in range(tube_segments):
+                first = start + arc * row + tube
+                second = first + row
+                self.indices.extend((first, second, first + 1, second, second + 1, first + 1))
+
+    def add_drape(
+        self, center: Vector3, width: float, height: float, color: Color,
+        material: Material = FABRIC,
+    ) -> None:
+        """Add a softly folded double-sided fabric panel."""
+        columns, rows = 12, 8
+        start = self.vertex_count
+        for row in range(rows + 1):
+            y_ratio = row / rows
+            for column in range(columns + 1):
+                x_ratio = column / columns
+                x = center[0] + (x_ratio - 0.5) * width
+                y = center[1] + (0.5 - y_ratio) * height
+                z = center[2] + math.sin(x_ratio * math.pi * 6) * 0.025 + y_ratio * 0.025
+                self._vertex((x, y, z), (0.0, 0.0, 1.0), color, material)
+        stride = columns + 1
+        for row in range(rows):
+            for column in range(columns):
+                first = start + row * stride + column
+                second = first + stride
+                self.indices.extend((first, second, first + 1, second, second + 1, first + 1))
 
 
 class ProceduralGlbBuilder:
@@ -260,6 +337,7 @@ class ProceduralGlbBuilder:
             (0.0, -0.025, 0.0),
             (width, 0.05, depth),
             self._mix(palette[-1], (0.75, 0.77, 0.8), 0.65),
+            WOOD,
         )
 
         for placement in scene.objects:
@@ -290,17 +368,18 @@ class ProceduralGlbBuilder:
             height_m=0.3,
         )
         base = self._position(placement, room_width, room_depth)
+        asset = placement.asset_id.lower()
         if placement.role == "cake_table":
             self._add_table(mesh, base, dimensions, palette)
         elif placement.role == "cake":
             self._add_cake(mesh, base, dimensions, cake, palette)
         elif placement.role == "backdrop":
-            self._add_backdrop(mesh, base, dimensions, palette)
+            self._add_backdrop(mesh, base, dimensions, palette, asset)
         elif placement.role == "lighting":
             self._add_light(mesh, base, dimensions, palette)
         elif placement.role == "signage":
             self._add_signage(mesh, base, dimensions, palette)
-        elif "floor-arrangement" in placement.asset_id:
+        elif "floor-arrangement" in asset:
             self._add_floor_arrangement(mesh, base, dimensions, palette)
         else:
             self._add_table_decor(mesh, base, dimensions, palette)
@@ -335,6 +414,7 @@ class ProceduralGlbBuilder:
             top_center,
             (dimensions.width_m, top_thickness, depth),
             palette[-1],
+            WOOD,
         )
         leg_height = dimensions.height_m - top_thickness
         leg_width = min(0.08, dimensions.width_m * 0.1, depth * 0.1)
@@ -349,6 +429,7 @@ class ProceduralGlbBuilder:
                     ),
                     (leg_width, leg_height, leg_width),
                     ProceduralGlbBuilder._mix(palette[1], (0.35, 0.25, 0.2), 0.4),
+                    WOOD,
                 )
 
     @staticmethod
@@ -380,6 +461,7 @@ class ProceduralGlbBuilder:
                         depth * shrink,
                     ),
                     tier_color,
+                    FROSTING,
                 )
             else:
                 mesh.add_cylinder(
@@ -387,6 +469,7 @@ class ProceduralGlbBuilder:
                     max(0.02, dimensions.width_m * shrink / 2),
                     tier_height * 0.94,
                     tier_color,
+                    material=FROSTING,
                 )
         topper_y = base[1] + dimensions.height_m + 0.025
         for offset in (-0.07, 0.0, 0.07):
@@ -394,6 +477,7 @@ class ProceduralGlbBuilder:
                 (base[0] + offset, topper_y + abs(offset) * 0.2, base[2]),
                 max(0.025, min(dimensions.width_m, depth) * 0.08),
                 palette[0],
+                material=FROSTING,
             )
 
     @staticmethod
@@ -402,18 +486,25 @@ class ProceduralGlbBuilder:
         base: Vector3,
         dimensions: Dimensions,
         palette: list[Color],
+        asset_id: str,
     ) -> None:
         depth = dimensions.depth_m or 0.15
         column_width = max(0.05, dimensions.width_m * 0.05)
-        mesh.add_box(
-            (
-                base[0],
-                base[1] + dimensions.height_m / 2,
-                base[2],
-            ),
-            (dimensions.width_m, dimensions.height_m, depth * 0.35),
-            ProceduralGlbBuilder._mix(palette[0], palette[-1], 0.72),
-        )
+        panel_color = ProceduralGlbBuilder._mix(palette[0], palette[-1], 0.72)
+        if any(word in asset_id for word in ("drape", "curtain", "fabric")):
+            mesh.add_drape(
+                (base[0], base[1] + dimensions.height_m / 2, base[2]),
+                dimensions.width_m,
+                dimensions.height_m,
+                panel_color,
+            )
+        else:
+            mesh.add_box(
+                (base[0], base[1] + dimensions.height_m / 2, base[2]),
+                (dimensions.width_m, dimensions.height_m, depth * 0.35),
+                panel_color,
+                FABRIC,
+            )
         for sign in (-1, 1):
             mesh.add_box(
                 (
@@ -424,6 +515,7 @@ class ProceduralGlbBuilder:
                 ),
                 (column_width, dimensions.height_m, depth),
                 palette[1],
+                METAL,
             )
         mesh.add_box(
             (
@@ -433,7 +525,19 @@ class ProceduralGlbBuilder:
             ),
             (dimensions.width_m, column_width, depth),
             palette[1],
+            METAL,
         )
+        # A catalogue-style metal arch and asymmetrical floral clusters make
+        # the selected backdrop recognisable rather than another flat block.
+        arch_radius = min(dimensions.width_m * 0.37, dimensions.height_m * 0.42)
+        arch_center = (base[0], base[1] + dimensions.height_m * 0.48, base[2] + depth * 0.42)
+        mesh.add_torus_arc(arch_center, arch_radius, max(0.012, column_width * 0.18), palette[1])
+        for side in (-1, 1):
+            for index in range(5):
+                x = base[0] + side * (arch_radius * (0.72 + index * 0.035))
+                y = base[1] + dimensions.height_m * (0.18 + index * 0.095)
+                color = palette[(index + (0 if side < 0 else 1)) % len(palette)]
+                mesh.add_sphere((x, y, base[2] + depth * 0.55), max(0.035, column_width * 0.7), color, 6, 8, FOLIAGE)
 
     @staticmethod
     def _add_floor_arrangement(
@@ -450,6 +554,7 @@ class ProceduralGlbBuilder:
             vase_height,
             palette[1],
             segments=16,
+            material=FOLIAGE,
         )
         flower_y = base[1] + vase_height + dimensions.height_m * 0.18
         radius = max(0.04, min(dimensions.width_m, depth) * 0.24)
@@ -460,6 +565,9 @@ class ProceduralGlbBuilder:
                 (base[0] + offset[0], flower_y + abs(offset[0]) * 0.25, base[2] + offset[1]),
                 radius,
                 palette[index % len(palette)],
+                latitude_segments=6,
+                longitude_segments=8,
+                material=FOLIAGE,
             )
 
     @staticmethod
@@ -478,6 +586,7 @@ class ProceduralGlbBuilder:
             ),
             (dimensions.width_m, dimensions.height_m, depth),
             ProceduralGlbBuilder._mix(palette[0], palette[-1], 0.5),
+            FABRIC,
         )
         for offset in (-0.2, 0.0, 0.2):
             mesh.add_sphere(
@@ -488,6 +597,9 @@ class ProceduralGlbBuilder:
                 ),
                 max(0.02, dimensions.height_m * 0.3),
                 palette[0],
+                latitude_segments=6,
+                longitude_segments=8,
+                material=FOLIAGE,
             )
 
     @staticmethod
@@ -502,6 +614,9 @@ class ProceduralGlbBuilder:
             (base[0], base[1], base[2]),
             radius,
             ProceduralGlbBuilder._mix((1.0, 0.82, 0.38), palette[-1], 0.25),
+            latitude_segments=6,
+            longitude_segments=8,
+            material=GLOW,
         )
 
     @staticmethod
@@ -519,6 +634,7 @@ class ProceduralGlbBuilder:
             post_height,
             palette[1],
             segments=12,
+            material=METAL,
         )
         mesh.add_box(
             (
@@ -528,6 +644,7 @@ class ProceduralGlbBuilder:
             ),
             (dimensions.width_m, dimensions.height_m * 0.45, depth),
             palette[-1],
+            WOOD,
         )
 
     @staticmethod
@@ -562,6 +679,7 @@ class ProceduralGlbBuilder:
         position_values = tuple(mesh.positions)
         normal_values = tuple(mesh.normals)
         color_values = tuple(mesh.colors)
+        material_values = tuple(mesh.materials)
         index_values = tuple(mesh.indices)
         if not position_values or not index_values:
             raise ValueError("cannot encode an empty procedural scene")
@@ -569,11 +687,12 @@ class ProceduralGlbBuilder:
         position_bytes = struct.pack(f"<{len(position_values)}f", *position_values)
         normal_bytes = struct.pack(f"<{len(normal_values)}f", *normal_values)
         color_bytes = struct.pack(f"<{len(color_values)}f", *color_values)
+        material_bytes = struct.pack(f"<{len(material_values)}f", *material_values)
         index_bytes = struct.pack(f"<{len(index_values)}H", *index_values)
 
         binary = bytearray()
         sections: list[tuple[int, int]] = []
-        for values in (position_bytes, normal_bytes, color_bytes, index_bytes):
+        for values in (position_bytes, normal_bytes, color_bytes, material_bytes, index_bytes):
             while len(binary) % 4:
                 binary.append(0)
             offset = len(binary)
@@ -611,6 +730,12 @@ class ProceduralGlbBuilder:
                 },
                 {
                     "bufferView": 3,
+                    "componentType": FLOAT_COMPONENT,
+                    "count": vertex_count,
+                    "type": "VEC3",
+                },
+                {
+                    "bufferView": 4,
                     "componentType": UNSIGNED_SHORT_COMPONENT,
                     "count": len(index_values),
                     "type": "SCALAR",
@@ -620,12 +745,14 @@ class ProceduralGlbBuilder:
             ],
             "asset": {
                 "version": "2.0",
-                "generator": "BakeSmart procedural GLB exporter",
+                "generator": "BakeSmart catalogue-aware GLB exporter v5",
                 "extras": {
                     "design_id": design_id,
                     "layers": list(layers),
                     "units": "metres",
                     "procedural_concept": True,
+                    "catalogue_aware": True,
+                    "material_channels": ["metallic", "roughness", "emissive"],
                 },
             },
             "buffers": [{"byteLength": binary_byte_length}],
@@ -652,6 +779,12 @@ class ProceduralGlbBuilder:
                     "buffer": 0,
                     "byteOffset": sections[3][0],
                     "byteLength": sections[3][1],
+                    "target": ARRAY_BUFFER,
+                },
+                {
+                    "buffer": 0,
+                    "byteOffset": sections[4][0],
+                    "byteLength": sections[4][1],
                     "target": ELEMENT_ARRAY_BUFFER,
                 },
             ],
@@ -675,8 +808,9 @@ class ProceduralGlbBuilder:
                                 "POSITION": 0,
                                 "NORMAL": 1,
                                 "COLOR_0": 2,
+                                "_MATERIAL": 3,
                             },
-                            "indices": 3,
+                            "indices": 4,
                             "material": 0,
                             "mode": 4,
                         }

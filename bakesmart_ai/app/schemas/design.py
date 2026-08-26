@@ -368,6 +368,7 @@ class PreviewAvailability(StrictModel):
     viewer_label: Literal[
         "Open Interactive 3D View",
         "Open Basic 3D Layout Preview",
+        "Open Detailed 3D View",
     ] | None = None
     scene_glb_url: str | None = None
     ar_supported: bool | None = None

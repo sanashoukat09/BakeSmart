@@ -6,7 +6,9 @@
   const statusText = document.getElementById("status-text");
   const resetButton = document.getElementById("reset-view");
   const downloadLink = document.getElementById("download-glb");
+  const photoFallback = document.getElementById("photo-fallback");
   const designId = window.location.pathname.split("/").filter(Boolean).pop();
+  const packageId = new URLSearchParams(window.location.search).get("package") || "balanced";
 
   if (!/^design-[0-9a-f]{20}$/.test(designId || "")) {
     showError("This BakeSmart scene link is invalid.");
@@ -16,6 +18,7 @@
   const glbUrl = `/api/v1/designs/${encodeURIComponent(designId)}/scene.glb`;
   downloadLink.href = glbUrl;
   downloadLink.download = `${designId}.glb`;
+  photoFallback.href = `/preview/${encodeURIComponent(designId)}/${encodeURIComponent(packageId)}`;
 
   const gl = canvas.getContext("webgl", {
     antialias: true,
@@ -43,12 +46,14 @@
     attribute vec3 aPosition;
     attribute vec3 aNormal;
     attribute vec3 aColor;
+    attribute vec3 aMaterial;
     uniform mat4 uMvp;
     uniform mat4 uModel;
     uniform float uShadowPass;
     varying vec3 vNormal;
     varying vec3 vColor;
     varying float vHeight;
+    varying vec3 vMaterial;
     void main() {
       vec3 position = aPosition;
       vHeight = aPosition.y;
@@ -60,6 +65,7 @@
       }
       vNormal = normalize(mat3(uModel) * aNormal);
       vColor = aColor;
+      vMaterial = aMaterial;
       gl_Position = uMvp * vec4(position, 1.0);
     }
   `;
@@ -69,6 +75,7 @@
     varying vec3 vNormal;
     varying vec3 vColor;
     varying float vHeight;
+    varying vec3 vMaterial;
     uniform float uShadowPass;
 
     void main() {
@@ -85,6 +92,9 @@
       vec3 keyLight = normalize(vec3(0.42, 0.86, 0.34));
       vec3 fillLight = normalize(vec3(-0.58, 0.34, 0.72));
       vec3 viewDirection = normalize(vec3(0.0, 0.22, 1.0));
+      float metallic = clamp(vMaterial.x, 0.0, 1.0);
+      float roughness = clamp(vMaterial.y, 0.08, 1.0);
+      float emissive = clamp(vMaterial.z, 0.0, 1.0);
 
       float keyDiffuse = max(dot(normal, keyLight), 0.0);
       float fillDiffuse = max(dot(normal, fillLight), 0.0);
@@ -94,7 +104,8 @@
       vec3 baseColor = clamp(mix(vec3(luminance), vColor, 1.14), 0.0, 1.0);
 
       vec3 halfVector = normalize(keyLight + viewDirection);
-      float specular = pow(max(dot(normal, halfVector), 0.0), 30.0) * 0.14;
+      float specularPower = mix(72.0, 8.0, roughness);
+      float specular = pow(max(dot(normal, halfVector), 0.0), specularPower);
       float edgeLight = pow(1.0 - max(dot(normal, viewDirection), 0.0), 3.0) * 0.055;
       float heightFactor = 1.0 - exp(-max(vHeight, 0.0) * 2.6);
       float ambientOcclusion = mix(0.8, 1.0, heightFactor);
@@ -103,8 +114,10 @@
       vec3 coolFill = vec3(0.84, 0.91, 1.0) * fillDiffuse * 0.24;
       vec3 ambient = mix(vec3(0.31, 0.3, 0.33), vec3(0.5, 0.47, 0.46), hemisphere);
       vec3 shaded = baseColor * (ambient + warmKey + coolFill) * ambientOcclusion;
-      shaded += vec3(1.0, 0.91, 0.78) * specular;
+      vec3 specularColor = mix(vec3(0.82), baseColor, metallic);
+      shaded += specularColor * specular * mix(0.12, 0.72, metallic);
       shaded += baseColor * edgeLight;
+      shaded += baseColor * emissive * 0.72;
 
       shaded = pow(clamp(shaded, 0.0, 1.0), vec3(0.86));
       gl_FragColor = vec4(shaded, 1.0);
@@ -142,6 +155,7 @@
   function showError(message) {
     statusCard.classList.add("error");
     statusText.textContent = message;
+    photoFallback.hidden = false;
   }
 
   function createShader(type, source) {
@@ -212,6 +226,9 @@
       positions: readAccessor(primitive.attributes.POSITION),
       normals: readAccessor(primitive.attributes.NORMAL),
       colors: readAccessor(primitive.attributes.COLOR_0),
+      materials: primitive.attributes._MATERIAL === undefined
+        ? null
+        : readAccessor(primitive.attributes._MATERIAL),
       indices: readAccessor(primitive.indices),
       boundsMin: document.accessors[primitive.attributes.POSITION].min,
       boundsMax: document.accessors[primitive.attributes.POSITION].max,
@@ -248,6 +265,13 @@
     bindAttribute("aPosition", parsed.positions);
     bindAttribute("aNormal", parsed.normals);
     bindAttribute("aColor", parsed.colors);
+    if (parsed.materials) {
+      bindAttribute("aMaterial", parsed.materials);
+    } else {
+      const materialLocation = gl.getAttribLocation(program, "aMaterial");
+      gl.disableVertexAttribArray(materialLocation);
+      gl.vertexAttrib3f(materialLocation, 0.0, 0.78, 0.0);
+    }
 
     const indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);

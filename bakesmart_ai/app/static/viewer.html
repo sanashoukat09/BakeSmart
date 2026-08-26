@@ -12,11 +12,12 @@
       <header class="viewer-header">
         <div>
           <p class="eyebrow">BakeSmart scene preview</p>
-          <h1>Open Basic 3D Layout Preview</h1>
-          <p class="subtitle">Cake, table and decorations shown together</p>
+          <h1>Detailed Interactive 3D View</h1>
+          <p class="subtitle">Your selected catalogue package, arranged to scale</p>
         </div>
         <div class="badges" aria-label="Preview information">
-          <span>Procedural GLB</span>
+          <span>Catalogue-aware geometry</span>
+          <span>PBR materials</span>
           <span>Metres</span>
           <span>No AR required</span>
         </div>
@@ -37,15 +38,16 @@
         </div>
         <div class="actions">
           <button id="reset-view" type="button">Reset view</button>
+          <a id="photo-fallback" href="#" hidden>Open real-photo preview</a>
           <a id="download-glb" href="#" download>Download GLB</a>
         </div>
       </footer>
 
       <p class="notice">
-        This is a procedural planning preview. It does not reconstruct the uploaded
-        cake photo, prove venue safety, or replace bakery and decorator approval.
+        This detailed planning view represents the selected catalogue items and their
+        dimensions. For photographic appearance, use the real-photo preview.
       </p>
     </main>
-    <script src="/static/viewer.js?v=20260825-1" defer></script>
+    <script src="/static/viewer.js?v=20260826-5" defer></script>
   </body>
 </html>

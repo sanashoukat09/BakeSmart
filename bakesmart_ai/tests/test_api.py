@@ -62,8 +62,8 @@ def test_recommendation_returns_three_budget_aware_packages(client, valid_design
     assert "backdrop" in body["scene"]["layers"]
     assert body["preview"] == {
         "interactive_3d_ready": True,
-        "viewer_3d_url": f"/viewer/{body['design_id']}",
-        "viewer_label": "Open Basic 3D Layout Preview",
+        "viewer_3d_url": f"/viewer/{body['design_id']}?package=balanced",
+        "viewer_label": "Open Detailed 3D View",
         "scene_glb_url": f"/api/v1/designs/{body['design_id']}/scene.glb",
         "ar_supported": None,
         "ar_url": None,
@@ -112,7 +112,7 @@ def test_viewer_and_glb_urls_are_real_local_resources(client, valid_design_reque
     assert "default-src 'self'" in viewer.headers["content-security-policy"]
     assert b'id="scene-canvas"' in viewer.content
     assert b"https://" not in viewer.content
-    assert b'/static/viewer.js?v=20260825-1' in viewer.content
+    assert b'/static/viewer.js?v=20260826-5' in viewer.content
     assert glb.status_code == 200
     assert glb.headers["content-type"] == "model/gltf-binary"
     assert glb.headers["cache-control"] == "private, no-cache"
@@ -121,6 +121,8 @@ def test_viewer_and_glb_urls_are_real_local_resources(client, valid_design_reque
     assert b"pointermove" in viewer_script.content
     assert b"wheel" in viewer_script.content
     assert b"distanceBetweenPointers" in viewer_script.content
+    assert b"aMaterial" in viewer_script.content
+    assert b"photo-fallback" in viewer.content
     assert viewer_script.content.count(b"precision mediump float;") == 2
 
 
