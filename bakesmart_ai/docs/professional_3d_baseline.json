@@ -1,0 +1,30 @@
+{
+  "baseline_branch": "Sana's-work",
+  "baseline_commit": "fee23d4e08983c0e637ff7613d12fd8b346c1cc6",
+  "captured_date": "2026-08-29",
+  "purpose": "Freeze the starting point for the professional 3D/AI rebuild before local-only training and calibration changes.",
+  "training_policy": "local_only_from_scratch",
+  "core_model_rules": {
+    "hosted_ai_inference_allowed": false,
+    "hosted_ai_training_data_generation_allowed": false,
+    "pretrained_core_model_weights_allowed": false,
+    "random_initialization_required": true,
+    "customer_photo_external_ai_upload_allowed": false,
+    "physical_scale_source": "confirmed_measurements_and_calibration"
+  },
+  "current_known_architecture": {
+    "venue_model": "BakeSmart local six-class venue segmentation pipeline",
+    "recommendation_model": "BakeSmart local bootstrap multi-head model",
+    "3d_renderer": "procedural GLB plus custom WebGL viewer",
+    "photo_preview": "2D catalogue cut-out compositor"
+  },
+  "next_build_sequence": [
+    "local-only guardrails",
+    "truthful UI state",
+    "unified taxonomy",
+    "measurement and camera calibration",
+    "room and constraint engine",
+    "professional modular asset pipeline",
+    "real-data model training and locked evaluation"
+  ]
+}
