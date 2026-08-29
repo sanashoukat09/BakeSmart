@@ -1,6 +1,6 @@
 """Offline rights-safe downloader/planner for BakeSmart asset sources.
 
-This tool does ordinary file retrieval only. It is not an AI service and is
+This tool performs ordinary file retrieval only. It is not an AI service and is
 never imported by BakeSmart's runtime recommendation or vision code.
 """
 
@@ -11,16 +11,16 @@ import csv
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 from urllib.request import Request, urlopen
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_DIR = PACKAGE_ROOT / "data" / "professional_asset_sources_v1"
 DEFAULT_OUTPUT = PACKAGE_ROOT / "assets" / "third_party_cc0" / "raw"
-USER_AGENT = "BakeSmart-Professional-Asset-Collector/1.1"
+USER_AGENT = "BakeSmart-Professional-Asset-Collector/1.2"
 
 
 def _registry_paths() -> list[Path]:
@@ -98,12 +98,7 @@ def _rank_candidate(
     elif "4k" in joined:
         score -= 10
 
-    if asset_type in {"model", "model_pack"}:
-        if "gltf" in joined or url.endswith((".glb", ".gltf", ".zip")):
-            score -= 45
-        if url.endswith(".glb"):
-            score -= 15
-    elif asset_type == "hdri":
+    if asset_type == "hdri":
         if url.endswith(".hdr"):
             score -= 50
         if "1k" in joined or "2k" in joined:
@@ -121,9 +116,77 @@ def _polyhaven_slug(row: dict[str, str]) -> str:
     return urlparse(row["source_url"]).path.rstrip("/").split("/")[-1]
 
 
-def _plan_polyhaven(row: dict[str, str]) -> tuple[str, int | None, str | None]:
+def _safe_relative_path(value: str) -> Path:
+    normalized = value.replace("\\", "/")
+    posix = PurePosixPath(normalized)
+    if posix.is_absolute() or ".." in posix.parts or not posix.parts:
+        raise RuntimeError(f"Unsafe included asset path from provider: {value!r}")
+    return Path(*posix.parts)
+
+
+def _filename_from_url(url: str, fallback: str) -> str:
+    name = unquote(Path(urlparse(url).path).name)
+    return name or fallback
+
+
+def _polyhaven_model_plan(
+    files: dict[str, Any],
+    source_id: str,
+) -> list[tuple[Path, str, int | None, str | None]]:
+    gltf_tree = files.get("gltf")
+    if not isinstance(gltf_tree, dict):
+        raise RuntimeError(f"Poly Haven returned no glTF tree for model {source_id}")
+
+    selected: dict[str, Any] | None = None
+    for resolution in ("1k", "2k", "4k"):
+        resolution_tree = gltf_tree.get(resolution)
+        if not isinstance(resolution_tree, dict):
+            continue
+        for file_format in ("glb", "gltf"):
+            candidate = resolution_tree.get(file_format)
+            if isinstance(candidate, dict) and isinstance(candidate.get("url"), str):
+                selected = candidate
+                break
+        if selected is not None:
+            break
+    if selected is None:
+        raise RuntimeError(f"Poly Haven returned no 1K-4K glTF/GLB for model {source_id}")
+
+    main_url = str(selected["url"])
+    plan: list[tuple[Path, str, int | None, str | None]] = [
+        (
+            Path(_filename_from_url(main_url, f"{source_id}.gltf")),
+            main_url,
+            int(selected.get("size") or 0) or None,
+            selected.get("md5"),
+        )
+    ]
+
+    includes = selected.get("include")
+    if isinstance(includes, dict):
+        for include_path, include_info in includes.items():
+            if not isinstance(include_info, dict) or not isinstance(include_info.get("url"), str):
+                raise RuntimeError(f"Malformed include record for {source_id}: {include_path}")
+            plan.append(
+                (
+                    _safe_relative_path(str(include_path)),
+                    str(include_info["url"]),
+                    int(include_info.get("size") or 0) or None,
+                    include_info.get("md5"),
+                )
+            )
+    return plan
+
+
+def _plan_polyhaven(
+    row: dict[str, str],
+) -> list[tuple[Path, str, int | None, str | None]]:
     slug = _polyhaven_slug(row)
     files = _request_json(f"https://api.polyhaven.com/files/{slug}")
+
+    if row["asset_type"] in {"model", "model_pack"}:
+        return _polyhaven_model_plan(files, row["source_id"])
+
     candidates = _flatten_files(files)
     if not candidates:
         raise RuntimeError(f"Poly Haven returned no downloadable files for {slug}")
@@ -131,7 +194,15 @@ def _plan_polyhaven(row: dict[str, str]) -> tuple[str, int | None, str | None]:
         candidates,
         key=lambda item: _rank_candidate(row, item[0], item[1]),
     )
-    return str(info["url"]), int(info.get("size") or 0) or None, info.get("md5")
+    url = str(info["url"])
+    return [
+        (
+            Path(_filename_from_url(url, f"{row['source_id']}.bin")),
+            url,
+            int(info.get("size") or 0) or None,
+            info.get("md5"),
+        )
+    ]
 
 
 def _download(
@@ -144,7 +215,7 @@ def _download(
     md5 = hashlib.md5()
     size = 0
     temporary = destination.with_suffix(destination.suffix + ".part")
-    with urlopen(request, timeout=120) as response, temporary.open("wb") as output:
+    with urlopen(request, timeout=180) as response, temporary.open("wb") as output:
         while True:
             chunk = response.read(1024 * 1024)
             if not chunk:
@@ -208,21 +279,27 @@ def main() -> int:
         )
         return 0
 
-    url, expected_size, expected_md5 = _plan_polyhaven(selected)
-    filename = Path(urlparse(url).path).name or f'{selected["source_id"]}.bin'
-    destination = args.output / selected["source_id"] / filename
-    print(f"Planned file: {url}")
-    print(f"Expected size: {expected_size or 'unknown'} bytes")
-    print(f"Destination: {destination}")
-    print(f"Expected MD5: {expected_md5 or 'not supplied'}")
+    plan = _plan_polyhaven(selected)
+    source_output = args.output / selected["source_id"]
+    for relative_path, url, expected_size, expected_md5 in plan:
+        destination = source_output / relative_path
+        print(f"Planned file: {url}")
+        print(f"Expected size: {expected_size or 'unknown'} bytes")
+        print(f"Destination: {destination}")
+        print(f"Expected MD5: {expected_md5 or 'not supplied'}")
 
     if not args.download:
         print("Dry run only. Re-run with --download after reviewing the plan.")
         return 0
 
-    size, digest = _download(url, destination, expected_md5)
-    print(f"Downloaded {size} bytes")
-    print(f"MD5 {digest}")
+    total = 0
+    for relative_path, url, _expected_size, expected_md5 in plan:
+        destination = source_output / relative_path
+        size, digest = _download(url, destination, expected_md5)
+        total += size
+        print(f"Downloaded {size} bytes -> {destination}")
+        print(f"MD5 {digest}")
+    print(f"Downloaded source bundle: {len(plan)} files, {total} bytes total")
     return 0
 
 
