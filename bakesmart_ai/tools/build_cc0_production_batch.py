@@ -45,7 +45,18 @@ def import_source(source_id, prefix):
         if o.type in {"CAMERA","LIGHT"}: bpy.data.objects.remove(o, do_unlink=True); imported.remove(o)
     meshes = [o for o in imported if o.type == "MESH"]
     if not meshes: raise RuntimeError(f"{source_id} has no mesh")
-    for i,o in enumerate(meshes,1): o.name=f"{prefix}_{i:02d}"
+    # glTF files often use empty parent nodes for scale/orientation. Detach every
+    # mesh while preserving its world matrix so later metre fitting is not
+    # multiplied by hidden parent transforms.
+    for i,o in enumerate(meshes,1):
+        world = o.matrix_world.copy()
+        o.parent = None
+        o.matrix_world = world
+        o.name=f"{prefix}_{i:02d}"
+    for o in list(imported):
+        if o.type == "EMPTY" and o.users_collection:
+            bpy.data.objects.remove(o, do_unlink=True)
+    bpy.context.view_layer.update()
     return meshes
 
 def bounds(objs):
@@ -59,13 +70,13 @@ def fit_uniform(objs,w,d,h,z):
     lo,hi=bounds(objs); c=(lo+hi)/2; move(objs,Vector((-c.x,-c.y,-lo.z))); lo,hi=bounds(objs); dim=hi-lo
     s=min(w/max(dim.x,1e-6),d/max(dim.y,1e-6),h/max(dim.z,1e-6))
     for o in objs: o.location*=s; o.scale*=s
-    lo,hi=bounds(objs); c=(lo+hi)/2; move(objs,Vector((-c.x,-c.y,z-lo.z)))
+    bpy.context.view_layer.update(); lo,hi=bounds(objs); c=(lo+hi)/2; move(objs,Vector((-c.x,-c.y,z-lo.z)))
 
 def fit_exact(objs,w,d,h,z):
     lo,hi=bounds(objs); c=(lo+hi)/2; move(objs,Vector((-c.x,-c.y,-lo.z))); lo,hi=bounds(objs); dim=hi-lo
     sx,sy,sz=w/max(dim.x,1e-6),d/max(dim.y,1e-6),h/max(dim.z,1e-6)
     for o in objs: o.location=Vector((o.location.x*sx,o.location.y*sy,o.location.z*sz)); o.scale=Vector((o.scale.x*sx,o.scale.y*sy,o.scale.z*sz))
-    lo,hi=bounds(objs); c=(lo+hi)/2; move(objs,Vector((-c.x,-c.y,z-lo.z)))
+    bpy.context.view_layer.update(); lo,hi=bounds(objs); c=(lo+hi)/2; move(objs,Vector((-c.x,-c.y,z-lo.z)))
 
 def mat(name,color,metal=0.0,rough=0.45):
     m=bpy.data.materials.new(name); m.use_nodes=True; b=next(n for n in m.node_tree.nodes if n.type=="BSDF_PRINCIPLED"); b.inputs["Base Color"].default_value=color; b.inputs["Metallic"].default_value=metal; b.inputs["Roughness"].default_value=rough; return m
