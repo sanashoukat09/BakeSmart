@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#3f2430">
+    <title>BakeSmart Production Asset Review</title>
+    <link rel="stylesheet" href="/static/viewer.css?v=20260829-8">
+    <link rel="stylesheet" href="/static/production_asset_review.css?v=20260829-1">
+  </head>
+  <body>
+    <main class="asset-review-shell">
+      <header class="asset-review-header">
+        <div>
+          <p class="eyebrow">BakeSmart production asset pipeline • human review only</p>
+          <h1>Real CC0 Asset Visual Review</h1>
+          <p class="subtitle">Inspect the actual GLB at true size before any production promotion.</p>
+        </div>
+        <div class="badges" aria-label="Review safeguards">
+          <span>Actual candidate GLB</span>
+          <span>Uniform scale 1.0</span>
+          <span>CC0-confirmed source</span>
+          <span>Not customer-ready</span>
+        </div>
+      </header>
+
+      <section class="asset-review-grid">
+        <aside class="asset-browser" aria-label="Assets awaiting visual review">
+          <div class="panel-heading">
+            <span>Review queue</span>
+            <strong id="queue-summary">Loading…</strong>
+          </div>
+          <nav id="asset-list" class="asset-list" aria-label="Production candidates"></nav>
+          <p class="review-safety-note">
+            Approval here records visual-review evidence only. It never changes the production manifest automatically.
+          </p>
+        </aside>
+
+        <section class="asset-review-main">
+          <div class="viewer-stage asset-stage" aria-label="Production asset 3D review">
+            <canvas id="scene-canvas" aria-label="Interactive true-size production candidate"></canvas>
+            <div class="loading-card" id="loading-card" role="status" aria-live="polite">
+              <span class="spinner" aria-hidden="true"></span>
+              <span id="status-text">Loading review queue…</span>
+            </div>
+          </div>
+          <div class="asset-view-actions">
+            <span>Drag to orbit • Shift+drag to pan • Scroll/pinch to zoom • Click the asset to select</span>
+            <button id="reset-view" type="button" disabled>Reset view</button>
+          </div>
+        </section>
+
+        <aside class="asset-details" aria-label="Selected asset review details">
+          <p class="eyebrow">Selected candidate</p>
+          <h2 id="asset-name">Waiting for asset…</h2>
+          <p id="asset-category" class="asset-category"></p>
+          <dl class="asset-metadata">
+            <div><dt>True size</dt><dd id="asset-size">—</dd></div>
+            <div><dt>Triangles</dt><dd id="asset-triangles">—</dd></div>
+            <div><dt>File size</dt><dd id="asset-file-size">—</dd></div>
+            <div><dt>Material profile</dt><dd id="asset-material">—</dd></div>
+            <div><dt>Sources</dt><dd id="asset-sources">—</dd></div>
+            <div><dt>Structural validation</dt><dd id="asset-validation">—</dd></div>
+          </dl>
+
+          <div class="decision-state" id="decision-state">No visual decision saved yet.</div>
+          <label class="review-notes-label" for="review-notes">Reviewer note</label>
+          <textarea id="review-notes" rows="5" maxlength="1000" placeholder="Required for Reject or Needs correction. Describe the visual issue clearly."></textarea>
+
+          <div class="decision-buttons" aria-label="Review decision">
+            <button type="button" data-decision="approve" class="approve-button">Approve</button>
+            <button type="button" data-decision="needs_correction" class="correction-button">Needs correction</button>
+            <button type="button" data-decision="reject" class="reject-button">Reject</button>
+          </div>
+          <p id="decision-message" class="decision-message" aria-live="polite"></p>
+          <button id="next-asset" type="button" class="next-asset-button">Next asset</button>
+        </aside>
+      </section>
+
+      <p class="notice review-warning">
+        Review-only tool. These GLBs passed automated structural checks, but material quality, silhouette, event realism,
+        visual polish and appropriateness still require human inspection. Nothing on this page is automatically promoted to production-ready.
+      </p>
+    </main>
+    <script src="/static/renderer_core.js?v=20260829-7" defer></script>
+    <script src="/static/production_asset_review.js?v=20260829-1" defer></script>
+  </body>
+</html>
