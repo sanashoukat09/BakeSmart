@@ -21,9 +21,12 @@ from app.schemas.professional import (
     PlanarProjectionRequest,
     PlanarProjectionResponse,
     ProfessionalCapabilitiesResponse,
+    RoomConstraintRequest,
+    RoomConstraintResponse,
 )
 from app.services.calibration import calibration_service
 from app.services.recommendation import recommendation_service
+from app.services.room_constraints import room_constraint_engine
 from app.services.venue_photo_analyzer import venue_photo_analyzer
 
 router = APIRouter()
@@ -77,6 +80,17 @@ async def project_photo_plane_points(
     request: PlanarProjectionRequest,
 ) -> PlanarProjectionResponse:
     return calibration_service.project_plane_points(request)
+
+
+@router.post(
+    "/constraints/room",
+    response_model=RoomConstraintResponse,
+    tags=["constraints"],
+)
+async def analyze_room_constraints(
+    request: RoomConstraintRequest,
+) -> RoomConstraintResponse:
+    return room_constraint_engine.assess(request)
 
 
 @router.post(

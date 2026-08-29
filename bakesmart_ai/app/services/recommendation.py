@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections import defaultdict, deque
 from datetime import datetime, timezone
 from typing import Literal
 
@@ -23,6 +24,7 @@ from app.services.photo_artifacts import (
     temporary_photo_store,
 )
 from app.services.photo_preview_builder import PhotoPreviewBuilder
+from app.services.room_constraints import RoomConstraintEngine
 from app.services.scene_artifacts import SceneArtifactStore
 from app.services.scene_builder import SceneBuilder, SceneBuildResult
 from app.services.stage3_recommendation import Stage3RecommendationEngine
@@ -46,6 +48,7 @@ class RecommendationService:
         self.stage3_engine: Stage3RecommendationEngine | None = None
         self.glb_builder: ProceduralGlbBuilder | None = None
         self.artifact_store: SceneArtifactStore | None = None
+        self.room_constraint_engine = RoomConstraintEngine()
         self.photo_store = photo_store
         self.preview_store = preview_store
         self.photo_preview_builder = PhotoPreviewBuilder()
@@ -122,6 +125,11 @@ class RecommendationService:
             )
             for package_id in ("essential", "balanced", "statement")
         }
+        package_results = {
+            package_id: self._apply_verified_room_fit(request, package_result)
+            for package_id, package_result in package_results.items()
+        }
+
         recommended_package_id = self._recommended_package_id(request)
         result = package_results[recommended_package_id]
         request_json = json.dumps(
@@ -193,6 +201,84 @@ class RecommendationService:
             packages=packages,
             recommended_package_id=recommended_package_id,
             warnings=list(dict.fromkeys(warnings)),
+        )
+
+    def _apply_verified_room_fit(
+        self,
+        request: DesignRequest,
+        result: SceneBuildResult,
+    ) -> SceneBuildResult:
+        fit = self.room_constraint_engine.fit_scene(
+            request,
+            list(result.scene.objects),
+        )
+        fit_warnings = list(fit.warnings)
+        if not fit.assessment.hard_constraints_ready:
+            if fit.assessment.violations:
+                fit_warnings.extend(
+                    f"Room constraint: {violation.message}"
+                    for violation in fit.assessment.violations
+                )
+            fit_warnings.append(
+                "The scale-aware candidate was not applied because it was not fully verified against the confirmed room constraints; the previous scene placement was retained."
+            )
+            return SceneBuildResult(
+                result.selected_theme_id,
+                result.decorations,
+                result.cake,
+                result.costs,
+                result.venue_assessment,
+                result.scene,
+                result.preview,
+                tuple(dict.fromkeys([*result.warnings, *fit_warnings])),
+            )
+
+        fitted_objects = list(fit.objects)
+        queues = defaultdict(deque)
+        for item in fitted_objects:
+            queues[(item.asset_id, item.role, item.catalog_id)].append(item)
+
+        def fitted_copy(original):
+            key = (original.asset_id, original.role, original.catalog_id)
+            if queues[key]:
+                return queues[key].popleft()
+            return original
+
+        fitted_decorations = []
+        for decoration in result.decorations:
+            fitted_decorations.append(
+                decoration.model_copy(
+                    update={
+                        "placements": [
+                            fitted_copy(placement)
+                            for placement in decoration.placements
+                        ]
+                    }
+                )
+            )
+        fitted_cake = result.cake.model_copy(
+            update={"placement": fitted_copy(result.cake.placement)}
+        )
+        fitted_scene = result.scene.model_copy(
+            update={"objects": fitted_objects}
+        )
+        targets = fit.assessment.scale_targets
+        if targets is not None:
+            fit_warnings.append(
+                "Verified scale-aware target: "
+                f"{targets.recommended_backdrop_width_m:.2f} m backdrop span "
+                f"across a {targets.usable_focal_width_m:.2f} m usable focal zone "
+                f"({targets.size_class} venue class)."
+            )
+        return SceneBuildResult(
+            result.selected_theme_id,
+            fitted_decorations,
+            fitted_cake,
+            result.costs,
+            result.venue_assessment,
+            fitted_scene,
+            result.preview,
+            tuple(dict.fromkeys([*result.warnings, *fit_warnings])),
         )
 
     @staticmethod

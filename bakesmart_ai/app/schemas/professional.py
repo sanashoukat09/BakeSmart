@@ -1,10 +1,10 @@
-"""Truthful professional-3D capability and calibration contracts."""
+"""Truthful professional-3D capability, calibration, and constraint contracts."""
 
 from typing import Literal
 
 from pydantic import Field
 
-from app.schemas.design import StrictModel
+from app.schemas.design import ObjectPlacement, SpaceInput, StrictModel
 
 
 class PreviewCapabilityState(StrictModel):
@@ -42,6 +42,8 @@ class ProfessionalCapabilitiesResponse(StrictModel):
     calibration_reference_api_ready: Literal[True] = True
     calibration_plane_api_ready: Literal[True] = True
     planar_projection_api_ready: Literal[True] = True
+    metric_room_constraints_ready: Literal[True] = True
+    scale_aware_scene_fitting_ready: Literal[True] = True
     preview: PreviewCapabilityState = Field(default_factory=PreviewCapabilityState)
 
 
@@ -148,4 +150,82 @@ class ProjectedPlanePoint(StrictModel):
 
 class PlanarProjectionResponse(StrictModel):
     calibration: PlanarCalibrationResponse
-    projected_points: list[ProjectedPlanePoint] = Field(default_factory=list, max_length=100)
+    projected_points: list[ProjectedPlanePoint] = Field(
+        default_factory=list,
+        max_length=100,
+    )
+
+
+class MetricRect2D(StrictModel):
+    """Axis-aligned metric footprint in the measured room coordinate system."""
+
+    x_m: float = Field(ge=0, le=100)
+    y_m: float = Field(ge=0, le=100)
+    width_m: float = Field(gt=0, le=100)
+    depth_m: float = Field(ge=0, le=100)
+
+
+class ConstraintZone(StrictModel):
+    """A measured no-placement or service zone derived from confirmed geometry."""
+
+    label: str = Field(min_length=1, max_length=120)
+    source_type: Literal[
+        "room",
+        "door",
+        "window",
+        "furniture",
+        "outlet",
+        "stairs",
+        "walkway",
+        "other",
+        "clearance",
+    ]
+    bounds: MetricRect2D
+    clearance_m: float = Field(ge=0, le=5)
+
+
+class ScaleAwareTargets(StrictModel):
+    """Planning envelope sized from the largest genuinely usable focal span."""
+
+    size_class: Literal["compact", "standard", "large", "hall"]
+    usable_focal_width_m: float = Field(gt=0, le=100)
+    recommended_backdrop_width_m: float = Field(gt=0, le=100)
+    recommended_backdrop_height_m: float = Field(gt=0, le=30)
+    recommended_table_width_m: float = Field(gt=0, le=20)
+    recommended_floor_decor_spread_m: float = Field(gt=0, le=100)
+    backdrop_wall_coverage_fraction: float = Field(gt=0, le=1)
+
+
+class ConstraintViolation(StrictModel):
+    code: Literal[
+        "out_of_room",
+        "obstacle_collision",
+        "object_collision",
+        "insufficient_circulation",
+        "missing_dimensions",
+    ]
+    message: str = Field(min_length=1, max_length=300)
+    asset_id: str | None = Field(default=None, max_length=200)
+
+
+class RoomConstraintRequest(StrictModel):
+    space: SpaceInput
+    minimum_clearance_m: float = Field(default=0.9, ge=0.9, le=5)
+    objects: list[ObjectPlacement] = Field(default_factory=list, max_length=100)
+
+
+class RoomConstraintResponse(StrictModel):
+    status: Literal[
+        "verified",
+        "manual_review_required",
+        "no_usable_zone",
+        "violations",
+    ]
+    room_bounds: MetricRect2D
+    largest_focal_zone: MetricRect2D | None = None
+    forbidden_zones: list[ConstraintZone] = Field(default_factory=list, max_length=100)
+    scale_targets: ScaleAwareTargets | None = None
+    hard_constraints_ready: bool
+    available_front_clearance_m: float = Field(ge=0, le=100)
+    violations: list[ConstraintViolation] = Field(default_factory=list, max_length=100)
+    limitations: list[str] = Field(default_factory=list, max_length=12)
