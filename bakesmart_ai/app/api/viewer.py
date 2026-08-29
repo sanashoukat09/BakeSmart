@@ -84,6 +84,25 @@ async def interactive_viewer(design_id: str) -> FileResponse:
 
 
 @router.get(
+    "/viewer/production-assets/review",
+    response_class=FileResponse,
+    tags=["viewer"],
+)
+async def production_asset_review_viewer() -> FileResponse:
+    """Open the actual geometry-review GLB queue for human visual inspection."""
+
+    return FileResponse(
+        STATIC_DIR / "production_asset_review.html",
+        media_type="text/html",
+        headers={
+            **_viewer_headers(),
+            "X-BakeSmart-Review-Only": "true",
+            "X-BakeSmart-Production-Ready": "false",
+        },
+    )
+
+
+@router.get(
     "/viewer/vertical-slice/{celebration}",
     response_class=FileResponse,
     tags=["viewer"],
