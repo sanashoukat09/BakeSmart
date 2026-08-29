@@ -1,0 +1,58 @@
+{
+  "report_version": "production-candidate-build-v1",
+  "review_only": true,
+  "production_ready": false,
+  "assets": [
+    {
+      "asset_id": "prod-table-low-floral",
+      "output": "app/assets/production/table-low-floral.glb",
+      "source_ids": [
+        "ph-ceramic-vase-04",
+        "ph-shrub-sorrel-01"
+      ],
+      "source_license_status": "cc0_confirmed",
+      "redistribution_allowed": true,
+      "true_dimensions_m": [
+        0.45,
+        0.45,
+        0.3
+      ],
+      "triangle_count": 12531,
+      "status": "built_for_geometry_review"
+    },
+    {
+      "asset_id": "prod-floor-marigold-clusters",
+      "output": "app/assets/production/floor-marigold-clusters.glb",
+      "source_ids": [
+        "ph-brass-pot-01",
+        "ph-flower-empodium"
+      ],
+      "source_license_status": "cc0_confirmed",
+      "redistribution_allowed": true,
+      "true_dimensions_m": [
+        0.7,
+        0.7,
+        1.1
+      ],
+      "triangle_count": 7025,
+      "status": "built_for_geometry_review"
+    },
+    {
+      "asset_id": "prod-sign-mirror-welcome",
+      "output": "app/assets/production/sign-mirror-welcome.glb",
+      "source_ids": [
+        "ph-ornate-mirror-01"
+      ],
+      "source_license_status": "cc0_confirmed",
+      "redistribution_allowed": true,
+      "true_dimensions_m": [
+        0.75,
+        0.05,
+        1.5
+      ],
+      "triangle_count": 12841,
+      "status": "built_for_geometry_review"
+    }
+  ],
+  "note": "Human visual review required before production_ready."
+}

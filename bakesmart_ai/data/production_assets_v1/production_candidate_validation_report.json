@@ -1,0 +1,86 @@
+{
+  "report_version": "production-candidate-validation-v1",
+  "all_structurally_valid": true,
+  "production_ready": false,
+  "human_visual_review_required": true,
+  "assets": [
+    {
+      "asset_id": "prod-table-low-floral",
+      "valid": true,
+      "file_size_bytes": 2472036,
+      "triangle_count": 12531,
+      "checks": [
+        "GLB magic header is valid.",
+        "GLB version is 2.",
+        "GLB declared length matches file length.",
+        "glTF asset.version is 2.0.",
+        "At least one node is present.",
+        "At least one mesh is present.",
+        "No unsupported required mesh-compression extension is declared.",
+        "All materials define pbrMetallicRoughness.",
+        "Embedded asset id matches the manifest.",
+        "Embedded units are metres.",
+        "Embedded anchor type matches the manifest.",
+        "Embedded true-size dimensions match the manifest within 2 cm.",
+        "LOD0 triangle count 12531 is within the 18000 triangle budget."
+      ],
+      "errors": [],
+      "warnings": [
+        "Texture pixel dimensions and visual material quality still require Blender/export review; the binary inspector does not decode every embedded image."
+      ],
+      "review_only": true
+    },
+    {
+      "asset_id": "prod-floor-marigold-clusters",
+      "valid": true,
+      "file_size_bytes": 2642600,
+      "triangle_count": 7025,
+      "checks": [
+        "GLB magic header is valid.",
+        "GLB version is 2.",
+        "GLB declared length matches file length.",
+        "glTF asset.version is 2.0.",
+        "At least one node is present.",
+        "At least one mesh is present.",
+        "No unsupported required mesh-compression extension is declared.",
+        "All materials define pbrMetallicRoughness.",
+        "Embedded asset id matches the manifest.",
+        "Embedded units are metres.",
+        "Embedded anchor type matches the manifest.",
+        "Embedded true-size dimensions match the manifest within 2 cm.",
+        "LOD0 triangle count 7025 is within the 26000 triangle budget."
+      ],
+      "errors": [],
+      "warnings": [
+        "Texture pixel dimensions and visual material quality still require Blender/export review; the binary inspector does not decode every embedded image."
+      ],
+      "review_only": true
+    },
+    {
+      "asset_id": "prod-sign-mirror-welcome",
+      "valid": true,
+      "file_size_bytes": 662984,
+      "triangle_count": 12841,
+      "checks": [
+        "GLB magic header is valid.",
+        "GLB version is 2.",
+        "GLB declared length matches file length.",
+        "glTF asset.version is 2.0.",
+        "At least one node is present.",
+        "At least one mesh is present.",
+        "No unsupported required mesh-compression extension is declared.",
+        "All materials define pbrMetallicRoughness.",
+        "Embedded asset id matches the manifest.",
+        "Embedded units are metres.",
+        "Embedded anchor type matches the manifest.",
+        "Embedded true-size dimensions match the manifest within 2 cm.",
+        "LOD0 triangle count 12841 is within the 14000 triangle budget."
+      ],
+      "errors": [],
+      "warnings": [
+        "Texture pixel dimensions and visual material quality still require Blender/export review; the binary inspector does not decode every embedded image."
+      ],
+      "review_only": true
+    }
+  ]
+}
