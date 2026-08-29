@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app import __version__
+from app.api.asset_routes import router as asset_router
 from app.api.routes import router as api_router
 from app.api.viewer import STATIC_DIR, router as viewer_router
 from app.core.config import settings
@@ -38,6 +39,7 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix="/api/v1")
+app.include_router(asset_router, prefix="/api/v1")
 app.include_router(viewer_router)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
