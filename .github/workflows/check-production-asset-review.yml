@@ -7,6 +7,8 @@ on:
       - "Sana's-work"
     paths:
       - ".github/workflows/check-production-asset-review.yml"
+      - "bakesmart_ai/app/review_main.py"
+      - "bakesmart_ai/run_asset_review.ps1"
       - "bakesmart_ai/app/schemas/asset_review.py"
       - "bakesmart_ai/app/services/production_asset_review.py"
       - "bakesmart_ai/app/api/asset_routes.py"
@@ -39,17 +41,35 @@ jobs:
           python-version: "3.11"
 
       - name: Install lightweight test dependencies
-        run: python -m pip install "pydantic>=2,<3" pytest
+        run: python -m pip install "fastapi>=0.110,<1" "pydantic>=2,<3" pytest
 
       - name: Check Python syntax
         working-directory: bakesmart_ai
         run: |
           python -m py_compile \
+            app/review_main.py \
             app/schemas/asset_review.py \
             app/services/production_asset_review.py \
             app/api/asset_routes.py \
             app/api/viewer.py \
             tests/test_production_asset_review.py
+
+      - name: Verify lightweight entrypoint imports without ML runtime modules
+        working-directory: bakesmart_ai
+        run: |
+          python - <<'PY'
+          import sys
+          import app.review_main
+          forbidden = [
+              name for name in sys.modules
+              if name.startswith("torch")
+              or name.startswith("onnxruntime")
+              or name.startswith("training.model_runtime")
+              or name.startswith("training.venue_vision_runtime")
+          ]
+          assert not forbidden, f"review entrypoint loaded ML runtime modules: {forbidden}"
+          assert app.review_main.app is not None
+          PY
 
       - name: Check JavaScript syntax
         working-directory: bakesmart_ai
