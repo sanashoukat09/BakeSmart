@@ -18,14 +18,32 @@ from urllib.request import Request, urlopen
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
-REGISTRY = PACKAGE_ROOT / "data" / "professional_asset_sources_v1" / "source_manifest.csv"
+REGISTRY_DIR = PACKAGE_ROOT / "data" / "professional_asset_sources_v1"
 DEFAULT_OUTPUT = PACKAGE_ROOT / "assets" / "third_party_cc0" / "raw"
-USER_AGENT = "BakeSmart-Professional-Asset-Collector/1.0"
+USER_AGENT = "BakeSmart-Professional-Asset-Collector/1.1"
+
+
+def _registry_paths() -> list[Path]:
+    paths = sorted(REGISTRY_DIR.glob("source_manifest*.csv"))
+    if not paths:
+        raise FileNotFoundError(f"No source manifests found in {REGISTRY_DIR}")
+    return paths
 
 
 def _rows() -> list[dict[str, str]]:
-    with REGISTRY.open("r", encoding="utf-8", newline="") as handle:
-        return list(csv.DictReader(handle))
+    rows: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for path in _registry_paths():
+        with path.open("r", encoding="utf-8", newline="") as handle:
+            for row in csv.DictReader(handle):
+                source_id = row.get("source_id", "").strip()
+                if not source_id:
+                    raise ValueError(f"{path.name} contains a blank source_id")
+                if source_id in seen:
+                    raise ValueError(f"Duplicate professional asset source id: {source_id}")
+                seen.add(source_id)
+                rows.append(row)
+    return rows
 
 
 def _approved(row: dict[str, str]) -> bool:
@@ -44,7 +62,10 @@ def _request_json(url: str) -> dict[str, Any]:
         return json.loads(response.read().decode("utf-8"))
 
 
-def _flatten_files(value: Any, path: tuple[str, ...] = ()) -> list[tuple[tuple[str, ...], dict[str, Any]]]:
+def _flatten_files(
+    value: Any,
+    path: tuple[str, ...] = (),
+) -> list[tuple[tuple[str, ...], dict[str, Any]]]:
     output: list[tuple[tuple[str, ...], dict[str, Any]]] = []
     if isinstance(value, dict):
         if isinstance(value.get("url"), str):
@@ -59,7 +80,11 @@ def _flatten_files(value: Any, path: tuple[str, ...] = ()) -> list[tuple[tuple[s
     return output
 
 
-def _rank_candidate(row: dict[str, str], path: tuple[str, ...], file_info: dict[str, Any]) -> tuple[int, int]:
+def _rank_candidate(
+    row: dict[str, str],
+    path: tuple[str, ...],
+    file_info: dict[str, Any],
+) -> tuple[int, int]:
     joined = "/".join(path).lower()
     url = str(file_info.get("url", "")).lower()
     size = int(file_info.get("size") or 10**12)
@@ -102,11 +127,18 @@ def _plan_polyhaven(row: dict[str, str]) -> tuple[str, int | None, str | None]:
     candidates = _flatten_files(files)
     if not candidates:
         raise RuntimeError(f"Poly Haven returned no downloadable files for {slug}")
-    path, info = min(candidates, key=lambda item: _rank_candidate(row, item[0], item[1]))
+    path, info = min(
+        candidates,
+        key=lambda item: _rank_candidate(row, item[0], item[1]),
+    )
     return str(info["url"]), int(info.get("size") or 0) or None, info.get("md5")
 
 
-def _download(url: str, destination: Path, expected_md5: str | None) -> tuple[int, str]:
+def _download(
+    url: str,
+    destination: Path,
+    expected_md5: str | None,
+) -> tuple[int, str]:
     destination.parent.mkdir(parents=True, exist_ok=True)
     request = Request(url, headers={"User-Agent": USER_AGENT})
     md5 = hashlib.md5()
@@ -124,7 +156,8 @@ def _download(url: str, destination: Path, expected_md5: str | None) -> tuple[in
     if expected_md5 and digest.lower() != expected_md5.lower():
         temporary.unlink(missing_ok=True)
         raise RuntimeError(
-            f"checksum mismatch for {destination.name}: expected {expected_md5}, got {digest}"
+            f"checksum mismatch for {destination.name}: "
+            f"expected {expected_md5}, got {digest}"
         )
     os.replace(temporary, destination)
     return size, digest
@@ -134,7 +167,11 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--list", action="store_true", help="List the approved source queue.")
     parser.add_argument("--source-id", help="Plan one approved source.")
-    parser.add_argument("--download", action="store_true", help="Actually download an automatically supported source.")
+    parser.add_argument(
+        "--download",
+        action="store_true",
+        help="Actually download an automatically supported source.",
+    )
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
 
@@ -143,14 +180,18 @@ def main() -> int:
     if args.list or not args.source_id:
         for row in approved:
             print(
-                f'{row["source_id"]:30} {row["asset_type"]:12} '
+                f'{row["source_id"]:34} {row["asset_type"]:12} '
                 f'{row["provider"]:12} {row["title"]}'
             )
-        print(f"\nApproved source records: {len(approved)}")
+        print(f"\nManifest files: {len(_registry_paths())}")
+        print(f"Approved source records: {len(approved)}")
         if not args.source_id:
             return 0
 
-    selected = next((row for row in approved if row["source_id"] == args.source_id), None)
+    selected = next(
+        (row for row in approved if row["source_id"] == args.source_id),
+        None,
+    )
     if selected is None:
         raise SystemExit(f"Unknown or unapproved source id: {args.source_id}")
 
@@ -161,7 +202,10 @@ def main() -> int:
 
     if selected["download_method"] != "polyhaven_api":
         print("Download mode: manual queue item.")
-        print("Reason: this provider does not expose a stable file metadata contract used by this helper.")
+        print(
+            "Reason: this provider does not expose a stable file metadata "
+            "contract used by this helper."
+        )
         return 0
 
     url, expected_size, expected_md5 = _plan_polyhaven(selected)
