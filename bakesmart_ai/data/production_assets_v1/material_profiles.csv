@@ -1,0 +1,15 @@
+profile_id,display_name,metallic,roughness,alpha_mode,double_sided,pbr_required,base_color_texture_required,orm_texture_required,emissive_texture_allowed,texture_max_px,notes
+mat-painted-metal,Powder-coated painted metal,0.65,0.32,OPAQUE,false,true,true,true,false,2048,Use normal/roughness detail; avoid mirror-like arches.
+mat-painted-board,Painted event board/panel,0.0,0.62,OPAQUE,false,true,true,true,false,2048,Matte painted MDF/board appearance with subtle roughness variation.
+mat-balloon-latex,Latex balloon,0.0,0.28,OPAQUE,false,true,true,true,false,2048,Soft dielectric highlight; use normal variation sparingly.
+mat-artificial-floral,Artificial floral cluster,0.0,0.72,MASK,true,true,true,true,false,2048,Use alpha-masked petal/leaf cards plus simple flower geometry; double-sided.
+mat-dried-stem,Dried/pampas-look stem,0.0,0.78,MASK,true,true,true,true,false,2048,Alpha-masked fibers or cards; avoid expensive strand geometry on mobile LODs.
+mat-artificial-greenery,Artificial greenery,0.0,0.68,MASK,true,true,true,true,false,2048,Alpha-masked leaves with normal maps and double-sided foliage.
+mat-glass-look,Clear glass/acrylic-look cylinder,0.0,0.12,BLEND,false,true,false,true,false,2048,Keep transmission-like surfaces simple for mobile; no physically expensive caustics.
+mat-led-emissive,Low-heat LED/emissive light,0.0,0.25,OPAQUE,false,true,true,true,true,2048,Use emissive texture/factor plus non-emissive housing; lighting is renderer-dependent.
+mat-fabric-matte,Matte event fabric/drape,0.0,0.88,OPAQUE,true,true,true,true,false,2048,Use normal maps for weave/folds; double-sided only where thin cloth is visible.
+mat-acrylic,Acrylic/clear polymer,0.0,0.18,BLEND,false,true,false,true,false,2048,Use controlled transparency; keep signage readable without full transmission effects.
+mat-brass-look,Brass-look decorative metal,0.78,0.26,OPAQUE,false,true,true,true,false,2048,Metallic workflow with roughness variation; avoid pure chrome.
+mat-painted-wood,Painted or sealed wood,0.0,0.58,OPAQUE,false,true,true,true,false,2048,Use restrained wood normal/roughness; base color may be painted.
+mat-printed-board,Printed foam/wayfinding board,0.0,0.72,OPAQUE,false,true,true,true,false,2048,Printed base-color texture must remain legible; minimal normal detail.
+mat-mirror-look,Mirror-look acrylic,0.88,0.08,OPAQUE,false,true,false,true,false,2048,Approximate mirror with metallic/low roughness; real reflections depend on renderer.
