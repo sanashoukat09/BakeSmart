@@ -1,0 +1,255 @@
+.asset-review-shell {
+  width: min(1500px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 24px 0 36px;
+}
+
+.asset-review-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.asset-review-grid {
+  display: grid;
+  grid-template-columns: minmax(210px, 260px) minmax(420px, 1fr) minmax(280px, 340px);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.asset-browser,
+.asset-details,
+.asset-review-main {
+  min-width: 0;
+}
+
+.asset-browser,
+.asset-details {
+  border: 1px solid rgba(94, 55, 70, 0.15);
+  border-radius: 20px;
+  background: rgba(255, 252, 250, 0.92);
+  box-shadow: 0 16px 42px rgba(58, 34, 43, 0.08);
+  padding: 18px;
+}
+
+.panel-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  margin-bottom: 12px;
+}
+
+.panel-heading span,
+.asset-category,
+.review-safety-note,
+.decision-message {
+  color: #745b66;
+}
+
+.asset-list {
+  display: grid;
+  gap: 10px;
+}
+
+.asset-list a {
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(94, 55, 70, 0.13);
+  border-radius: 14px;
+  padding: 12px;
+  text-decoration: none;
+  color: inherit;
+  background: #fff;
+}
+
+.asset-list a:hover,
+.asset-list a[aria-current="page"] {
+  border-color: rgba(123, 67, 91, 0.45);
+  box-shadow: 0 8px 24px rgba(74, 42, 55, 0.08);
+}
+
+.asset-list small {
+  color: #7d6972;
+}
+
+.asset-list .queue-decision {
+  font-weight: 700;
+  color: #563847;
+}
+
+.review-safety-note {
+  font-size: 0.86rem;
+  line-height: 1.45;
+  margin: 16px 0 0;
+}
+
+.asset-review-main {
+  display: grid;
+  grid-template-rows: minmax(540px, 1fr) auto;
+}
+
+.asset-stage {
+  min-height: 540px;
+}
+
+.asset-view-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  padding: 10px 4px 0;
+  color: #6d5962;
+  font-size: 0.9rem;
+}
+
+.asset-view-actions button,
+.next-asset-button,
+.decision-buttons button {
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.asset-view-actions button,
+.next-asset-button {
+  background: #efe7e9;
+  color: #4e3440;
+}
+
+.asset-details h2 {
+  margin: 4px 0 3px;
+}
+
+.asset-metadata {
+  display: grid;
+  gap: 0;
+  margin: 18px 0;
+}
+
+.asset-metadata div {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(94, 55, 70, 0.1);
+}
+
+.asset-metadata dt {
+  color: #806a74;
+}
+
+.asset-metadata dd {
+  margin: 0;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.decision-state {
+  border-radius: 12px;
+  background: #f4eff1;
+  padding: 10px 12px;
+  margin: 0 0 14px;
+  font-weight: 700;
+  color: #563847;
+}
+
+.review-notes-label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 7px;
+}
+
+#review-notes {
+  width: 100%;
+  resize: vertical;
+  box-sizing: border-box;
+  border: 1px solid rgba(94, 55, 70, 0.22);
+  border-radius: 12px;
+  padding: 11px;
+  font: inherit;
+  color: #3e2b34;
+  background: #fff;
+}
+
+.decision-buttons {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.approve-button {
+  background: #dcefe3;
+  color: #255f3c;
+}
+
+.correction-button {
+  background: #f6e7c8;
+  color: #7b5614;
+}
+
+.reject-button {
+  background: #f2d9dd;
+  color: #842f3d;
+}
+
+.decision-buttons button:disabled,
+.asset-view-actions button:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
+.decision-message {
+  min-height: 1.3em;
+  margin: 10px 0;
+  font-size: 0.9rem;
+}
+
+.next-asset-button {
+  width: 100%;
+}
+
+@media (max-width: 1080px) {
+  .asset-review-grid {
+    grid-template-columns: 220px 1fr;
+  }
+  .asset-details {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .asset-review-shell {
+    width: min(100% - 18px, 1500px);
+    padding-top: 12px;
+  }
+  .asset-review-header {
+    display: block;
+  }
+  .asset-review-grid {
+    grid-template-columns: 1fr;
+  }
+  .asset-browser,
+  .asset-details {
+    padding: 14px;
+  }
+  .asset-review-main {
+    grid-template-rows: minmax(420px, 62vh) auto;
+  }
+  .asset-stage {
+    min-height: 420px;
+  }
+  .asset-view-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .asset-metadata div {
+    grid-template-columns: 105px 1fr;
+  }
+}
