@@ -1,0 +1,38 @@
+category,target_variants,approved_source_coverage,production_ready_count,gap_status,next_action
+balloon_garlands,8,high,0,needs_authoring,Build organic garland half-arch full-arch floor-cluster pastel kids wedding-neutral and corporate variants from approved balloon pack.
+structural_arches,6,medium,0,needs_authoring,Convert two CC0 arch sources and author round double asymmetrical floral-ready and balloon-ready frames at verified metre scale.
+chiara_panels,6,none,0,missing,Model from scratch in Blender using measured panel dimensions; no safe production-ready source collected yet.
+floral_arches,8,medium,0,needs_authoring,Use approved flower and greenery sources to author modular floral sprays then compose true-size arch packages.
+flower_clusters,12,high,0,needs_authoring,Author mobile-optimized bouquet low-floral pedestal-spray and floor-cluster modules from CC0 flower sources.
+greenery_clusters,8,high,0,needs_authoring,Optimize potted plants shrubs and low-poly foliage into event-specific planters garlands and side clusters.
+marigold_decor,8,low,0,missing_specialist,Create marigold-specific flower heads strings torans and floor clusters locally; generic yellow flower sources are reference only.
+mehndi_stage,5,low,0,missing_specialist,Model modular South Asian stage panels seating canopy and jhoola-inspired elements from scratch with measured dimensions.
+wedding_stage,6,low,0,missing_specialist,Build modular stage platforms panels drapes florals and seating locally; generic arches only cover structural subparts.
+pedestals_plinths,10,medium,0,needs_authoring,Use CC0 column/stool sources plus locally modeled cylinders cubes fluted and acrylic-look plinths.
+cake_tables,8,high,0,needs_authoring,Adapt approved table packs and model common round rectangular acrylic and pedestal cake tables to exact metre sizes.
+event_chairs,12,high,0,needs_authoring,Select and optimize individual CC0 chair models across banquet modern rustic and outdoor styles.
+event_tables,10,high,0,needs_authoring,Select and optimize round rectangular cocktail dessert and buffet table variants.
+dessert_displays,6,medium,0,needs_authoring,Use etagere market-stand and table sources to author dessert pedestals candy bars and buffet groupings.
+welcome_signs,8,high,0,needs_authoring,Adapt mirror frame wooden sign picture frame and signpost bases; generate event text locally as separate texture/material content.
+directional_signs,5,high,0,needs_authoring,Adapt approved signpost and board models into standardized BakeSmart directional sets.
+table_numbers,5,high,0,needs_authoring,Adapt standing frame and locally modeled acrylic/metal card holders.
+lighting_candles,5,medium,0,needs_authoring,Convert candle pack to safe LED-candle visuals and author emissive variants.
+lighting_lanterns,6,high,0,needs_authoring,Use lantern and lantern-chandelier models for floor hanging and tabletop variants with local emissive materials.
+lighting_chandeliers,5,high,0,needs_authoring,Optimize three chandelier sources and author mobile LODs plus placement clearance metadata.
+string_lights,6,none,0,missing,Model parametric festoon fairy-light curtain micro-string and star-light systems locally.
+uplights,4,none,0,missing,Model compact event uplight fixtures locally and drive beam appearance in renderer rather than geometry.
+neon_signs,8,none,0,missing,Create parametric spline/text emissive sign system locally; do not rely on fixed third-party wording.
+drapes_fabrics,12,high_material_low_geometry,0,needs_authoring,Use approved fabric/velvet PBR maps on locally modeled drape panel swag and curtain meshes.
+textile_mehndi,8,medium_material_low_geometry,0,needs_authoring,Author embroidered-look textile panels cushions throws and table overlays locally using CC0 material foundations plus original BakeSmart patterns.
+mirrors_frames,6,high,0,needs_authoring,Adapt ornate mirror and picture frame sources for welcome-sign and vintage themes.
+corporate_brand_walls,6,none,0,missing,Model modular straight curved slat and panel brand-wall systems locally with replaceable logo texture slots.
+acrylic_signage,6,none,0,missing,Model transparent acrylic sign boards stands and table-number holders locally.
+backdrop_panels,12,low,0,missing,Model modular rectangular arched wave slat sequin-look and fabric-backed panels locally.
+seasonal_winter,8,high_pack,0,needs_authoring,Review Kenney holiday pack and promote only useful trees gifts ornaments stars and snow-themed props after per-asset checks.
+outdoor_canopies,5,medium,0,needs_authoring,Use tent frame as structural reference and author event-safe canopy/pergola variants at measured scale.
+materials_fabric,12,high,0,needs_processing,Create 1K/2K optimized runtime derivatives from verified CC0 fabric sources.
+materials_wood,8,high,0,needs_processing,Create optimized runtime wood material set for rustic tables signs and pedestals.
+materials_stone_marble,8,high,0,needs_processing,Create marble terrazzo concrete and plaster runtime materials with mobile texture budgets.
+materials_metal,8,medium,0,needs_processing,Create brushed brass gold-painted metal steel and muted-metal authoring profiles using safe material references and original authored factors.
+hdri_indoor_event,8,high,0,needs_processing,Create 1K/2K runtime derivatives from approved event hall reception music hall and studio HDRIs.
+hdri_outdoor_event,6,low,0,missing,Collect additional CC0 garden terrace lawn courtyard sunset and night outdoor HDRIs.
