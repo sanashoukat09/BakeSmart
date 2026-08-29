@@ -1,0 +1,60 @@
+name: Check production asset visual review
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "Sana's-work"
+    paths:
+      - ".github/workflows/check-production-asset-review.yml"
+      - "bakesmart_ai/app/schemas/asset_review.py"
+      - "bakesmart_ai/app/services/production_asset_review.py"
+      - "bakesmart_ai/app/api/asset_routes.py"
+      - "bakesmart_ai/app/api/viewer.py"
+      - "bakesmart_ai/app/static/production_asset_review.html"
+      - "bakesmart_ai/app/static/production_asset_review.css"
+      - "bakesmart_ai/app/static/production_asset_review.js"
+      - "bakesmart_ai/tests/test_production_asset_review.py"
+      - "bakesmart_ai/data/production_assets_v1/asset_manifest.csv"
+      - "bakesmart_ai/data/production_assets_v1/production_candidate_build_report.json"
+      - "bakesmart_ai/data/production_assets_v1/production_candidate_validation_report.json"
+      - "bakesmart_ai/app/assets/production/*.glb"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out Sana's-work
+        uses: actions/checkout@v4
+        with:
+          ref: "Sana's-work"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install lightweight test dependencies
+        run: python -m pip install "pydantic>=2,<3" pytest
+
+      - name: Check Python syntax
+        working-directory: bakesmart_ai
+        run: |
+          python -m py_compile \
+            app/schemas/asset_review.py \
+            app/services/production_asset_review.py \
+            app/api/asset_routes.py \
+            app/api/viewer.py \
+            tests/test_production_asset_review.py
+
+      - name: Check JavaScript syntax
+        working-directory: bakesmart_ai
+        run: node --check app/static/production_asset_review.js
+
+      - name: Run production asset review tests
+        working-directory: bakesmart_ai
+        run: python -m pytest -q tests/test_production_asset_review.py
