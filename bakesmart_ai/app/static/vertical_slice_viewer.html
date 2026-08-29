@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#3f2430">
+    <title>BakeSmart Professional 3D Review</title>
+    <link rel="stylesheet" href="/static/viewer.css?v=20260829-7">
+  </head>
+  <body>
+    <main class="viewer-shell">
+      <header class="viewer-header">
+        <div>
+          <p class="eyebrow">BakeSmart Stage 7 • review only</p>
+          <h1 id="scene-title">Professional Modular 3D Review</h1>
+          <p class="subtitle" id="scene-subtitle">Loading true-size modular review scene…</p>
+        </div>
+        <div class="badges" aria-label="Renderer information">
+          <span>Independent GLB modules</span>
+          <span>Uniform scale 1.0</span>
+          <span>PBR material + texture aware</span>
+          <span>Local WebGL only</span>
+        </div>
+      </header>
+
+      <section class="viewer-stage" aria-label="Professional 3D review scene">
+        <canvas id="scene-canvas" aria-label="Selectable modular BakeSmart 3D review scene"></canvas>
+        <div class="loading-card" id="loading-card" role="status" aria-live="polite">
+          <span class="spinner" aria-hidden="true"></span>
+          <span id="status-text">Assembling true-size review modules…</span>
+        </div>
+        <aside class="selection-card" id="selection-card" hidden>
+          <span>Selected module</span>
+          <strong id="selection-name"></strong>
+          <small id="selection-meta"></small>
+        </aside>
+      </section>
+
+      <footer class="viewer-controls">
+        <div class="instructions">
+          <strong>Inspect module scale and composition</strong>
+          <span>Drag to orbit • Shift+drag to pan • Scroll/pinch to zoom • Click an object to select it</span>
+        </div>
+        <div class="actions">
+          <button id="reset-view" type="button">Reset view</button>
+          <a id="manifest-link" href="#">Open scene manifest</a>
+        </div>
+      </footer>
+
+      <p class="notice review-warning">
+        Review-only vertical slice. These are BakeSmart-created low-poly technical prototypes used to validate module
+        scale, composition and renderer behavior. They are not artist-approved or production-rights-cleared customer assets.
+      </p>
+    </main>
+    <script src="/static/renderer_core.js?v=20260829-7" defer></script>
+    <script src="/static/vertical_slice_viewer.js?v=20260829-7" defer></script>
+  </body>
+</html>
