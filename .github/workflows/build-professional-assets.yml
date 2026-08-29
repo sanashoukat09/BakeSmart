@@ -42,11 +42,13 @@ jobs:
       - name: Install validator dependencies
         run: python -m pip install "pydantic>=2,<3"
 
-      - name: Install Blender
+      - name: Install Blender and glTF dependency
         run: |
+          set -euxo pipefail
           sudo apt-get update
-          sudo apt-get install -y blender
+          sudo apt-get install -y blender python3-numpy
           blender --version
+          blender --background --python-expr "import numpy; print('Blender NumPy', numpy.__version__)"
 
       - name: Download vetted CC0 model bundles
         working-directory: bakesmart_ai
@@ -61,15 +63,23 @@ jobs:
       - name: Build true-size geometry-review GLBs
         working-directory: bakesmart_ai
         run: |
+          set -euxo pipefail
+          rm -f data/production_assets_v1/production_candidate_build_report.json
           blender --background --python tools/build_cc0_production_batch.py -- \
             --plan data/production_assets_v1/production_batch1_plan.csv \
             --report data/production_assets_v1/production_candidate_build_report.json
+          test -s data/production_assets_v1/production_candidate_build_report.json
+          test -s app/assets/production/table-low-floral.glb
+          test -s app/assets/production/floor-marigold-clusters.glb
+          test -s app/assets/production/sign-mirror-welcome.glb
 
       - name: Validate candidate GLBs
         working-directory: bakesmart_ai
         run: |
+          set -euxo pipefail
           python tools/validate_production_candidates.py
           python tools/promote_geometry_review.py
+          test -s data/production_assets_v1/production_candidate_validation_report.json
 
       - name: Commit generated review candidates to Sana's-work only
         run: |
