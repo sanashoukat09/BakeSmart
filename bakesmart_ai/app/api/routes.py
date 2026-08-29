@@ -3,7 +3,6 @@ from fastapi import APIRouter, HTTPException, status
 from app.schemas.design import (
     AreaType,
     CakePhotoUploadRequest,
-    CapabilitiesResponse,
     DesignRequest,
     EnvironmentType,
     EventType,
@@ -14,6 +13,12 @@ from app.schemas.design import (
     VenuePhotoAnalysisRequest,
     VenueType,
 )
+from app.schemas.professional import (
+    CalibrationValidationRequest,
+    CalibrationValidationResponse,
+    ProfessionalCapabilitiesResponse,
+)
+from app.services.calibration import calibration_service
 from app.services.recommendation import recommendation_service
 from app.services.venue_photo_analyzer import venue_photo_analyzer
 
@@ -22,11 +27,11 @@ router = APIRouter()
 
 @router.get(
     "/capabilities",
-    response_model=CapabilitiesResponse,
+    response_model=ProfessionalCapabilitiesResponse,
     tags=["designs"],
 )
-async def capabilities() -> CapabilitiesResponse:
-    return CapabilitiesResponse(
+async def capabilities() -> ProfessionalCapabilitiesResponse:
+    return ProfessionalCapabilitiesResponse(
         area_types=[item.value for item in AreaType],
         venue_types=[item.value for item in VenueType],
         environment_types=[item.value for item in EnvironmentType],
@@ -35,6 +40,17 @@ async def capabilities() -> CapabilitiesResponse:
         currency="PKR",
         model_ready=recommendation_service.is_ready,
     )
+
+
+@router.post(
+    "/calibration/reference",
+    response_model=CalibrationValidationResponse,
+    tags=["calibration"],
+)
+async def validate_calibration_reference(
+    request: CalibrationValidationRequest,
+) -> CalibrationValidationResponse:
+    return calibration_service.validate_reference(request)
 
 
 @router.post(
@@ -51,6 +67,10 @@ async def validate_design(request: DesignRequest) -> ValidationResponse:
     if request.space.known_reference_m is None:
         warnings.append(
             "No known visual reference measurement was supplied; photo-based scale cannot be verified."
+        )
+    else:
+        warnings.append(
+            "A known physical length is recorded, but it does not camera-calibrate the photo by itself. Mark and confirm its image endpoints through the calibration reference step; photo projection remains uncalibrated."
         )
     if not request.space.photo_evidence:
         warnings.append("No locally analysed venue photo evidence was supplied.")

@@ -155,15 +155,16 @@ class RecommendationService:
                 viewer_3d_url=(
                     f"/viewer/{design_id}?package={recommended_package_id}"
                 ),
-                viewer_label="Open Detailed 3D View",
+                viewer_label="Open Basic 3D Layout Preview",
                 scene_glb_url=f"/api/v1/designs/{design_id}/scene.glb",
                 ar_supported=None,
                 ar_url=None,
                 fallback_label=None,
             )
             warnings.append(
-                "The detailed 3D view uses catalogue-aware generated geometry for "
-                "planning. Use the real-photo preview for photographic appearance."
+                "The 3D planning preview uses procedural catalogue-aware geometry in "
+                "metre-based scene coordinates. It is not a camera-calibrated photo "
+                "reconstruction or a textured PBR asset view."
             )
         except (KeyError, OSError, OverflowError, ValueError):
             warnings.append(

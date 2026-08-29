@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#3f2430">
-    <title>BakeSmart Interactive 3D View</title>
+    <title>BakeSmart 3D Planning Preview</title>
     <link rel="stylesheet" href="/static/viewer.css">
   </head>
   <body>
@@ -12,28 +12,28 @@
       <header class="viewer-header">
         <div>
           <p class="eyebrow">BakeSmart scene preview</p>
-          <h1>Detailed Interactive 3D View</h1>
-          <p class="subtitle">Your selected catalogue package, arranged to scale</p>
+          <h1>3D Planning Preview</h1>
+          <p class="subtitle">Procedural planning geometry positioned in metre-based scene coordinates from your entered venue measurements</p>
         </div>
         <div class="badges" aria-label="Preview information">
-          <span>Catalogue-aware geometry</span>
-          <span>PBR materials</span>
-          <span>Metres</span>
-          <span>No AR required</span>
+          <span>Procedural planning geometry</span>
+          <span>Vertex-colour lighting</span>
+          <span>Metre-based scene data</span>
+          <span>Local WebGL renderer</span>
         </div>
       </header>
 
       <section class="viewer-stage" aria-label="Interactive event scene">
-        <canvas id="scene-canvas" aria-label="Rotatable 3D BakeSmart scene"></canvas>
+        <canvas id="scene-canvas" aria-label="Rotatable 3D BakeSmart planning scene"></canvas>
         <div class="loading-card" id="loading-card" role="status" aria-live="polite">
           <span class="spinner" aria-hidden="true"></span>
-          <span id="status-text">Loading combined scene…</span>
+          <span id="status-text">Loading planning scene…</span>
         </div>
       </section>
 
       <footer class="viewer-controls">
         <div class="instructions">
-          <strong>Explore the design</strong>
+          <strong>Inspect the layout</strong>
           <span>Drag to rotate • Scroll or pinch to zoom</span>
         </div>
         <div class="actions">
@@ -44,8 +44,9 @@
       </footer>
 
       <p class="notice">
-        This detailed planning view represents the selected catalogue items and their
-        dimensions. For photographic appearance, use the real-photo preview.
+        This is a procedural 3D planning preview, not a camera-calibrated photo
+        reconstruction or textured PBR render. Use it to inspect layout intent while
+        BakeSmart's professional calibration, modular assets and renderer are built.
       </p>
     </main>
     <script src="/static/viewer.js?v=20260826-5" defer></script>

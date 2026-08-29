@@ -18,8 +18,54 @@ def test_capabilities_use_metres_and_pkr(client):
     assert body["canonical_units"] == "metres"
     assert body["currency"] == "PKR"
     assert body["model_ready"] is True
+    assert body["ai_runtime"] == "local_only"
+    assert body["core_training_policy"] == "from_scratch_random_initialization"
+    assert body["external_ai_provider"] == "none"
+    assert body["scale_source"] == (
+        "customer_confirmed_measurements_and_reference_points"
+    )
+    assert body["calibration_reference_api_ready"] is True
+    assert body["preview"] == {
+        "geometry_mode": "procedural_planning_geometry",
+        "asset_mode": "generated_procedural_glb",
+        "renderer_mode": "local_webgl",
+        "material_mode": "vertex_color_lit",
+        "metric_scene_coordinates": True,
+        "camera_navigation_ready": True,
+        "photo_projection_ready": False,
+        "full_camera_calibration_ready": False,
+        "object_editing_ready": False,
+    }
     assert "room" in body["area_types"]
     assert "kids_birthday" in body["event_types"]
+
+
+def test_calibration_reference_uses_only_customer_confirmed_measurement(client):
+    response = client.post(
+        "/api/v1/calibration/reference",
+        json={
+            "image_width_px": 1000,
+            "image_height_px": 500,
+            "reference": {
+                "photo_id": "venue-photo-0123456789abcdef0123",
+                "label": "Measured table edge",
+                "start": {"x_fraction": 0.1, "y_fraction": 0.5},
+                "end": {"x_fraction": 0.5, "y_fraction": 0.5},
+                "known_length_m": 2.0,
+                "plane": "table",
+                "customer_confirmed": True,
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "reference_recorded"
+    assert body["segment_length_px"] == 400.0
+    assert body["pixels_per_m_along_reference"] == 200.0
+    assert body["metric_reference_ready"] is True
+    assert body["global_projection_ready"] is False
+    assert body["scale_source"] == "customer_confirmed_reference"
 
 
 def test_valid_design_request_is_normalized(client, valid_design_request):
@@ -30,7 +76,8 @@ def test_valid_design_request_is_normalized(client, valid_design_request):
     assert body["valid"] is True
     assert body["normalized_request"]["event"]["theme_id"] == "floral-romantic"
     assert body["normalized_request"]["minimum_clearance_m"] == 0.9
-    assert len(body["warnings"]) == 1
+    assert len(body["warnings"]) == 2
+    assert any("does not camera-calibrate" in warning for warning in body["warnings"])
 
 
 def test_recommendation_returns_three_budget_aware_packages(client, valid_design_request):
@@ -63,7 +110,7 @@ def test_recommendation_returns_three_budget_aware_packages(client, valid_design
     assert body["preview"] == {
         "interactive_3d_ready": True,
         "viewer_3d_url": f"/viewer/{body['design_id']}?package=balanced",
-        "viewer_label": "Open Detailed 3D View",
+        "viewer_label": "Open Basic 3D Layout Preview",
         "scene_glb_url": f"/api/v1/designs/{body['design_id']}/scene.glb",
         "ar_supported": None,
         "ar_url": None,
@@ -72,6 +119,7 @@ def test_recommendation_returns_three_budget_aware_packages(client, valid_design
     assert body["scene"]["asset_status"] == "generated_procedural_glb"
     assert body["scene"]["concept_not_to_scale"] is False
     assert any("real catalogue price ranges" in warning for warning in body["warnings"])
+    assert any("not a camera-calibrated" in warning for warning in body["warnings"])
     assert body["venue_assessment"]["placement_status"] == "clearance_verified"
     assert body["venue_assessment"]["evidence_confidence"] == "medium"
     assert body["venue_assessment"]["available_front_clearance_m"] == 1.575
@@ -113,6 +161,9 @@ def test_viewer_and_glb_urls_are_real_local_resources(client, valid_design_reque
     assert b'id="scene-canvas"' in viewer.content
     assert b"https://" not in viewer.content
     assert b'/static/viewer.js?v=20260826-5' in viewer.content
+    assert b"3D Planning Preview" in viewer.content
+    assert b"PBR materials" not in viewer.content
+    assert b"camera-calibrated" in viewer.content
     assert glb.status_code == 200
     assert glb.headers["content-type"] == "model/gltf-binary"
     assert glb.headers["cache-control"] == "private, no-cache"
