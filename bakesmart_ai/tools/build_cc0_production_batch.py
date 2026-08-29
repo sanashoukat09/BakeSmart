@@ -3,7 +3,7 @@
 Run with Blender. This is deterministic local asset processing, not AI.
 """
 from __future__ import annotations
-import argparse, csv, json, shutil, sys, zipfile
+import argparse, csv, json, shutil, sys, traceback, zipfile
 from pathlib import Path
 import bpy
 from mathutils import Vector
@@ -125,4 +125,9 @@ def main():
     if not result: raise RuntimeError("no candidates selected")
     a.report.parent.mkdir(parents=True,exist_ok=True); a.report.write_text(json.dumps({"report_version":"production-candidate-build-v1","review_only":True,"production_ready":False,"assets":result,"note":"Human visual review required before production_ready."},indent=2)+"\n",encoding="utf-8")
 
-if __name__=="__main__": main()
+if __name__=="__main__":
+    try:
+        main()
+    except Exception:
+        traceback.print_exc()
+        raise SystemExit(1)
