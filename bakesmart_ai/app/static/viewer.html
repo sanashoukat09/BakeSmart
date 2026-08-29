@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#3f2430">
     <title>BakeSmart 3D Planning Preview</title>
-    <link rel="stylesheet" href="/static/viewer.css">
+    <link rel="stylesheet" href="/static/viewer.css?v=20260829-7">
   </head>
   <body>
     <main class="viewer-shell">
@@ -13,13 +13,13 @@
         <div>
           <p class="eyebrow">BakeSmart scene preview</p>
           <h1>3D Planning Preview</h1>
-          <p class="subtitle">Procedural planning geometry positioned in metre-based scene coordinates from your entered venue measurements</p>
+          <p class="subtitle">Metre-based scene data rendered by BakeSmart's Stage-7 local material-aware WebGL renderer</p>
         </div>
         <div class="badges" aria-label="Preview information">
-          <span>Procedural planning geometry</span>
-          <span>Vertex-colour lighting</span>
+          <span>Local multi-mesh GLB renderer</span>
+          <span>PBR material + texture aware</span>
           <span>Metre-based scene data</span>
-          <span>Local WebGL renderer</span>
+          <span>Procedural customer fallback</span>
         </div>
       </header>
 
@@ -29,12 +29,16 @@
           <span class="spinner" aria-hidden="true"></span>
           <span id="status-text">Loading planning scene…</span>
         </div>
+        <aside class="selection-card" id="selection-card" hidden>
+          <span>Selected object</span>
+          <strong id="selection-name"></strong>
+        </aside>
       </section>
 
       <footer class="viewer-controls">
         <div class="instructions">
           <strong>Inspect the layout</strong>
-          <span>Drag to rotate • Scroll or pinch to zoom</span>
+          <span>Drag to orbit • Shift+drag to pan • Scroll/pinch to zoom • Click to select</span>
         </div>
         <div class="actions">
           <button id="reset-view" type="button">Reset view</button>
@@ -44,11 +48,13 @@
       </footer>
 
       <p class="notice">
-        This is a procedural 3D planning preview, not a camera-calibrated photo
-        reconstruction or textured PBR render. Use it to inspect layout intent while
-        BakeSmart's professional calibration, modular assets and renderer are built.
+        Stage 7 upgrades the local renderer to understand multiple GLB nodes/modules, PBR metallic-roughness factors,
+        supported embedded/same-origin textures, selection and planar contact shadows. This particular customer scene
+        is still the procedural planning fallback until reviewed production assets are approved. It is not a
+        camera-calibrated photo reconstruction or ray-traced render.
       </p>
     </main>
-    <script src="/static/viewer.js?v=20260826-5" defer></script>
+    <script src="/static/renderer_core.js?v=20260829-7" defer></script>
+    <script src="/static/viewer.js?v=20260829-7" defer></script>
   </body>
 </html>
