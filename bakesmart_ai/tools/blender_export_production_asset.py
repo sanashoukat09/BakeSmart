@@ -4,8 +4,8 @@ Run with Blender, not normal Python:
     blender --background source.blend --python tools/blender_export_production_asset.py \
       -- --asset-id prod-backdrop-round-arch
 
-The .blend file must contain one root object named BS_ROOT. Its evaluated world
-dimensions must match the manifest's true-size dimensions within 2 cm.
+The .blend file must contain a root object named BS_ROOT. The combined evaluated
+mesh bounds must match the manifest's true-size dimensions within 2 cm.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 
 import bpy
+from mathutils import Vector
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
@@ -40,18 +41,34 @@ def _manifest_row(asset_id: str) -> dict[str, str]:
     raise SystemExit(f"Unknown production asset: {asset_id}")
 
 
+def _mesh_objects() -> list:
+    return [obj for obj in bpy.context.scene.objects if obj.type == "MESH"]
+
+
 def _triangle_count() -> int:
     total = 0
-    for obj in bpy.context.scene.objects:
-        if obj.type != "MESH":
-            continue
+    for obj in _mesh_objects():
         obj.data.calc_loop_triangles()
         total += len(obj.data.loop_triangles)
     return total
 
 
+def _combined_world_dimensions() -> tuple[float, float, float]:
+    mesh_objects = _mesh_objects()
+    if not mesh_objects:
+        raise SystemExit("No mesh objects are present.")
+    points = [
+        obj.matrix_world @ Vector(corner)
+        for obj in mesh_objects
+        for corner in obj.bound_box
+    ]
+    minimum = tuple(min(point[index] for point in points) for index in range(3))
+    maximum = tuple(max(point[index] for point in points) for index in range(3))
+    return tuple(maximum[index] - minimum[index] for index in range(3))
+
+
 def _validate_materials() -> None:
-    mesh_objects = [obj for obj in bpy.context.scene.objects if obj.type == "MESH"]
+    mesh_objects = _mesh_objects()
     if not mesh_objects:
         raise SystemExit("No mesh objects are present.")
     for obj in mesh_objects:
@@ -73,9 +90,7 @@ def _validate_materials() -> None:
 
 def _apply_mesh_scales() -> None:
     bpy.ops.object.select_all(action="DESELECT")
-    for obj in bpy.context.scene.objects:
-        if obj.type != "MESH":
-            continue
+    for obj in _mesh_objects():
         obj.select_set(True)
         bpy.context.view_layer.objects.active = obj
         bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
@@ -97,11 +112,11 @@ def main() -> None:
         float(row["depth_m"]),
         float(row["height_m"]),
     )
-    actual = tuple(float(value) for value in root.dimensions)
+    actual = _combined_world_dimensions()
     for axis, (measured, target) in zip("XYZ", zip(actual, expected, strict=True), strict=True):
         if abs(measured - target) > 0.02:
             raise SystemExit(
-                f"BS_ROOT {axis} dimension {measured:.3f} m does not match "
+                f"Combined mesh {axis} dimension {measured:.3f} m does not match "
                 f"manifest target {target:.3f} m within 2 cm."
             )
 
@@ -121,11 +136,7 @@ def main() -> None:
     root["bakesmart_scaling_policy"] = row["scaling_policy"]
     root["bakesmart_manifest_version"] = "production-assets-v1"
 
-    output = (
-        Path(args.output)
-        if args.output
-        else PACKAGE_ROOT / row["glb_path"]
-    )
+    output = Path(args.output) if args.output else PACKAGE_ROOT / row["glb_path"]
     output.parent.mkdir(parents=True, exist_ok=True)
     bpy.ops.export_scene.gltf(
         filepath=str(output),
