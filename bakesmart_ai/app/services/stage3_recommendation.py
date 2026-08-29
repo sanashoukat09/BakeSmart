@@ -5,6 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.schemas.design import DesignRequest
+from app.services.production_assets import (
+    ProductionAssetRegistry,
+    production_asset_registry,
+)
 from app.services.real_decor_catalog import RealDecorCatalog
 from app.services.scene_builder import CATEGORY_ALIASES, EVENT_DECOR_PRIORITY
 
@@ -27,10 +31,15 @@ class Stage3Plan:
 
 
 class Stage3RecommendationEngine:
-    """Rank real catalogue components and build three genuinely different plans."""
+    """Rank real catalogue components and prefer validated production GLBs."""
 
-    def __init__(self, catalog: RealDecorCatalog | None = None) -> None:
+    def __init__(
+        self,
+        catalog: RealDecorCatalog | None = None,
+        assets: ProductionAssetRegistry | None = None,
+    ) -> None:
         self.catalog = catalog or RealDecorCatalog()
+        self.assets = assets or production_asset_registry
 
     def build_plans(
         self, request: DesignRequest, selected_theme_id: str
@@ -122,6 +131,15 @@ class Stage3RecommendationEngine:
             warnings.append(
                 "No real catalogue component fit this package's budget and venue constraints."
             )
+        else:
+            fallback_count = sum(
+                not self.assets.is_renderable_catalog_item(row["decor_id"])
+                for row, _, _ in selected
+            )
+            if fallback_count:
+                warnings.append(
+                    f"{fallback_count} selected catalogue component(s) still use procedural 3D fallback because their modular production GLBs are not yet approved."
+                )
         return Stage3Plan(package_id, tuple(selected), budget_limit, tuple(warnings))
 
     def _rank_key(
@@ -150,15 +168,13 @@ class Stage3RecommendationEngine:
         source = self.catalog.market_sources[row["market_source_id"]]
         if source["evidence_type"].startswith("direct_vendor"):
             score += 1
+        if self.assets.is_renderable_catalog_item(row["item_id"]):
+            score += 8
         return (-score, self._planning_price(row, package_id), row["item_id"])
 
     @staticmethod
     def _planning_price(row: dict[str, str], package_id: str) -> int:
         low, high = int(row["price_min_pkr"]), int(row["price_max_pkr"])
-        # Essential uses the advertised lower bound, balanced uses a midpoint.
-        # Statement also uses the lower bound so a premium archetype is not
-        # incorrectly replaced by a cheaper tier merely because its range is wide.
-        # Every response states that a current written quote is still required.
         fraction = {"essential": 0.0, "balanced": 0.5, "statement": 0.0}[package_id]
         return int(round(low + (high - low) * fraction))
 
@@ -214,12 +230,19 @@ class Stage3RecommendationEngine:
         preferred = (
             ", ".join(request.event.preferred_colors[:3]) or "the chosen palette"
         )
+        production_note = ""
+        if self.assets.is_renderable_catalog_item(row["item_id"]):
+            production_note = (
+                " A validated, rights-cleared production GLB is available for this "
+                "catalogue item."
+            )
         reason = (
             f"Selected for the {package_id} package because it matches the "
             f"{request.event.event_type.value.replace('_', ' ')} event, {preferred}, "
             f"the {request.space.environment.value.replace('_', ' ')} venue and "
             "the available budget. "
             f"Price range evidence: {source['publisher']}."
+            f"{production_note}"
         )
         return {
             **row,
