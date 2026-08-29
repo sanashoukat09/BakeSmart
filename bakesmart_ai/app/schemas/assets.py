@@ -117,3 +117,87 @@ class ProductionAssetValidationResponse(StrictModel):
     errors: list[str] = Field(default_factory=list, max_length=30)
     warnings: list[str] = Field(default_factory=list, max_length=30)
     renderable: bool
+
+
+VerticalSliceCelebration = Literal[
+    "birthday",
+    "wedding",
+    "south_asian_mehndi",
+]
+
+
+class VerticalSliceAssetState(StrictModel):
+    asset_id: str = Field(pattern=r"^prod-[a-z0-9]+(?:-[a-z0-9]+)*$")
+    catalog_id: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+    role: Literal["backdrop", "support", "lighting", "table", "signage"]
+    glb_present: bool
+    structurally_valid: bool
+    production_status: Literal[
+        "planned",
+        "in_authoring",
+        "geometry_review",
+        "material_review",
+        "production_ready",
+        "rejected",
+    ]
+    customer_renderable: bool
+    review_glb_url: str | None = None
+
+
+class VerticalSliceCelebrationState(StrictModel):
+    celebration: VerticalSliceCelebration
+    display_name: str = Field(min_length=1, max_length=80)
+    required_asset_count: int = Field(ge=1, le=20)
+    present_glb_count: int = Field(ge=0, le=20)
+    structurally_valid_count: int = Field(ge=0, le=20)
+    production_ready_count: int = Field(ge=0, le=20)
+    geometry_slice_complete: bool
+    customer_slice_ready: bool
+    assets: list[VerticalSliceAssetState] = Field(min_length=1, max_length=20)
+    blockers: list[str] = Field(default_factory=list, max_length=12)
+
+
+class VerticalSliceSummaryResponse(StrictModel):
+    slice_version: Literal["professional-vertical-slice-v1"] = (
+        "professional-vertical-slice-v1"
+    )
+    geometry_review_assets_present: bool
+    customer_runtime_ready: bool
+    celebrations: list[VerticalSliceCelebrationState] = Field(
+        min_length=3,
+        max_length=3,
+    )
+    limitations: list[str] = Field(default_factory=list, max_length=12)
+
+
+class VerticalSliceCompositionRequest(StrictModel):
+    celebration: VerticalSliceCelebration
+    usable_focal_width_m: float = Field(gt=0, le=100)
+    target_visual_width_m: float = Field(gt=0, le=100)
+    include_lighting: bool = True
+
+
+class VerticalSlicePlacement(StrictModel):
+    asset_id: str = Field(pattern=r"^prod-[a-z0-9]+(?:-[a-z0-9]+)*$")
+    catalog_id: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+    role: Literal["backdrop", "support", "lighting", "table", "signage"]
+    instance_index: int = Field(ge=1, le=50)
+    x_center_m: float = Field(ge=-100, le=100)
+    depth_from_focal_wall_m: float = Field(ge=0, le=100)
+    base_height_m: float = Field(ge=0, le=30)
+    uniform_scale: Literal[1.0] = 1.0
+    true_width_m: float = Field(gt=0, le=100)
+    true_depth_m: float = Field(gt=0, le=100)
+    true_height_m: float = Field(gt=0, le=30)
+
+
+class VerticalSliceCompositionResponse(StrictModel):
+    celebration: VerticalSliceCelebration
+    status: Literal["fits", "partial", "does_not_fit"]
+    usable_focal_width_m: float = Field(gt=0, le=100)
+    requested_visual_width_m: float = Field(gt=0, le=100)
+    achieved_visual_width_m: float = Field(ge=0, le=100)
+    true_size_only: Literal[True] = True
+    review_only: Literal[True] = True
+    placements: list[VerticalSlicePlacement] = Field(default_factory=list, max_length=50)
+    notes: list[str] = Field(default_factory=list, max_length=20)
