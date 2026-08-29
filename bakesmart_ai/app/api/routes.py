@@ -16,6 +16,10 @@ from app.schemas.design import (
 from app.schemas.professional import (
     CalibrationValidationRequest,
     CalibrationValidationResponse,
+    PlanarCalibrationRequest,
+    PlanarCalibrationResponse,
+    PlanarProjectionRequest,
+    PlanarProjectionResponse,
     ProfessionalCapabilitiesResponse,
 )
 from app.services.calibration import calibration_service
@@ -54,6 +58,28 @@ async def validate_calibration_reference(
 
 
 @router.post(
+    "/calibration/plane",
+    response_model=PlanarCalibrationResponse,
+    tags=["calibration"],
+)
+async def calibrate_photo_plane(
+    request: PlanarCalibrationRequest,
+) -> PlanarCalibrationResponse:
+    return calibration_service.calibrate_plane(request)
+
+
+@router.post(
+    "/calibration/plane/project",
+    response_model=PlanarProjectionResponse,
+    tags=["calibration"],
+)
+async def project_photo_plane_points(
+    request: PlanarProjectionRequest,
+) -> PlanarProjectionResponse:
+    return calibration_service.project_plane_points(request)
+
+
+@router.post(
     "/designs/validate",
     response_model=ValidationResponse,
     tags=["designs"],
@@ -70,7 +96,7 @@ async def validate_design(request: DesignRequest) -> ValidationResponse:
         )
     else:
         warnings.append(
-            "A known physical length is recorded, but it does not camera-calibrate the photo by itself. Mark and confirm its image endpoints through the calibration reference step; photo projection remains uncalibrated."
+            "A known physical length is recorded, but it does not camera-calibrate the photo by itself. Mark and confirm its image endpoints through the calibration reference step; use four or more confirmed plane correspondences for perspective-correct wall/floor/table projection."
         )
     if not request.space.photo_evidence:
         warnings.append("No locally analysed venue photo evidence was supplied.")
