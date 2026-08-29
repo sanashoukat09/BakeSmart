@@ -1,8 +1,13 @@
 """Production 3D asset-pipeline endpoints."""
 
 from fastapi import APIRouter, HTTPException, Query, status
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
 
+from app.schemas.asset_review import (
+    ProductionAssetReviewListResponse,
+    ProductionAssetReviewSubmission,
+    ProductionAssetReviewSubmissionResponse,
+)
 from app.schemas.assets import (
     ProductionAssetCatalogResponse,
     ProductionAssetLibrarySummary,
@@ -17,6 +22,7 @@ from app.schemas.renderer import (
     RendererCapabilitiesResponse,
     VerticalSliceSceneManifestResponse,
 )
+from app.services.production_asset_review import production_asset_review_service
 from app.services.production_assets import production_asset_registry
 from app.services.professional_renderer import (
     build_vertical_slice_scene,
@@ -62,6 +68,87 @@ async def validate_production_asset(
             detail={
                 "code": "unknown_production_asset",
                 "message": f"Unknown production asset '{request.asset_id}'.",
+            },
+        ) from exc
+
+
+@router.get(
+    "/assets/3d/production-review",
+    response_model=ProductionAssetReviewListResponse,
+    tags=["production assets"],
+)
+async def production_asset_visual_review_queue() -> ProductionAssetReviewListResponse:
+    """List actual structurally valid geometry-review GLBs for human review."""
+
+    return production_asset_review_service.candidates()
+
+
+@router.get(
+    "/assets/3d/production-review/{asset_id}.glb",
+    response_class=FileResponse,
+    tags=["production assets"],
+)
+async def production_asset_visual_review_glb(asset_id: str) -> FileResponse:
+    """Serve the actual production-candidate GLB at true size for review only."""
+
+    try:
+        record = production_asset_registry.by_asset_id[asset_id]
+        path = production_asset_review_service.glb_path(asset_id)
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "unknown_production_asset",
+                "message": f"Unknown production asset '{asset_id}'.",
+            },
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "asset_not_visual_review_candidate",
+                "message": str(exc),
+            },
+        ) from exc
+    return FileResponse(
+        path,
+        media_type="model/gltf-binary",
+        headers={
+            "Cache-Control": "private, no-store",
+            "Content-Disposition": f'inline; filename="{record.catalog_id}-production-review.glb"',
+            "X-BakeSmart-Review-Only": "true",
+            "X-BakeSmart-Production-Ready": "false",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.post(
+    "/assets/3d/production-review/decision",
+    response_model=ProductionAssetReviewSubmissionResponse,
+    tags=["production assets"],
+)
+async def save_production_asset_visual_review(
+    request: ProductionAssetReviewSubmission,
+) -> ProductionAssetReviewSubmissionResponse:
+    """Persist human visual-review evidence without changing production status."""
+
+    try:
+        return production_asset_review_service.submit(request)
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "unknown_production_asset",
+                "message": f"Unknown production asset '{request.asset_id}'.",
+            },
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "visual_review_decision_rejected",
+                "message": str(exc),
             },
         ) from exc
 
