@@ -1,4 +1,4 @@
-"""Serve generated GLB scenes and BakeSmart's local interactive viewer."""
+"""Serve generated GLB scenes and BakeSmart's local interactive viewers."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ router = APIRouter()
 artifact_store = SceneArtifactStore()
 photo_preview_store = PhotoPreviewStore()
 STATIC_DIR = Path(__file__).resolve().parents[1] / "static"
+_VERTICAL_SLICE_CELEBRATIONS = {"birthday", "wedding", "south_asian_mehndi"}
 
 
 def _preview_or_404(design_id: str, package_id: str) -> Path:
@@ -55,6 +56,19 @@ def _artifact_or_404(design_id: str) -> Path:
     return path
 
 
+def _viewer_headers() -> dict[str, str]:
+    return {
+        "Cache-Control": "no-store",
+        "Content-Security-Policy": (
+            "default-src 'self'; script-src 'self'; style-src 'self'; "
+            "connect-src 'self'; img-src 'self' data: blob:; object-src 'none'; "
+            "base-uri 'none'; frame-ancestors 'self'"
+        ),
+        "Referrer-Policy": "no-referrer",
+        "X-Content-Type-Options": "nosniff",
+    }
+
+
 @router.get(
     "/viewer/{design_id}",
     response_class=FileResponse,
@@ -65,16 +79,27 @@ async def interactive_viewer(design_id: str) -> FileResponse:
     return FileResponse(
         STATIC_DIR / "viewer.html",
         media_type="text/html",
-        headers={
-            "Cache-Control": "no-store",
-            "Content-Security-Policy": (
-                "default-src 'self'; script-src 'self'; style-src 'self'; "
-                "connect-src 'self'; img-src 'self' data:; object-src 'none'; "
-                "base-uri 'none'; frame-ancestors 'self'"
-            ),
-            "Referrer-Policy": "no-referrer",
-            "X-Content-Type-Options": "nosniff",
-        },
+        headers=_viewer_headers(),
+    )
+
+
+@router.get(
+    "/viewer/vertical-slice/{celebration}",
+    response_class=FileResponse,
+    tags=["viewer"],
+)
+async def vertical_slice_review_viewer(celebration: str) -> FileResponse:
+    """Open the Stage-7 multi-GLB renderer with review-only true-size modules."""
+
+    if celebration not in _VERTICAL_SLICE_CELEBRATIONS:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vertical-slice review scene not found",
+        )
+    return FileResponse(
+        STATIC_DIR / "vertical_slice_viewer.html",
+        media_type="text/html",
+        headers={**_viewer_headers(), "X-BakeSmart-Review-Only": "true"},
     )
 
 
