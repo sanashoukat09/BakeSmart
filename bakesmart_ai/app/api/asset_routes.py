@@ -1,6 +1,6 @@
 """Production 3D asset-pipeline endpoints."""
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.responses import Response
 
 from app.schemas.assets import (
@@ -8,11 +8,20 @@ from app.schemas.assets import (
     ProductionAssetLibrarySummary,
     ProductionAssetValidationRequest,
     ProductionAssetValidationResponse,
+    VerticalSliceCelebration,
     VerticalSliceCompositionRequest,
     VerticalSliceCompositionResponse,
     VerticalSliceSummaryResponse,
 )
+from app.schemas.renderer import (
+    RendererCapabilitiesResponse,
+    VerticalSliceSceneManifestResponse,
+)
 from app.services.production_assets import production_asset_registry
+from app.services.professional_renderer import (
+    build_vertical_slice_scene,
+    renderer_capabilities,
+)
 from app.services.vertical_slice import vertical_slice_service
 
 
@@ -75,6 +84,40 @@ async def compose_professional_vertical_slice(
     request: VerticalSliceCompositionRequest,
 ) -> VerticalSliceCompositionResponse:
     return vertical_slice_service.compose(request)
+
+
+@router.get(
+    "/assets/3d/renderer/capabilities",
+    response_model=RendererCapabilitiesResponse,
+    tags=["production assets"],
+)
+async def professional_renderer_capabilities() -> RendererCapabilitiesResponse:
+    """Report Stage-7 renderer support without claiming production assets are ready."""
+
+    return renderer_capabilities()
+
+
+@router.get(
+    "/assets/3d/vertical-slice/scene",
+    response_model=VerticalSliceSceneManifestResponse,
+    tags=["production assets"],
+)
+async def professional_vertical_slice_scene(
+    celebration: VerticalSliceCelebration,
+    usable_focal_width_m: float = Query(gt=0, le=100),
+    target_visual_width_m: float = Query(gt=0, le=100),
+    include_lighting: bool = True,
+) -> VerticalSliceSceneManifestResponse:
+    """Assemble independent true-size review modules for the Stage-7 renderer."""
+
+    return build_vertical_slice_scene(
+        VerticalSliceCompositionRequest(
+            celebration=celebration,
+            usable_focal_width_m=usable_focal_width_m,
+            target_visual_width_m=target_visual_width_m,
+            include_lighting=include_lighting,
+        )
+    )
 
 
 @router.get(
