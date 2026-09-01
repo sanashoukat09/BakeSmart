@@ -27,6 +27,7 @@ def clear():
     bpy.ops.object.select_all(action="SELECT"); bpy.ops.object.delete(use_global=False)
 
 def source_file(source_id):
+    if not source_id or not source_id.strip(): raise RuntimeError("source id must be non-empty")
     folder = RAW / source_id
     if not folder.is_dir(): raise RuntimeError(f"missing downloaded source: {folder}")
     archives = sorted(folder.glob("*.zip")); search = folder
@@ -102,7 +103,7 @@ def add_text_mesh(body,name,location,material,target_width,size=.20):
 def build_low_floral(row):
     vase=import_source(row["primary_source_id"],"CC0_Vase"); fit_exact(vase,.15,.15,.16,0.0)
     green=mat("BS_StemGreen",(.10,.23,.08,1),0,.68); blush=mat("BS_BlushPetal",(.78,.38,.34,1),0,.55); cream=mat("BS_CreamPetal",(.94,.84,.68,1),0,.58); gold=mat("BS_FlowerCore",(.78,.48,.12,1),.08,.48)
-    heads=[(-.12,-.04,.235),(-.09,.07,.255),(-.055,-.09,.265),(-.02,.02,.285),(.025,-.075,.255),(.055,.075,.275),(.095,-.015,.245),(.12,.055,.23),(-.115,.09,.225),(.105,-.09,.225),(-.04,.115,.235),(.035,.115,.245)]
+    heads=[(-.12,-.04,.235),(-.09,.075,.255),(-.055,-.105,.265),(-.02,.02,.285),(.025,-.085,.255),(.055,.085,.275),(.095,-.015,.245),(.12,.055,.23),(-.115,.11,.225),(.105,-.11,.225),(-.04,.135,.235),(.035,-.135,.245)]
     for i,end in enumerate(heads):
         base=(end[0]*.18,end[1]*.18,.145); cylinder_between(f"BS_Stem_{i:02d}",base,end,.0028,green)
         mid=((base[0]+end[0])*.55,(base[1]+end[1])*.55,(base[2]+end[2])*.55); add_leaf(f"BS_Leaf_{i:02d}",mid,math.atan2(end[1],end[0])+.65,green)
