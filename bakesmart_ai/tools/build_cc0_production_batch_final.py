@@ -7,7 +7,17 @@ materials, provenance and validation gates remain unchanged.
 from __future__ import annotations
 
 import math
+import sys
+from pathlib import Path
+
 from mathutils import Vector
+
+# Blender does not guarantee that the directory containing a --python script is
+# on sys.path. Add this tools directory explicitly before importing the reviewed
+# base builder.
+TOOLS_DIR = Path(__file__).resolve().parent
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
 
 import build_cc0_production_batch as base
 
@@ -37,8 +47,6 @@ def compact_marigold(name, center, orange, saffron, radius=0.031):
             petal.rotation_euler[2] = angle
 
 
-# build_marigold resolves this module-global function at runtime, so replacing
-# it here keeps the reviewed arrangement but lowers only the flower-head cost.
 base.add_marigold = compact_marigold
 
 
