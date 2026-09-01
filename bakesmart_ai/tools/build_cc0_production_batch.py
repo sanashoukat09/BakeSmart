@@ -92,20 +92,17 @@ def build(row):
     if kind=="low_floral_centerpiece":
         vase=import_source(row["primary_source_id"],"CC0_Vase"); blossoms=import_source(row["tertiary_source_id"],"CC0_Gazania")
         helper=mat("BS_CeramicHelper",(0.92,0.89,0.82,1)); fit_exact(vase,.15,.15,.16,0.0)
-        # Treat the CC0 flowering patch as bouquet source geometry: compress it vertically,
-        # lift it completely above the vessel mouth, then overlap small rotated copies into
-        # one compact crown instead of forming a landscaping ring around the base.
         fit_exact(blossoms,.29,.29,.13,.15)
         duplicate_group(blossoms,"BS_BouquetCrown",((.025,.018,.005,32,.82),(-.025,-.015,.008,-36,.78),(0,.025,.018,92,.70)))
         return helper
     if kind=="marigold_brass_cluster":
         brass=import_source(row["primary_source_id"],"CC0_Brass"); blossoms=import_source(row["tertiary_source_id"],"CC0_Gazania")
         helper=mat("BS_BrassHelper",(0.55,0.30,0.06,1),.72,.28); fit_exact(brass,.34,.34,.34,0.0)
-        # The previous Empodium source visually read as grass. Exclude it completely.
-        # Build one dense warm-flower crown from the Gazania source above and around the
-        # vessel, with a lower skirt and a smaller raised crown for Mehndi-stage density.
-        fit_exact(blossoms,.46,.46,.45,.30)
-        duplicate_group(blossoms,"BS_MarigoldCrown",((.06,0,.02,30,.82),(-.06,0,.02,-30,.82),(0,.05,.20,82,.62),(0,-.05,.20,-82,.62),(0,0,.38,18,.48)))
+        # Preserve a genuinely tall floor-decor silhouette instead of weakening the
+        # physical-scale guard. The base crown spans 0.68 m above a 0.30 m anchor;
+        # smaller overlapping copies add density without exceeding the 1.10 m envelope.
+        fit_exact(blossoms,.48,.48,.68,.30)
+        duplicate_group(blossoms,"BS_MarigoldCrown",((.045,0,.00,30,.72),(-.045,0,.00,-30,.72),(0,.045,.035,82,.56),(0,-.045,.035,-82,.56),(0,0,.08,18,.40)))
         return helper
     if kind=="mirror_welcome_sign":
         mirror=import_source(row["primary_source_id"],"CC0_Mirror"); stand=mat("BS_Stand",(0.68,0.52,0.20,1),.65,.30); lettering=mat("BS_WelcomeLettering",(0.88,0.71,0.28,1),.45,.28)
