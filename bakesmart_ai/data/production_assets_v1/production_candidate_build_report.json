@@ -8,7 +8,8 @@
       "output": "app/assets/production/table-low-floral.glb",
       "source_ids": [
         "ph-ceramic-vase-04",
-        "ph-shrub-sorrel-01"
+        "ph-shrub-sorrel-01",
+        "ph-flower-gazania"
       ],
       "source_license_status": "cc0_confirmed",
       "redistribution_allowed": true,
@@ -18,11 +19,11 @@
         0.3
       ],
       "visible_mesh_bounds_m": [
-        0.407,
-        0.43,
-        0.2951
+        0.3165,
+        0.3165,
+        0.2664
       ],
-      "triangle_count": 17926,
+      "triangle_count": 16911,
       "status": "built_for_geometry_review"
     },
     {
@@ -30,7 +31,8 @@
       "output": "app/assets/production/floor-marigold-clusters.glb",
       "source_ids": [
         "ph-brass-pot-01",
-        "ph-flower-empodium"
+        "ph-flower-empodium",
+        "ph-flower-gazania"
       ],
       "source_license_status": "cc0_confirmed",
       "redistribution_allowed": true,
@@ -40,11 +42,11 @@
         1.1
       ],
       "visible_mesh_bounds_m": [
-        0.6589,
-        0.636,
-        1.0798
+        0.524,
+        0.5379,
+        0.8785
       ],
-      "triangle_count": 23948,
+      "triangle_count": 22285,
       "status": "built_for_geometry_review"
     },
     {
@@ -65,7 +67,7 @@
         0.056,
         1.5
       ],
-      "triangle_count": 12839,
+      "triangle_count": 11769,
       "status": "built_for_geometry_review"
     }
   ],
