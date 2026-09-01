@@ -24,18 +24,26 @@ jobs:
         with:
           ref: "Sana's-work"
 
-      - name: Install Blender
+      - name: Install Blender and glTF dependency
         run: |
+          set -euxo pipefail
           sudo apt-get update
-          sudo apt-get install -y blender
+          sudo apt-get install -y blender python3-numpy
+          blender --version
+          blender --background --python-expr "import numpy; print('Blender NumPy', numpy.__version__)"
 
       - name: Render geometry-review assets
         working-directory: bakesmart_ai
         run: |
+          set -euxo pipefail
+          rm -rf "$RUNNER_TEMP/production-asset-review-renders"
           blender -b \
             --python tools/render_production_asset_reviews.py \
             -- \
             --output-dir "$RUNNER_TEMP/production-asset-review-renders"
+          test -s "$RUNNER_TEMP/production-asset-review-renders/prod-table-low-floral/front.png"
+          test -s "$RUNNER_TEMP/production-asset-review-renders/prod-floor-marigold-clusters/front.png"
+          test -s "$RUNNER_TEMP/production-asset-review-renders/prod-sign-mirror-welcome/front.png"
 
       - name: Upload review renders
         uses: actions/upload-artifact@v4
