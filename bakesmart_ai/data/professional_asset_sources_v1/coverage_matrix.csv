@@ -13,6 +13,9 @@ cake_tables,8,high,0,needs_authoring,Adapt approved table packs and model common
 event_chairs,12,high,0,needs_authoring,Select and optimize individual CC0 chair models across banquet modern rustic and outdoor styles.
 event_tables,10,high,0,needs_authoring,Select and optimize round rectangular cocktail dessert and buffet table variants.
 dessert_displays,6,medium,0,needs_authoring,Use etagere market-stand and table sources to author dessert pedestals candy bars and buffet groupings.
+cake_geometry_system,12,medium_reference,0,needs_authoring,Use Kenney Food Kit for blocking and two realistic Poly Haven cakes for proportions and material reference then author true-size round square rectangular heart and tiered BakeSmart cake geometry locally.
+cake_decor_modules,20,low_pack,0,needs_authoring,Review individual CC0 food-pack pieces for safe reusable toppers while locally authoring piping flowers pearls bows drips and editable name or age toppers.
+cake_display_props,8,medium,0,needs_authoring,Combine approved tables etagere and food-pack references into measured cake boards acrylic stands cupcake towers and dessert display modules.
 welcome_signs,8,high,0,needs_authoring,Adapt mirror frame wooden sign picture frame and signpost bases; generate event text locally as separate texture/material content.
 directional_signs,5,high,0,needs_authoring,Adapt approved signpost and board models into standardized BakeSmart directional sets.
 table_numbers,5,high,0,needs_authoring,Adapt standing frame and locally modeled acrylic/metal card holders.
@@ -35,4 +38,4 @@ materials_wood,8,high,0,needs_processing,Create optimized runtime wood material 
 materials_stone_marble,8,high,0,needs_processing,Create marble terrazzo concrete and plaster runtime materials with mobile texture budgets.
 materials_metal,8,medium,0,needs_processing,Create brushed brass gold-painted metal steel and muted-metal authoring profiles using safe material references and original authored factors.
 hdri_indoor_event,8,high,0,needs_processing,Create 1K/2K runtime derivatives from approved event hall reception music hall and studio HDRIs.
-hdri_outdoor_event,6,low,0,missing,Collect additional CC0 garden terrace lawn courtyard sunset and night outdoor HDRIs.
+hdri_outdoor_event,6,high,0,needs_processing,Create 1K and 2K runtime derivatives from the six verified garden terrace courtyard pure-sky and sunset HDRIs in Batch 3.

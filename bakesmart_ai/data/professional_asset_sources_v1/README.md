@@ -14,7 +14,7 @@ This directory is the provenance gate for BakeSmart's professional 3D asset libr
 
 ## Collected source batches
 
-The registry now contains **64 vetted CC0 source records** across two source manifests.
+The registry now contains **77 vetted CC0 source records** across three source manifests.
 
 Batch 1 (`source_manifest.csv`) contains 24 sources for balloons, structural arches, vases/brass props, dessert display, candles, tables/chairs, PBR materials and event-lighting HDRIs.
 
@@ -31,6 +31,17 @@ Batch 2 (`source_manifest_batch2.csv`) adds 40 sources for:
 - dessert/market display structures;
 - broad Kenney CC0 furniture/nature/holiday/retro packs;
 - velvet, marble, terrazzo, concrete and plaster PBR materials.
+
+Batch 3 (`source_manifest_batch3.csv`) adds 13 sources verified from official provider pages on 1 September 2026:
+
+- six outdoor HDRIs covering formal garden, terrace, courtyard, floral tent, pure sunset sky and park sunset lighting;
+- four fabric PBR sources covering satin, sheer georgette, linen and matte cotton;
+- two realistic Poly Haven cake models as material, proportion and mobile-optimization references;
+- the Kenney CC0 Food Kit as a cake/dessert blocking and mobile-LOD source.
+
+The current Quaternius site-wide QAL v1.0 conflicts with older pack pages that still display CC0 and prohibits standalone asset redistribution. New direct Quaternius pack downloads therefore stay in `excluded_candidates.csv` as `needs_rights_resolution`. Existing Poly Pizza records remain governed by the explicit per-asset license displayed by that provider and still require a saved provenance record at download time.
+
+GitHub repository search did not reveal an event-specific model library with sufficiently clear per-asset CC0 provenance. A repository code license must never be assumed to license bundled 3D artwork.
 
 The collection intentionally mixes high-detail hero sources with lightweight sources suitable for mobile LODs. A high-detail source is never sent directly to the customer viewer without optimization.
 
