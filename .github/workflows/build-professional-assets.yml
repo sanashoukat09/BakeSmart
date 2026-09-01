@@ -11,6 +11,7 @@ on:
       - "bakesmart_ai/tools/build_cc0_production_batch.py"
       - "bakesmart_ai/tools/validate_production_candidates.py"
       - "bakesmart_ai/tools/promote_geometry_review.py"
+      - "bakesmart_ai/tools/render_production_asset_reviews.py"
       - "bakesmart_ai/data/production_assets_v1/production_batch1_plan.csv"
       - "bakesmart_ai/data/professional_asset_sources_v1/source_manifest.csv"
       - "bakesmart_ai/data/professional_asset_sources_v1/source_manifest_batch2.csv"
@@ -25,7 +26,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
 
     steps:
       - name: Check out Sana's-work
@@ -42,11 +43,11 @@ jobs:
       - name: Install validator dependencies
         run: python -m pip install "pydantic>=2,<3"
 
-      - name: Install Blender and glTF dependency
+      - name: Install Blender and headless rendering dependencies
         run: |
           set -euxo pipefail
           sudo apt-get update
-          sudo apt-get install -y blender python3-numpy
+          sudo apt-get install -y blender python3-numpy libegl1 libgl1-mesa-dri xvfb
           blender --version
           blender --background --python-expr "import numpy; print('Blender NumPy', numpy.__version__)"
 
@@ -81,6 +82,29 @@ jobs:
           python tools/validate_production_candidates.py
           python tools/promote_geometry_review.py
           test -s data/production_assets_v1/production_candidate_validation_report.json
+
+      - name: Render geometry-review assets for QA
+        working-directory: bakesmart_ai
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          set -euxo pipefail
+          rm -rf "$RUNNER_TEMP/production-asset-review-renders"
+          xvfb-run -a -s "-screen 0 1920x1080x24" blender -b \
+            --python tools/render_production_asset_reviews.py \
+            -- \
+            --output-dir "$RUNNER_TEMP/production-asset-review-renders"
+          test -s "$RUNNER_TEMP/production-asset-review-renders/prod-table-low-floral/front.png"
+          test -s "$RUNNER_TEMP/production-asset-review-renders/prod-floor-marigold-clusters/front.png"
+          test -s "$RUNNER_TEMP/production-asset-review-renders/prod-sign-mirror-welcome/front.png"
+
+      - name: Upload QA renders
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-asset-review-renders
+          path: ${{ runner.temp }}/production-asset-review-renders
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Commit generated review candidates to Sana's-work only
         run: |
