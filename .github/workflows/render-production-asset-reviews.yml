@@ -24,20 +24,22 @@ jobs:
         with:
           ref: "Sana's-work"
 
-      - name: Install Blender and glTF dependency
+      - name: Install Blender and headless rendering dependencies
         run: |
           set -euxo pipefail
           sudo apt-get update
-          sudo apt-get install -y blender python3-numpy
+          sudo apt-get install -y blender python3-numpy libegl1 libgl1-mesa-dri xvfb
           blender --version
           blender --background --python-expr "import numpy; print('Blender NumPy', numpy.__version__)"
 
       - name: Render geometry-review assets
         working-directory: bakesmart_ai
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
         run: |
           set -euxo pipefail
           rm -rf "$RUNNER_TEMP/production-asset-review-renders"
-          blender -b \
+          xvfb-run -a -s "-screen 0 1920x1080x24" blender -b \
             --python tools/render_production_asset_reviews.py \
             -- \
             --output-dir "$RUNNER_TEMP/production-asset-review-renders"
