@@ -143,7 +143,14 @@ def _configure_render() -> None:
     scene.render.image_settings.file_format = "PNG"
     scene.render.film_transparent = False
     scene.render.image_settings.color_mode = "RGBA"
-    scene.view_settings.look = "Medium High Contrast"
+    look_items = {
+        item.identifier
+        for item in scene.bl_rna.properties["view_settings"].fixed_type.properties["look"].enum_items
+    }
+    for preferred in ("AgX - Medium High Contrast", "Medium High Contrast", "None"):
+        if preferred in look_items:
+            scene.view_settings.look = preferred
+            break
 
 
 def render_asset(asset_id: str, glb_path: Path, output_dir: Path) -> None:
