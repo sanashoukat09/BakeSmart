@@ -79,27 +79,40 @@ def mat(name,color,metal=0.0,rough=0.45):
 def cube(name,dim,loc,m):
     bpy.ops.mesh.primitive_cube_add(size=1,location=loc); o=bpy.context.active_object; o.name=name; o.dimensions=dim; bpy.ops.object.transform_apply(location=False,rotation=False,scale=True); o.data.materials.append(m); return o
 
+def add_text_mesh(body, name, location, material, target_width, size=.20):
+    bpy.ops.object.text_add(location=location, rotation=(math.radians(90), 0.0, 0.0))
+    obj=bpy.context.object; obj.name=name; obj.data.body=body; obj.data.align_x="CENTER"; obj.data.align_y="CENTER"; obj.data.size=size; obj.data.extrude=.003; obj.data.bevel_depth=.001
+    bpy.context.view_layer.update()
+    if obj.dimensions.x > 1e-6:
+        scale=target_width/obj.dimensions.x; obj.scale*=scale
+    bpy.context.view_layer.objects.active=obj; obj.select_set(True); bpy.ops.object.convert(target="MESH"); obj=bpy.context.object; obj.data.materials.append(material); return obj
+
 def build(row):
     kind=row["builder"]
     if kind=="low_floral_centerpiece":
-        vase=import_source(row["primary_source_id"],"CC0_Vase"); greenery=import_source(row["secondary_source_id"],"CC0_Greenery"); blossoms=import_source(row["tertiary_source_id"],"CC0_Gazania")
-        helper=mat("BS_CeramicHelper",(0.92,0.89,0.82,1)); fit_exact(vase,.16,.16,.18,0.0)
-        fit_exact(greenery,.18,.18,.075,.155)
-        duplicate_group(greenery,"BS_GreeneryFiller",((.075,0,-.005,35,.82),(-.075,0,-.005,-35,.82),(0,.075,-.008,90,.78),(0,-.075,-.008,-90,.78)))
-        fit_exact(blossoms,.13,.13,.085,.19)
-        duplicate_group(blossoms,"BS_BlossomCrown",((.09,0,-.005,35,.92),(-.09,0,-.005,-35,.92),(0,.09,-.01,80,.88),(0,-.09,-.01,-80,.88),(.065,.065,.005,125,.78),(-.065,.065,.005,-125,.78),(.065,-.065,.0,160,.78),(-.065,-.065,.0,-160,.78)))
+        vase=import_source(row["primary_source_id"],"CC0_Vase"); blossoms=import_source(row["tertiary_source_id"],"CC0_Gazania")
+        helper=mat("BS_CeramicHelper",(0.92,0.89,0.82,1)); fit_exact(vase,.15,.15,.16,0.0)
+        # Treat the CC0 flowering patch as bouquet source geometry: compress it vertically,
+        # lift it completely above the vessel mouth, then overlap small rotated copies into
+        # one compact crown instead of forming a landscaping ring around the base.
+        fit_exact(blossoms,.29,.29,.13,.15)
+        duplicate_group(blossoms,"BS_BouquetCrown",((.025,.018,.005,32,.82),(-.025,-.015,.008,-36,.78),(0,.025,.018,92,.70)))
         return helper
     if kind=="marigold_brass_cluster":
-        brass=import_source(row["primary_source_id"],"CC0_Brass"); foliage=import_source(row["secondary_source_id"],"CC0_FoliageSupport"); blossoms=import_source(row["tertiary_source_id"],"CC0_Gazania")
-        helper=mat("BS_BrassHelper",(0.55,0.30,0.06,1),.72,.28); fit_exact(brass,.32,.32,.32,0.0)
-        fit_exact(foliage,.18,.18,.55,.28)
-        duplicate_group(foliage,"BS_FoliageSupport",((.14,0,-.02,20,.78),(-.14,0,-.03,-22,.72),(0,.14,-.04,70,.68),(0,-.14,-.04,-70,.68)))
-        fit_exact(blossoms,.18,.18,.18,.28)
-        duplicate_group(blossoms,"BS_MarigoldLook",((.17,0,.00,28,.90),(-.17,0,.00,-28,.90),(0,.17,-.01,78,.88),(0,-.17,-.01,-78,.88),(.12,.12,.10,118,.78),(-.12,.12,.12,-118,.78),(.12,-.12,.09,158,.78),(-.12,-.12,.11,-158,.78),(0,0,.30,42,.72),(0.08,0,.42,-18,.60),(-.08,.02,.50,18,.54)))
+        brass=import_source(row["primary_source_id"],"CC0_Brass"); blossoms=import_source(row["tertiary_source_id"],"CC0_Gazania")
+        helper=mat("BS_BrassHelper",(0.55,0.30,0.06,1),.72,.28); fit_exact(brass,.34,.34,.34,0.0)
+        # The previous Empodium source visually read as grass. Exclude it completely.
+        # Build one dense warm-flower crown from the Gazania source above and around the
+        # vessel, with a lower skirt and a smaller raised crown for Mehndi-stage density.
+        fit_exact(blossoms,.46,.46,.45,.30)
+        duplicate_group(blossoms,"BS_MarigoldCrown",((.06,0,.02,30,.82),(-.06,0,.02,-30,.82),(0,.05,.20,82,.62),(0,-.05,.20,-82,.62),(0,0,.38,18,.48)))
         return helper
     if kind=="mirror_welcome_sign":
-        mirror=import_source(row["primary_source_id"],"CC0_Mirror"); stand=mat("BS_Stand",(0.68,0.52,0.20,1),.65,.30); plaque=mat("BS_WelcomePlaque",(0.82,0.78,0.70,1),.08,.32)
-        fit_exact(mirror,.70,.035,1.34,.16); cube("BS_FootL",(.16,.05,.025),(-.27,0,.0125),stand); cube("BS_FootR",(.16,.05,.025),(.27,0,.0125),stand); cube("BS_BracketL",(.028,.04,.16),(-.30,0,.09),stand); cube("BS_BracketR",(.028,.04,.16),(.30,0,.09),stand); cube("BS_ReplaceableWelcomePlaque",(.42,.014,.18),(0,-.024,.98),plaque); return stand
+        mirror=import_source(row["primary_source_id"],"CC0_Mirror"); stand=mat("BS_Stand",(0.68,0.52,0.20,1),.65,.30); lettering=mat("BS_WelcomeLettering",(0.88,0.71,0.28,1),.45,.28)
+        fit_exact(mirror,.70,.035,1.34,.16); cube("BS_FootL",(.16,.05,.025),(-.27,0,.0125),stand); cube("BS_FootR",(.16,.05,.025),(.27,0,.0125),stand); cube("BS_BracketL",(.028,.04,.16),(-.30,0,.09),stand); cube("BS_BracketR",(.028,.04,.16),(.30,0,.09),stand)
+        add_text_mesh("Welcome","BS_WelcomeText",(0,-.023,.99),lettering,.36,.18)
+        add_text_mesh("Celebrate with us","BS_SubtitleText",(0,-.023,.86),lettering,.30,.08)
+        return stand
     raise RuntimeError(f"unknown builder {kind}")
 
 def triangles(objs):
