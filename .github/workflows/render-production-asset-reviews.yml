@@ -1,0 +1,46 @@
+name: Render production asset reviews
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "Sana's-work"
+    paths:
+      - ".github/workflows/render-production-asset-reviews.yml"
+      - "bakesmart_ai/tools/render_production_asset_reviews.py"
+      - "bakesmart_ai/data/production_assets_v1/asset_manifest.csv"
+      - "bakesmart_ai/app/assets/production/*.glb"
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out Sana's-work
+        uses: actions/checkout@v4
+        with:
+          ref: "Sana's-work"
+
+      - name: Install Blender
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender
+
+      - name: Render geometry-review assets
+        working-directory: bakesmart_ai
+        run: |
+          blender -b \
+            --python tools/render_production_asset_reviews.py \
+            -- \
+            --output-dir "$RUNNER_TEMP/production-asset-review-renders"
+
+      - name: Upload review renders
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-asset-review-renders
+          path: ${{ runner.temp }}/production-asset-review-renders
+          if-no-files-found: error
+          retention-days: 14
