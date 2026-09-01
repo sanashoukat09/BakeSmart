@@ -9,6 +9,7 @@ on:
       - ".github/workflows/build-professional-assets.yml"
       - "bakesmart_ai/tools/collect_professional_assets.py"
       - "bakesmart_ai/tools/build_cc0_production_batch.py"
+      - "bakesmart_ai/tools/build_cc0_production_batch_final.py"
       - "bakesmart_ai/tools/validate_production_candidates.py"
       - "bakesmart_ai/tools/promote_geometry_review.py"
       - "bakesmart_ai/tools/render_production_asset_reviews.py"
@@ -67,7 +68,7 @@ jobs:
         run: |
           set -euxo pipefail
           rm -f data/production_assets_v1/production_candidate_build_report.json
-          blender --background --python tools/build_cc0_production_batch.py -- \
+          blender --background --python tools/build_cc0_production_batch_final.py -- \
             --plan data/production_assets_v1/production_batch1_plan.csv \
             --report data/production_assets_v1/production_candidate_build_report.json
           test -s data/production_assets_v1/production_candidate_build_report.json
