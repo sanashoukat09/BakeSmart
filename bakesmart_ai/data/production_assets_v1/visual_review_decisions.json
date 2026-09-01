@@ -1,0 +1,32 @@
+{
+  "review_version": "production-asset-visual-review-v1",
+  "review_only": true,
+  "production_ready": false,
+  "review_method": "Assistant visual QA of deterministic four-angle Blender renders from GitHub Actions run 33485225379",
+  "decisions": {
+    "prod-floor-marigold-clusters": {
+      "asset_id": "prod-floor-marigold-clusters",
+      "decision": "needs_correction",
+      "notes": "Not customer-usable. Four-angle Blender review shows the brass pot dominating the composition, extremely sparse/disconnected floral stems, inadequate floral density for a 0.70 x 0.70 x 1.10 m floor arrangement, and a large flat gold square/circular authored base that reads as erroneous display geometry. Rebuild as a coherent dense marigold-look floral cluster around/above the brass vessel, remove the flat base artifact, and preserve the confirmed true-size envelope.",
+      "reviewed_at": "2026-09-01T08:08:00Z",
+      "manifest_changed": false,
+      "production_promoted": false
+    },
+    "prod-sign-mirror-welcome": {
+      "asset_id": "prod-sign-mirror-welcome",
+      "decision": "needs_correction",
+      "notes": "Core ornate arched mirror geometry is promising and proportionally coherent, but it is not yet customer-ready. The face reads as a blank grey panel rather than convincing mirror/signage, the simple rectangular support/base is visually crude relative to the ornate frame, and the asset lacks a proper replaceable welcome-text/sign treatment. Keep the ornate source geometry, improve the freestanding support, author a physically plausible reflective/sign face, and verify material appearance in the BakeSmart renderer before promotion.",
+      "reviewed_at": "2026-09-01T08:08:00Z",
+      "manifest_changed": false,
+      "production_promoted": false
+    },
+    "prod-table-low-floral": {
+      "asset_id": "prod-table-low-floral",
+      "decision": "needs_correction",
+      "notes": "Not customer-usable. Four-angle Blender review confirms the floral stems are too sparse and scattered to read as a professional low centerpiece, several elements appear visually disconnected, and a large white square/circular authored base dominates the 0.45 x 0.45 m footprint as an obvious artifact. Retain the usable vase source, remove the flat base artifact, rebuild a compact dense low floral arrangement around the vessel, and keep the exact 0.45 x 0.45 x 0.30 m true-size envelope.",
+      "reviewed_at": "2026-09-01T08:08:00Z",
+      "manifest_changed": false,
+      "production_promoted": false
+    }
+  }
+}
