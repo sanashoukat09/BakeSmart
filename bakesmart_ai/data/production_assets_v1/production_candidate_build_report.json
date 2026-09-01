@@ -17,9 +17,9 @@
         0.3
       ],
       "visible_mesh_bounds_m": [
-        0.3324,
-        0.3324,
-        0.2924
+        0.2792,
+        0.2792,
+        0.2787
       ],
       "triangle_count": 16916,
       "status": "built_for_final_visual_review"
@@ -38,11 +38,11 @@
         1.1
       ],
       "visible_mesh_bounds_m": [
-        0.5179,
-        0.5279,
+        0.4662,
+        0.4751,
         1.0275
       ],
-      "triangle_count": 20700,
+      "triangle_count": 24960,
       "status": "built_for_final_visual_review"
     },
     {
