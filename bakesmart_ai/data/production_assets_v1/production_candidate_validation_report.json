@@ -7,8 +7,8 @@
     {
       "asset_id": "prod-table-low-floral",
       "valid": true,
-      "file_size_bytes": 1244452,
-      "triangle_count": 16916,
+      "file_size_bytes": 1129112,
+      "triangle_count": 15516,
       "checks": [
         "GLB magic header is valid.",
         "GLB version is 2.",
@@ -22,7 +22,7 @@
         "Embedded units are metres.",
         "Embedded anchor type matches the manifest.",
         "Embedded true-size dimensions match the manifest within 2 cm.",
-        "LOD0 triangle count 16916 is within the 18000 triangle budget."
+        "LOD0 triangle count 15516 is within the 18000 triangle budget."
       ],
       "errors": [],
       "warnings": [
@@ -33,8 +33,8 @@
     {
       "asset_id": "prod-floor-marigold-clusters",
       "valid": true,
-      "file_size_bytes": 3214896,
-      "triangle_count": 24960,
+      "file_size_bytes": 3028168,
+      "triangle_count": 22160,
       "checks": [
         "GLB magic header is valid.",
         "GLB version is 2.",
@@ -48,7 +48,7 @@
         "Embedded units are metres.",
         "Embedded anchor type matches the manifest.",
         "Embedded true-size dimensions match the manifest within 2 cm.",
-        "LOD0 triangle count 24960 is within the 26000 triangle budget."
+        "LOD0 triangle count 22160 is within the 26000 triangle budget."
       ],
       "errors": [],
       "warnings": [
