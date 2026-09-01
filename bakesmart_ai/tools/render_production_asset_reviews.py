@@ -3,7 +3,8 @@
 Run with Blender's Python:
   blender -b --python tools/render_production_asset_reviews.py -- --output-dir <dir>
 
-This is deterministic visual-QA support. It never changes production status.
+This is deterministic visual-QA support. QA pass version: 2.
+It never changes production status.
 """
 
 from __future__ import annotations
