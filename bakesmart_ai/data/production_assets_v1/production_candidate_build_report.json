@@ -7,8 +7,7 @@
       "asset_id": "prod-table-low-floral",
       "output": "app/assets/production/table-low-floral.glb",
       "source_ids": [
-        "ph-ceramic-vase-04",
-        "ph-flower-gazania"
+        "ph-ceramic-vase-04"
       ],
       "source_license_status": "cc0_confirmed",
       "redistribution_allowed": true,
@@ -18,19 +17,18 @@
         0.3
       ],
       "visible_mesh_bounds_m": [
-        0.3231,
-        0.2957,
-        0.2754
+        0.2923,
+        0.3223,
+        0.292
       ],
-      "triangle_count": 15098,
+      "triangle_count": 11736,
       "status": "built_for_geometry_review"
     },
     {
       "asset_id": "prod-floor-marigold-clusters",
       "output": "app/assets/production/floor-marigold-clusters.glb",
       "source_ids": [
-        "ph-brass-pot-01",
-        "ph-flower-gazania"
+        "ph-brass-pot-01"
       ],
       "source_license_status": "cc0_confirmed",
       "redistribution_allowed": true,
@@ -40,11 +38,11 @@
         1.1
       ],
       "visible_mesh_bounds_m": [
-        0.5755,
-        0.5623,
-        0.729
+        0.5359,
+        0.5374,
+        0.9796
       ],
-      "triangle_count": 21794,
+      "triangle_count": 12104,
       "status": "built_for_geometry_review"
     },
     {
