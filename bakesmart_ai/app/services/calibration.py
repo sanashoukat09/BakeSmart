@@ -286,7 +286,9 @@ class CalibrationService:
             confirmed_anchor_count=confirmed_count,
             homography_m_to_px=self._matrix_payload(homography),
             homography_px_to_m=self._matrix_payload(inverse),
-            rms_reprojection_error_px=round(rms_error, 6),
+            # Preserve sub-pixel precision in the API contract. Rounding to six
+            # decimals could turn a valid value just below 1e-5 into 1e-5.
+            rms_reprojection_error_px=round(rms_error, 9),
             max_reprojection_error_px=round(max_error, 6),
             image_coverage_fraction=round(image_coverage_fraction, 8),
             fit_quality=fit_quality,

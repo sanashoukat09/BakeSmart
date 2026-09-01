@@ -18,4 +18,6 @@ An approval is review evidence only. It does **not** update `asset_manifest.csv`
 
 ## Current Batch 1
 
-The page discovers eligible candidates from the build and validation reports. Batch 1 currently contains the CC0-derived low floral centerpiece, Mehndi marigold/brass cluster, and ornate mirror welcome sign.
+The page discovers built geometry-review candidates and re-runs structural and visible-bounds validation against the actual GLB before listing them. A stored decision is tied to the exact GLB SHA-256 digest; rebuilding an asset automatically makes an older decision stale and returns the new revision to pending review.
+
+Batch 1 contains the CC0-derived low floral centerpiece, Mehndi marigold/brass cluster, and ornate mirror welcome sign. Only candidates that pass the current live validator appear in the queue.

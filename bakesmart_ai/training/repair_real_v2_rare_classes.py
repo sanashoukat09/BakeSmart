@@ -130,6 +130,16 @@ def _outlet_core(local_component: np.ndarray) -> np.ndarray:
         selected = coordinates[order[:target]]
         core = np.zeros_like(local_component)
         core[selected[:, 0], selected[:, 1]] = True
+    # Equal-distance plateaus can produce two disconnected islands depending
+    # on the OpenCV build. Keep the largest 8-connected core so the repaired
+    # outlet remains one auditable object on every supported environment.
+    count, components, stats, _centroids = cv2.connectedComponentsWithStats(
+        core.astype(np.uint8),
+        connectivity=8,
+    )
+    if count > 2:
+        largest = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+        core = components == largest
     return core
 
 

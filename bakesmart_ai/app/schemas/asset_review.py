@@ -16,6 +16,11 @@ class ProductionAssetReviewDecisionRecord(StrictModel):
     decision: ProductionAssetVisualDecision
     notes: str = Field(default="", max_length=1000)
     reviewed_at: datetime
+    artifact_sha256: str | None = Field(
+        default=None,
+        pattern=r"^[a-f0-9]{64}$",
+        description="Exact GLB revision that received this decision.",
+    )
     manifest_changed: Literal[False] = False
     production_promoted: Literal[False] = False
 
@@ -34,6 +39,7 @@ class ProductionAssetReviewCandidate(StrictModel):
     structurally_valid: bool
     triangle_count: int = Field(ge=0)
     file_size_bytes: int = Field(ge=0)
+    artifact_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     true_size_scale: Literal[1.0] = 1.0
     review_only: Literal[True] = True
     customer_renderable: Literal[False] = False

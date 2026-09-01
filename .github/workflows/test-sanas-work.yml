@@ -1,0 +1,73 @@
+name: Test Sana's-work
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "Sana's-work"
+  pull_request:
+    branches:
+      - "Sana's-work"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-sanas-work-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-api:
+    name: Python API and data contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: bakesmart_ai
+    steps:
+      - name: Check out tested revision
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            bakesmart_ai/requirements.txt
+            bakesmart_ai/requirements-dev.txt
+
+      - name: Install CPU model runtime and application dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r requirements-dev.txt
+
+      - name: Run the complete Python test suite
+        run: python -m pytest -q
+
+      - name: Validate versioned datasets
+        run: python -m training.validate_datasets
+
+      - name: Validate production asset registry
+        run: python tools/validate_production_assets.py
+
+  flutter-app:
+    name: Flutter application tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out tested revision
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Run Flutter tests
+        run: flutter test

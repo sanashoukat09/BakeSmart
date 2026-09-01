@@ -99,7 +99,9 @@ _original_marigold = base.build_marigold
 
 def final_low_floral(row):
     _original_low_floral(row)
-    transform_authored(("BS_",), sx=0.82, sy=0.82, sz=0.88, pivot_z=0.155)
+    # Fill the advertised 45 cm centerpiece footprint. The previous 0.82
+    # horizontal scale produced only 27.3 cm of visible width/depth.
+    transform_authored(("BS_",), sx=1.18, sy=1.18, sz=0.88, pivot_z=0.155)
     set_base_color("BS_BlushRose", (0.42, 0.055, 0.075, 1.0))
     set_base_color("BS_PaleBlush", (0.70, 0.22, 0.25, 1.0))
     set_base_color("BS_Ivory", (0.74, 0.50, 0.30, 1.0))
@@ -140,7 +142,15 @@ def final_marigold(row):
             )
             extra_index += 1
 
-    transform_authored(("BS_Mehndi", "BS_Marigold", "BS_Lower", "BS_FinalFill"), sx=0.88, sy=0.88, sz=1.0, pivot_z=0.34)
+    # The installation envelope is 70 cm square; keep the visible floral crown
+    # above the 85% true-scale gate instead of leaving a tiny central cluster.
+    transform_authored(
+        ("BS_Mehndi", "BS_Marigold", "BS_Lower", "BS_FinalFill"),
+        sx=1.18,
+        sy=1.18,
+        sz=1.0,
+        pivot_z=0.34,
+    )
     set_base_color("BS_MarigoldOrange", (0.42, 0.012, 0.001, 1.0))
     set_base_color("BS_MarigoldSaffron", (0.68, 0.065, 0.002, 1.0))
     set_base_color("BS_MarigoldYellow", (0.72, 0.20, 0.002, 1.0))

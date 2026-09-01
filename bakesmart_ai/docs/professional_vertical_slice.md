@@ -31,7 +31,7 @@ If a structure does not fit the confirmed focal span, the planner rejects or omi
 
 The generated GLBs are geometry/scale prototypes, not artist-approved photorealistic production assets. They are validated against the Stage 5 GLB contract but are not placed in the production asset folder and do not change production readiness.
 
-The production manifest therefore remains truthful: 30 production requirements, 30 production GLBs still missing, 0 production-approved GLBs, and the 80–120 final modular asset target still pending.
+The production manifest therefore remains truthful: 30 production requirements, 3 review candidates present, 27 production GLBs still missing, 0 production-approved GLBs, and the 80–120 final modular asset target still pending.
 
 ## API
 
@@ -59,8 +59,8 @@ python tools/generate_vertical_slice_assets.py
 
 This writes review-only GLBs to `app/assets/review_vertical_slice/` for manual QA.
 
-## What is still not done
+## What followed in Stage 7
 
-The current customer viewer still uses the existing procedural scene output. Full external multi-GLB scene assembly, UV/textured PBR rendering, artist-reviewed materials, contact shadows, object selection/editing, LOD switching, and the final 80–120 production asset library remain future work.
+The local Stage-7 renderer now supports external multi-GLB scene assembly, PBR factors and supported textures, contact shadows, orbit/pan/zoom and object selection. The normal customer scene still uses its procedural fallback because no production candidate has passed every approval gate.
 
-The next implementation stage should be Stage 7: renderer + modular scene assembly upgrade.
+Artist-reviewed materials, editing/undo, LOD switching, calibrated photo projection, integration of approved production modules and the final 80–120 production asset library remain future work.

@@ -16,7 +16,7 @@ Only the third is renderable as a production asset.
 
 ### 1. True-size asset manifest
 
-`data/production_assets_v1/asset_manifest.csv` maps every current real decoration catalogue item to a production asset requirement. Each row records exact metre dimensions, expected `.blend`/`.glb` paths, anchor type, fixed/repeat/modular scale policy, strict scale limits, collision padding, PBR material profile, LOD budgets, texture limits, license status and production approval state.
+`data/production_assets_v1/asset_manifest.csv` maps every current real decoration catalogue item to a production asset requirement. Each row records the metre-based installation envelope, expected `.blend`/`.glb` paths, anchor type, fixed/repeat/modular scale policy, strict scale limits, collision padding, PBR material profile, LOD budgets, texture limits, license status and production approval state.
 
 Manifest dimensions are checked against the existing real catalogue at service startup, so the 3D pipeline cannot quietly invent a different physical size.
 
@@ -26,7 +26,9 @@ Manifest dimensions are checked against the existing real catalogue at service s
 
 ### 3. Binary GLB validator
 
-`app/services/production_assets.py` validates GLBs locally. It checks GLB/glTF version, mesh/node presence, PBR materials, BakeSmart export metadata, metre units, asset id, anchor type, true-size dimensions within 2 cm, triangle budget and a 25 MB per-module mobile budget.
+`app/services/production_assets.py` validates GLBs locally. It checks GLB/glTF version, mesh/node presence, PBR materials, BakeSmart export metadata, metre units, asset id, anchor type, triangle budget and a 25 MB per-module mobile budget. It also independently calculates world-space visible bounds from glTF POSITION accessors and node transforms instead of trusting declared metadata alone.
+
+The validation response separates visible mesh bounds, the real-catalogue installation envelope, and the collision envelope with horizontal safety padding. Visible geometry must fill at least 85% of the installation envelope on every axis and may not exceed it by more than 2 cm. This prevents a small decoration from being labelled as a much larger true-size object.
 
 Texture pixel dimensions and visual material quality still require Blender/export review.
 
@@ -57,10 +59,11 @@ Stage 3 ranking gives a preference to a catalogue item only when its production 
 - Production pipeline/manifest: implemented.
 - Current real-catalogue mappings: 30.
 - Material authoring profiles: 14.
-- Production-ready GLBs: 0 until real source models, PBR materials and rights are reviewed.
+- Candidate GLBs present: 3; 27 manifest GLBs remain missing.
+- Production-ready GLBs: 0 until geometry, visible scale, materials and rights are reviewed.
 - Professional library target: 80–120 modular production GLBs.
-- External modular-GLB scene assembly: not implemented yet.
-- Textured PBR customer renderer: not implemented yet.
+- External modular-GLB scene assembly and supported PBR rendering: implemented in the Stage-7 review renderer.
+- Approved production-module integration into the normal customer scene: not implemented yet.
 - Full photo-calibrated 3D projection: not implemented yet.
 
 ## Next stage

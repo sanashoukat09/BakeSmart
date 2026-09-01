@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -62,15 +63,9 @@ class ProductionAssetReviewService:
 
     def _candidate_payloads(self) -> list[dict[str, Any]]:
         build = self._read_json(self.build_report_path)
-        validation = self._read_json(self.validation_report_path)
         built = {
             row.get("asset_id"): row
             for row in build.get("assets", [])
-            if isinstance(row, dict) and row.get("asset_id")
-        }
-        validated = {
-            row.get("asset_id"): row
-            for row in validation.get("assets", [])
             if isinstance(row, dict) and row.get("asset_id")
         }
         output: list[dict[str, Any]] = []
@@ -78,10 +73,7 @@ class ProductionAssetReviewService:
             if asset.production_status != "geometry_review":
                 continue
             build_row = built.get(asset.asset_id)
-            validation_row = validated.get(asset.asset_id)
-            if not isinstance(build_row, dict) or not isinstance(validation_row, dict):
-                continue
-            if not validation_row.get("valid"):
+            if not isinstance(build_row, dict):
                 continue
             if not asset.redistribution_allowed:
                 continue
@@ -90,12 +82,23 @@ class ProductionAssetReviewService:
             path = self.registry.package_root / asset.glb_path
             if not path.is_file():
                 continue
+            checks, errors, warnings, triangles = inspect_glb_bytes(
+                path.read_bytes(),
+                asset,
+            )
+            if errors or not checks:
+                continue
             output.append(
                 {
                     "record": asset,
                     "build": build_row,
-                    "validation": validation_row,
                     "path": path,
+                    "fresh_validation": {
+                        "checks": checks,
+                        "warnings": warnings,
+                        "triangle_count": triangles,
+                        "file_size_bytes": path.stat().st_size,
+                    },
                 }
             )
         return output
@@ -116,7 +119,11 @@ class ProductionAssetReviewService:
         for payload in self._candidate_payloads():
             asset = payload["record"]
             build = payload["build"]
-            validation = payload["validation"]
+            fresh_validation = payload["fresh_validation"]
+            artifact_sha256 = hashlib.sha256(payload["path"].read_bytes()).hexdigest()
+            decision = decisions.get(asset.asset_id)
+            if decision is not None and decision.artifact_sha256 != artifact_sha256:
+                decision = None
             candidates.append(
                 ProductionAssetReviewCandidate(
                     asset_id=asset.asset_id,
@@ -129,10 +136,11 @@ class ProductionAssetReviewService:
                     source_license_status=asset.source_license_status,
                     redistribution_allowed=asset.redistribution_allowed,
                     structurally_valid=True,
-                    triangle_count=int(validation.get("triangle_count") or 0),
-                    file_size_bytes=int(validation.get("file_size_bytes") or 0),
+                    triangle_count=int(fresh_validation.get("triangle_count") or 0),
+                    file_size_bytes=int(fresh_validation["file_size_bytes"]),
+                    artifact_sha256=artifact_sha256,
                     glb_url=f"/api/v1/assets/3d/production-review/{asset.asset_id}.glb",
-                    decision=decisions.get(asset.asset_id),
+                    decision=decision,
                 )
             )
         decided = sum(1 for candidate in candidates if candidate.decision is not None)
@@ -163,7 +171,7 @@ class ProductionAssetReviewService:
         self,
         submission: ProductionAssetReviewSubmission,
     ) -> ProductionAssetReviewSubmissionResponse:
-        self._payload_for(submission.asset_id)
+        candidate_payload = self._payload_for(submission.asset_id)
         notes = submission.notes.strip()
         if submission.decision in {"reject", "needs_correction"} and not notes:
             raise ValueError(
@@ -174,6 +182,9 @@ class ProductionAssetReviewService:
             decision=submission.decision,
             notes=notes,
             reviewed_at=datetime.now(timezone.utc),
+            artifact_sha256=hashlib.sha256(
+                candidate_payload["path"].read_bytes()
+            ).hexdigest(),
         )
         decisions = self._decisions()
         decisions[submission.asset_id] = record

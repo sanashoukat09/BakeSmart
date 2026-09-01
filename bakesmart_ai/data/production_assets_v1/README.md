@@ -17,12 +17,14 @@ Expected embedded metadata:
 - `bakesmart_asset_id`
 - `bakesmart_catalog_id`
 - `bakesmart_units = metres`
-- `bakesmart_dimensions_m = [width, depth, height]`
+- `bakesmart_dimensions_m = [width, depth, height]` (installation envelope)
+- `bakesmart_visible_mesh_bounds_m = [width, depth, height]`
+- `bakesmart_collision_envelope_m = [width, depth, height]`
 - `bakesmart_anchor_type`
 - `bakesmart_scaling_policy`
 - `bakesmart_manifest_version = production-assets-v1`
 
-The GLB's true dimensions must match the real catalogue dimensions within 2 cm.
+The installation envelope must match the real catalogue dimensions. The validator independently calculates visible GLB bounds from mesh accessors and node transforms. Visible geometry must fill at least 85% of the installation envelope on each axis without exceeding the envelope by more than 2 cm. The collision envelope adds horizontal manifest padding and is used for placement safety rather than visual sizing.
 
 ## Scaling rule
 
@@ -58,8 +60,8 @@ blender --background assets/production_sources/backdrop-round-arch.blend `
   --asset-id prod-backdrop-round-arch
 ```
 
-The Blender exporter enforces true dimensions, a `BS_ROOT`, PBR node materials and the LOD0 triangle budget before writing the GLB.
+The Blender exporter enforces true dimensions, a `BS_ROOT`, visible-bound metadata, PBR node materials and the LOD0 triangle budget before writing the GLB.
 
 ## Truth boundary
 
-The current customer viewer still renders one combined procedural GLB. This production registry is now used for readiness validation and future preference in recommendation ranking, but external modular GLB scene assembly and a textured PBR runtime renderer are separate later stages.
+The Stage-7 renderer can assemble multiple modular GLBs and render supported PBR factors/textures. The normal customer recommendation still renders one combined procedural GLB until approved production modules exist and are integrated into that flow.

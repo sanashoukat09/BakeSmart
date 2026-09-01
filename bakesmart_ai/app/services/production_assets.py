@@ -5,10 +5,12 @@ from __future__ import annotations
 import csv
 import json
 import struct
+from math import sqrt
 from pathlib import Path
 from typing import Any
 
 from app.schemas.assets import (
+    AssetBoundsCoverage,
     MaterialProfileRecord,
     ProductionAssetCatalogResponse,
     ProductionAssetLibrarySummary,
@@ -22,6 +24,8 @@ from app.services.real_decor_catalog import RealDecorCatalog
 PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ASSET_DATA_DIR = PACKAGE_ROOT / "data" / "production_assets_v1"
 MAX_MODULE_FILE_BYTES = 25 * 1024 * 1024
+MIN_VISIBLE_AXIS_COVERAGE = 0.85
+MAX_VISIBLE_ENVELOPE_OVERFLOW_M = 0.02
 GLB_MAGIC = b"glTF"
 GLB_VERSION = 2
 JSON_CHUNK_TYPE = 0x4E4F534A
@@ -76,6 +80,167 @@ def _triangle_count(document: dict[str, Any]) -> int:
             if isinstance(position_index, int) and 0 <= position_index < len(accessors):
                 total += int(accessors[position_index].get("count", 0)) // 3
     return total
+
+
+def _glb_json_document(data: bytes) -> dict[str, Any] | None:
+    """Decode the first GLB JSON chunk after lightweight header validation."""
+
+    if len(data) < 20:
+        return None
+    magic, version, declared_length = struct.unpack_from("<4sII", data, 0)
+    if magic != GLB_MAGIC or version != GLB_VERSION or declared_length != len(data):
+        return None
+    chunk_length, chunk_type = struct.unpack_from("<II", data, 12)
+    if chunk_type != JSON_CHUNK_TYPE or 20 + chunk_length > len(data):
+        return None
+    try:
+        decoded = json.loads(
+            data[20 : 20 + chunk_length]
+            .rstrip(b" \t\r\n\x00")
+            .decode("utf-8")
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return decoded if isinstance(decoded, dict) else None
+
+
+def _identity_matrix() -> list[list[float]]:
+    return [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0],
+    ]
+
+
+def _multiply_matrices(
+    left: list[list[float]],
+    right: list[list[float]],
+) -> list[list[float]]:
+    return [
+        [
+            sum(left[row][inner] * right[inner][column] for inner in range(4))
+            for column in range(4)
+        ]
+        for row in range(4)
+    ]
+
+
+def _node_matrix(node: dict[str, Any]) -> list[list[float]]:
+    encoded = node.get("matrix")
+    if isinstance(encoded, list) and len(encoded) == 16:
+        return [
+            [float(encoded[column * 4 + row]) for column in range(4)]
+            for row in range(4)
+        ]
+
+    translation = node.get("translation", [0.0, 0.0, 0.0])
+    scale = node.get("scale", [1.0, 1.0, 1.0])
+    rotation = node.get("rotation", [0.0, 0.0, 0.0, 1.0])
+    if not all(
+        isinstance(value, (int, float))
+        for value in [*translation, *scale, *rotation]
+    ):
+        raise ValueError("node transform contains non-numeric values")
+    x, y, z, w = (float(value) for value in rotation)
+    magnitude = sqrt(x * x + y * y + z * z + w * w)
+    if magnitude == 0:
+        raise ValueError("node quaternion has zero length")
+    x, y, z, w = (value / magnitude for value in (x, y, z, w))
+    sx, sy, sz = (float(value) for value in scale)
+    tx, ty, tz = (float(value) for value in translation)
+    return [
+        [(1 - 2 * (y * y + z * z)) * sx, 2 * (x * y - z * w) * sy, 2 * (x * z + y * w) * sz, tx],
+        [2 * (x * y + z * w) * sx, (1 - 2 * (x * x + z * z)) * sy, 2 * (y * z - x * w) * sz, ty],
+        [2 * (x * z - y * w) * sx, 2 * (y * z + x * w) * sy, (1 - 2 * (x * x + y * y)) * sz, tz],
+        [0.0, 0.0, 0.0, 1.0],
+    ]
+
+
+def _transform_point(
+    matrix: list[list[float]],
+    point: tuple[float, float, float],
+) -> tuple[float, float, float]:
+    x, y, z = point
+    return tuple(
+        matrix[row][0] * x
+        + matrix[row][1] * y
+        + matrix[row][2] * z
+        + matrix[row][3]
+        for row in range(3)
+    )
+
+
+def _visible_mesh_dimensions(
+    document: dict[str, Any],
+) -> tuple[float, float, float] | None:
+    """Return world-space width/depth/height from glTF POSITION accessor bounds.
+
+    glTF is Y-up, so its world X/Y/Z extents map to BakeSmart width/height/depth.
+    Accessor bounds are checked independently instead of trusting exported extras.
+    """
+
+    nodes = document.get("nodes", [])
+    meshes = document.get("meshes", [])
+    accessors = document.get("accessors", [])
+    if not nodes or not meshes or not accessors:
+        return None
+    scene_index = document.get("scene", 0)
+    scenes = document.get("scenes", [])
+    if not isinstance(scene_index, int) or not 0 <= scene_index < len(scenes):
+        return None
+    root_indices = scenes[scene_index].get("nodes", [])
+    points: list[tuple[float, float, float]] = []
+
+    def visit(node_index: int, parent_matrix: list[list[float]], active: set[int]) -> None:
+        if not isinstance(node_index, int) or not 0 <= node_index < len(nodes):
+            raise ValueError("scene references an invalid node index")
+        if node_index in active:
+            raise ValueError("node hierarchy contains a cycle")
+        node = nodes[node_index]
+        world = _multiply_matrices(parent_matrix, _node_matrix(node))
+        mesh_index = node.get("mesh")
+        if isinstance(mesh_index, int) and 0 <= mesh_index < len(meshes):
+            for primitive in meshes[mesh_index].get("primitives", []):
+                position_index = primitive.get("attributes", {}).get("POSITION")
+                if not isinstance(position_index, int) or not 0 <= position_index < len(accessors):
+                    continue
+                accessor = accessors[position_index]
+                minimum = accessor.get("min")
+                maximum = accessor.get("max")
+                if not (
+                    isinstance(minimum, list)
+                    and isinstance(maximum, list)
+                    and len(minimum) == len(maximum) == 3
+                ):
+                    continue
+                for x in (float(minimum[0]), float(maximum[0])):
+                    for y in (float(minimum[1]), float(maximum[1])):
+                        for z in (float(minimum[2]), float(maximum[2])):
+                            points.append(_transform_point(world, (x, y, z)))
+        next_active = {*active, node_index}
+        for child_index in node.get("children", []):
+            visit(child_index, world, next_active)
+
+    for root_index in root_indices:
+        visit(root_index, _identity_matrix(), set())
+    if not points:
+        return None
+    minimum = [min(point[axis] for point in points) for axis in range(3)]
+    maximum = [max(point[axis] for point in points) for axis in range(3)]
+    gltf_extents = [maximum[axis] - minimum[axis] for axis in range(3)]
+    return gltf_extents[0], gltf_extents[2], gltf_extents[1]
+
+
+def _physical_envelopes(record: ProductionAssetRecord) -> tuple[Dimensions, Dimensions]:
+    installation = record.dimensions
+    padding = record.collision_padding_m
+    collision = Dimensions(
+        width_m=installation.width_m + 2 * padding,
+        depth_m=(installation.depth_m or 0.0) + 2 * padding,
+        height_m=installation.height_m,
+    )
+    return installation, collision
 
 
 def inspect_glb_bytes(
@@ -202,6 +367,84 @@ def inspect_glb_bytes(
                 )
             else:
                 checks.append("Embedded true-size dimensions match the manifest within 2 cm.")
+
+    try:
+        visible_dimensions = _visible_mesh_dimensions(document)
+    except (TypeError, ValueError) as exc:
+        visible_dimensions = None
+        errors.append(f"Visible mesh bounds could not be calculated safely: {exc}.")
+    if visible_dimensions is None:
+        warnings.append(
+            "Visible mesh bounds could not be calculated from POSITION accessor min/max values."
+        )
+    else:
+        expected_dimensions = (
+            record.dimensions.width_m,
+            record.dimensions.depth_m or 0.0,
+            record.dimensions.height_m,
+        )
+        coverage = tuple(
+            measured / expected
+            for measured, expected in zip(
+                visible_dimensions,
+                expected_dimensions,
+                strict=True,
+            )
+        )
+        axis_names = ("width", "depth", "height")
+        undersized = [
+            f"{axis}={fraction:.1%}"
+            for axis, fraction in zip(axis_names, coverage, strict=True)
+            if fraction < MIN_VISIBLE_AXIS_COVERAGE
+        ]
+        overflow = [
+            f"{axis}={measured:.4f} m vs {expected:.4f} m"
+            for axis, measured, expected in zip(
+                axis_names,
+                visible_dimensions,
+                expected_dimensions,
+                strict=True,
+            )
+            if measured > expected + MAX_VISIBLE_ENVELOPE_OVERFLOW_M
+        ]
+        if undersized:
+            errors.append(
+                "Visible mesh is too small for its declared installation envelope; "
+                "minimum per-axis coverage is 85% (" + ", ".join(undersized) + ")."
+            )
+        else:
+            checks.append(
+                "Visible mesh fills at least 85% of the installation envelope on every axis."
+            )
+        if overflow:
+            errors.append(
+                "Visible mesh exceeds the installation envelope by more than 2 cm ("
+                + ", ".join(overflow)
+                + ")."
+            )
+        else:
+            checks.append(
+                "Visible mesh stays within the installation envelope plus 2 cm tolerance."
+            )
+
+        extras_visible = extras.get("bakesmart_visible_mesh_bounds_m") if extras else None
+        if isinstance(extras_visible, (list, tuple)) and len(extras_visible) == 3:
+            declared_visible = _round_dimensions(list(extras_visible))
+            calculated_visible = _round_dimensions(list(visible_dimensions))
+            if any(
+                abs(declared - calculated) > 0.02
+                for declared, calculated in zip(declared_visible, calculated_visible, strict=True)
+            ):
+                errors.append(
+                    f"Embedded visible mesh bounds {declared_visible} do not match calculated bounds "
+                    f"{calculated_visible} within 2 cm."
+                )
+            else:
+                checks.append(
+                    "Embedded visible mesh bounds match independently calculated bounds within 2 cm."
+                )
+        else:
+            warnings.append("Embedded bakesmart_visible_mesh_bounds_m metadata is missing.")
 
     triangles = _triangle_count(document)
     if triangles <= 0:
@@ -438,12 +681,15 @@ class ProductionAssetRegistry:
         if record is None:
             raise KeyError(asset_id)
         path = self.package_root / record.glb_path
+        installation, collision = _physical_envelopes(record)
         if not path.is_file():
             response = ProductionAssetValidationResponse(
                 asset_id=record.asset_id,
                 catalog_id=record.catalog_id,
                 status="missing_glb",
                 glb_path=record.glb_path,
+                installation_envelope_m=installation,
+                collision_envelope_m=collision,
                 checks=[],
                 errors=[
                     "The production GLB file does not exist yet. Create it from the approved Blender source and run the local validator."
@@ -464,6 +710,8 @@ class ProductionAssetRegistry:
                 status="invalid_glb",
                 glb_path=record.glb_path,
                 file_size_bytes=file_size,
+                installation_envelope_m=installation,
+                collision_envelope_m=collision,
                 errors=[
                     f"Module file exceeds the {MAX_MODULE_FILE_BYTES // (1024 * 1024)} MB mobile budget."
                 ],
@@ -475,6 +723,30 @@ class ProductionAssetRegistry:
 
         data = path.read_bytes()
         checks, errors, warnings, triangle_count = inspect_glb_bytes(data, record)
+        document = _glb_json_document(data)
+        try:
+            measured = _visible_mesh_dimensions(document) if document is not None else None
+        except (TypeError, ValueError):
+            measured = None
+        visible_values_fit_schema = measured is not None and (
+            0 < measured[0] <= 100
+            and 0 < measured[1] <= 100
+            and 0 < measured[2] <= 30
+        )
+        visible = (
+            Dimensions(width_m=measured[0], depth_m=measured[1], height_m=measured[2])
+            if visible_values_fit_schema
+            else None
+        )
+        coverage = (
+            AssetBoundsCoverage(
+                width_fraction=measured[0] / installation.width_m,
+                depth_fraction=measured[1] / (installation.depth_m or 1.0),
+                height_fraction=measured[2] / installation.height_m,
+            )
+            if measured is not None
+            else None
+        )
         if errors:
             status = "invalid_glb"
         elif (
@@ -496,6 +768,10 @@ class ProductionAssetRegistry:
             glb_path=record.glb_path,
             file_size_bytes=file_size,
             triangle_count=triangle_count,
+            installation_envelope_m=installation,
+            visible_mesh_bounds_m=visible,
+            visible_coverage=coverage,
+            collision_envelope_m=collision,
             checks=checks,
             errors=errors,
             warnings=warnings,

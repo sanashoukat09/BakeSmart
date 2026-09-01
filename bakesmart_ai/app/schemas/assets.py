@@ -101,6 +101,14 @@ class ProductionAssetValidationRequest(StrictModel):
     asset_id: str = Field(pattern=r"^prod-[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
+class AssetBoundsCoverage(StrictModel):
+    """Visible-mesh coverage of the declared installation envelope per axis."""
+
+    width_fraction: float = Field(ge=0)
+    depth_fraction: float = Field(ge=0)
+    height_fraction: float = Field(ge=0)
+
+
 class ProductionAssetValidationResponse(StrictModel):
     asset_id: str
     catalog_id: str
@@ -113,6 +121,10 @@ class ProductionAssetValidationResponse(StrictModel):
     glb_path: str
     file_size_bytes: int | None = Field(default=None, ge=0)
     triangle_count: int | None = Field(default=None, ge=0)
+    installation_envelope_m: Dimensions
+    visible_mesh_bounds_m: Dimensions | None = None
+    visible_coverage: AssetBoundsCoverage | None = None
+    collision_envelope_m: Dimensions
     checks: list[str] = Field(default_factory=list, max_length=30)
     errors: list[str] = Field(default_factory=list, max_length=30)
     warnings: list[str] = Field(default_factory=list, max_length=30)

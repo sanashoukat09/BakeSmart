@@ -154,13 +154,14 @@ def test_viewer_and_glb_urls_are_real_local_resources(client, valid_design_reque
     viewer = client.get(recommendation["preview"]["viewer_3d_url"])
     glb = client.get(recommendation["preview"]["scene_glb_url"])
     viewer_script = client.get("/static/viewer.js")
+    renderer_core = client.get("/static/renderer_core.js")
 
     assert viewer.status_code == 200
     assert viewer.headers["content-type"].startswith("text/html")
     assert "default-src 'self'" in viewer.headers["content-security-policy"]
     assert b'id="scene-canvas"' in viewer.content
     assert b"https://" not in viewer.content
-    assert b'/static/viewer.js?v=20260826-5' in viewer.content
+    assert b'/static/viewer.js?v=20260829-7' in viewer.content
     assert b"3D Planning Preview" in viewer.content
     assert b"PBR materials" not in viewer.content
     assert b"camera-calibrated" in viewer.content
@@ -169,12 +170,13 @@ def test_viewer_and_glb_urls_are_real_local_resources(client, valid_design_reque
     assert glb.headers["cache-control"] == "private, no-cache"
     assert glb.content[:4] == b"glTF"
     assert viewer_script.status_code == 200
-    assert b"pointermove" in viewer_script.content
-    assert b"wheel" in viewer_script.content
-    assert b"distanceBetweenPointers" in viewer_script.content
-    assert b"aMaterial" in viewer_script.content
+    assert renderer_core.status_code == 200
+    assert b"pointermove" in renderer_core.content
+    assert b"wheel" in renderer_core.content
+    assert b"pbrMetallicRoughness" in renderer_core.content
+    assert b"uShadowPass" in renderer_core.content
     assert b"photo-fallback" in viewer.content
-    assert viewer_script.content.count(b"precision mediump float;") == 2
+    assert renderer_core.content.count(b"precision highp float;") == 2
 
 
 def test_unknown_viewer_scene_returns_not_found(client):

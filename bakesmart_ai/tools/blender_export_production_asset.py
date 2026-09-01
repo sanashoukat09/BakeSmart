@@ -132,6 +132,13 @@ def main() -> None:
     root["bakesmart_catalog_id"] = row["catalog_id"]
     root["bakesmart_units"] = "metres"
     root["bakesmart_dimensions_m"] = list(expected)
+    root["bakesmart_visible_mesh_bounds_m"] = list(actual)
+    padding = float(row["collision_padding_m"])
+    root["bakesmart_collision_envelope_m"] = [
+        expected[0] + 2 * padding,
+        expected[1] + 2 * padding,
+        expected[2],
+    ]
     root["bakesmart_anchor_type"] = row["anchor_type"]
     root["bakesmart_scaling_policy"] = row["scaling_policy"]
     root["bakesmart_manifest_version"] = "production-assets-v1"

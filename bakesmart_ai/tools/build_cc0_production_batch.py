@@ -455,8 +455,11 @@ def export_asset(row: dict[str, str], manifest_row: dict[str, str]) -> dict[str,
     for index, label in enumerate(("width", "depth", "height")):
         if actual[index] > expected[index] + 0.02:
             raise RuntimeError(f"{label} {actual[index]:.4f} exceeds placement envelope {expected[index]:.4f}")
-        if actual[index] < expected[index] * 0.60:
-            raise RuntimeError(f"{label} {actual[index]:.4f} is grossly undersized for placement envelope {expected[index]:.4f}")
+        if actual[index] < expected[index] * 0.85:
+            raise RuntimeError(
+                f"{label} {actual[index]:.4f} fills less than 85% of installation "
+                f"envelope {expected[index]:.4f}"
+            )
     triangles = triangle_count(meshes)
     if triangles > budget:
         raise RuntimeError(f"triangle budget exceeded: {triangles}")
@@ -472,6 +475,12 @@ def export_asset(row: dict[str, str], manifest_row: dict[str, str]) -> dict[str,
     root["bakesmart_units"] = "metres"
     root["bakesmart_dimensions_m"] = list(expected)
     root["bakesmart_visible_mesh_bounds_m"] = [float(value) for value in actual]
+    padding = float(manifest_row["collision_padding_m"])
+    root["bakesmart_collision_envelope_m"] = [
+        expected[0] + 2 * padding,
+        expected[1] + 2 * padding,
+        expected[2],
+    ]
     root["bakesmart_anchor_type"] = manifest_row["anchor_type"]
     root["bakesmart_scaling_policy"] = manifest_row["scaling_policy"]
     root["bakesmart_manifest_version"] = "production-assets-v1"

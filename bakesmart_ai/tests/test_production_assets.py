@@ -64,8 +64,8 @@ def test_production_manifest_covers_current_real_catalogue():
     assert summary.mapped_catalog_item_count == 30
     assert summary.material_profile_count == 14
     assert summary.production_ready_count == 0
-    assert summary.missing_glb_count == 30
-    assert summary.pending_rights_review_count == 30
+    assert summary.missing_glb_count == 27
+    assert summary.pending_rights_review_count == 27
     assert summary.target_min_assets == 80
     assert summary.target_max_assets == 120
     assert summary.library_target_met is False
@@ -119,3 +119,23 @@ def test_binary_inspector_rejects_wrong_physical_dimensions():
     )
 
     assert any("do not match manifest dimensions" in error for error in errors)
+
+
+def test_current_candidates_report_independent_visible_and_collision_bounds():
+    result = production_asset_registry.validate_asset("prod-sign-mirror-welcome")
+
+    assert result.visible_mesh_bounds_m is not None
+    assert result.visible_coverage is not None
+    assert result.installation_envelope_m.width_m == 0.75
+    assert result.visible_coverage.width_fraction >= 0.85
+    assert result.collision_envelope_m.width_m == 0.79
+    assert result.collision_envelope_m.depth_m == 0.09
+
+
+def test_undersized_visible_candidate_fails_true_scale_gate():
+    result = production_asset_registry.validate_asset("prod-table-low-floral")
+
+    assert result.status == "invalid_glb"
+    assert result.visible_coverage is not None
+    assert result.visible_coverage.width_fraction < 0.85
+    assert any("too small" in error for error in result.errors)

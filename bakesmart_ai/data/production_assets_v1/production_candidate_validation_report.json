@@ -1,12 +1,12 @@
 {
   "report_version": "production-candidate-validation-v1",
-  "all_structurally_valid": true,
+  "all_structurally_valid": false,
   "production_ready": false,
   "human_visual_review_required": true,
   "assets": [
     {
       "asset_id": "prod-table-low-floral",
-      "valid": true,
+      "valid": false,
       "file_size_bytes": 1129112,
       "triangle_count": 15516,
       "checks": [
@@ -22,9 +22,13 @@
         "Embedded units are metres.",
         "Embedded anchor type matches the manifest.",
         "Embedded true-size dimensions match the manifest within 2 cm.",
+        "Visible mesh stays within the installation envelope plus 2 cm tolerance.",
+        "Embedded visible mesh bounds match independently calculated bounds within 2 cm.",
         "LOD0 triangle count 15516 is within the 18000 triangle budget."
       ],
-      "errors": [],
+      "errors": [
+        "Visible mesh is too small for its declared installation envelope; minimum per-axis coverage is 85% (width=60.6%, depth=60.6%)."
+      ],
       "warnings": [
         "Texture pixel dimensions and visual material quality still require Blender/export review; the binary inspector does not decode every embedded image."
       ],
@@ -32,7 +36,7 @@
     },
     {
       "asset_id": "prod-floor-marigold-clusters",
-      "valid": true,
+      "valid": false,
       "file_size_bytes": 3028168,
       "triangle_count": 22160,
       "checks": [
@@ -48,9 +52,13 @@
         "Embedded units are metres.",
         "Embedded anchor type matches the manifest.",
         "Embedded true-size dimensions match the manifest within 2 cm.",
+        "Visible mesh stays within the installation envelope plus 2 cm tolerance.",
+        "Embedded visible mesh bounds match independently calculated bounds within 2 cm.",
         "LOD0 triangle count 22160 is within the 26000 triangle budget."
       ],
-      "errors": [],
+      "errors": [
+        "Visible mesh is too small for its declared installation envelope; minimum per-axis coverage is 85% (width=64.1%, depth=65.8%)."
+      ],
       "warnings": [
         "Texture pixel dimensions and visual material quality still require Blender/export review; the binary inspector does not decode every embedded image."
       ],
@@ -74,6 +82,9 @@
         "Embedded units are metres.",
         "Embedded anchor type matches the manifest.",
         "Embedded true-size dimensions match the manifest within 2 cm.",
+        "Visible mesh fills at least 85% of the installation envelope on every axis.",
+        "Visible mesh stays within the installation envelope plus 2 cm tolerance.",
+        "Embedded visible mesh bounds match independently calculated bounds within 2 cm.",
         "LOD0 triangle count 11794 is within the 14000 triangle budget."
       ],
       "errors": [],
