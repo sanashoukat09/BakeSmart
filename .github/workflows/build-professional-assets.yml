@@ -58,6 +58,7 @@ jobs:
           python tools/collect_professional_assets.py --source-id ph-shrub-sorrel-01 --download
           python tools/collect_professional_assets.py --source-id ph-brass-pot-01 --download
           python tools/collect_professional_assets.py --source-id ph-flower-empodium --download
+          python tools/collect_professional_assets.py --source-id ph-flower-gazania --download
           python tools/collect_professional_assets.py --source-id ph-ornate-mirror-01 --download
 
       - name: Build true-size geometry-review GLBs
