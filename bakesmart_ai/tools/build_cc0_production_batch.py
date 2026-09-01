@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse, csv, json, math, shutil, sys, traceback, zipfile
 from pathlib import Path
 import bpy
-from mathutils import Matrix, Vector
+from mathutils import Vector
 
 ROOT = Path(__file__).resolve().parents[1]
 PLAN = ROOT / "data/production_assets_v1/production_batch1_plan.csv"
@@ -63,58 +63,79 @@ def fit_exact(objs,w,d,h,z):
     for o in objs: o.location=Vector((o.location.x*sx,o.location.y*sy,o.location.z*sz)); o.scale=Vector((o.scale.x*sx,o.scale.y*sy,o.scale.z*sz))
     bpy.context.view_layer.update(); lo,hi=bounds(objs); c=(lo+hi)/2; move(objs,Vector((-c.x,-c.y,z-lo.z)))
 
-def duplicate_group(objs,prefix,placements):
-    originals=list(objs); output=list(originals)
-    for copy_index,(dx,dy,dz,rotation_deg,scale) in enumerate(placements,1):
-        transform=Matrix.Translation(Vector((dx,dy,dz))) @ Matrix.Rotation(math.radians(rotation_deg),4,"Z") @ Matrix.Scale(scale,4)
-        for object_index,source in enumerate(originals,1):
-            duplicate=source.copy(); duplicate.data=source.data.copy(); duplicate.name=f"{prefix}_{copy_index:02d}_{object_index:02d}"
-            for collection in source.users_collection[:1]: collection.objects.link(duplicate)
-            duplicate.matrix_world=transform @ source.matrix_world; output.append(duplicate)
-    bpy.context.view_layer.update(); return output
-
 def mat(name,color,metal=0.0,rough=0.45):
     m=bpy.data.materials.new(name); m.use_nodes=True; b=next(n for n in m.node_tree.nodes if n.type=="BSDF_PRINCIPLED"); b.inputs["Base Color"].default_value=color; b.inputs["Metallic"].default_value=metal; b.inputs["Roughness"].default_value=rough; return m
 
 def cube(name,dim,loc,m):
     bpy.ops.mesh.primitive_cube_add(size=1,location=loc); o=bpy.context.active_object; o.name=name; o.dimensions=dim; bpy.ops.object.transform_apply(location=False,rotation=False,scale=True); o.data.materials.append(m); return o
 
-def add_text_mesh(body, name, location, material, target_width, size=.20):
-    bpy.ops.object.text_add(location=location, rotation=(math.radians(90), 0.0, 0.0))
-    obj=bpy.context.object; obj.name=name; obj.data.body=body; obj.data.align_x="CENTER"; obj.data.align_y="CENTER"; obj.data.size=size; obj.data.extrude=.003; obj.data.bevel_depth=.001
+def ico(name,loc,scale,m):
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1,radius=1.0,location=loc); o=bpy.context.object; o.name=name; o.scale=scale; bpy.ops.object.transform_apply(location=False,rotation=False,scale=True); o.data.materials.append(m); return o
+
+def cylinder_between(name,start,end,radius,m,vertices=8):
+    a=Vector(start); b=Vector(end); delta=b-a; length=delta.length
+    if length <= 1e-6: return None
+    bpy.ops.mesh.primitive_cylinder_add(vertices=vertices,radius=radius,depth=length,location=(a+b)*.5)
+    o=bpy.context.object; o.name=name; o.rotation_euler=delta.to_track_quat("Z","Y").to_euler(); o.data.materials.append(m); return o
+
+def add_leaf(name,loc,angle,m,length=.035,width=.013):
+    o=ico(name,loc,(length,width,.0045),m); o.rotation_euler[2]=angle; return o
+
+def add_daisy(name,center,petal,core,petal_radius=.024):
+    c=Vector(center); ico(name+"_Core",c,(.010,.010,.007),core)
+    for i in range(8):
+        a=2*math.pi*i/8; p=c+Vector((math.cos(a)*petal_radius*.62,math.sin(a)*petal_radius*.62,0))
+        o=ico(f"{name}_Petal_{i:02d}",p,(petal_radius*.55,petal_radius*.24,.0045),petal); o.rotation_euler[2]=a
+
+def add_marigold(name,center,orange,gold,r=.027):
+    c=Vector(center); ico(name+"_Core",c,(r*.62,r*.62,r*.55),gold)
+    for i in range(12):
+        a=2*math.pi*i/12; ring=.012 if i%2==0 else .018; z=.004 if i%3 else -.003
+        ico(f"{name}_Floret_{i:02d}",c+Vector((math.cos(a)*ring,math.sin(a)*ring,z)),(r*.46,r*.42,r*.40),orange if i%2 else gold)
+
+def add_text_mesh(body,name,location,material,target_width,size=.20):
+    bpy.ops.object.text_add(location=location,rotation=(math.radians(90),0.0,0.0)); obj=bpy.context.object; obj.name=name; obj.data.body=body; obj.data.align_x="CENTER"; obj.data.align_y="CENTER"; obj.data.size=size; obj.data.extrude=.003; obj.data.bevel_depth=.001
     bpy.context.view_layer.update()
-    if obj.dimensions.x > 1e-6:
-        scale=target_width/obj.dimensions.x; obj.scale*=scale
+    if obj.dimensions.x>1e-6: obj.scale*=target_width/obj.dimensions.x
     bpy.context.view_layer.objects.active=obj; obj.select_set(True); bpy.ops.object.convert(target="MESH"); obj=bpy.context.object; obj.data.materials.append(material); return obj
+
+def build_low_floral(row):
+    vase=import_source(row["primary_source_id"],"CC0_Vase"); fit_exact(vase,.15,.15,.16,0.0)
+    green=mat("BS_StemGreen",(.10,.23,.08,1),0,.68); blush=mat("BS_BlushPetal",(.78,.38,.34,1),0,.55); cream=mat("BS_CreamPetal",(.94,.84,.68,1),0,.58); gold=mat("BS_FlowerCore",(.78,.48,.12,1),.08,.48)
+    heads=[(-.12,-.04,.235),(-.09,.07,.255),(-.055,-.09,.265),(-.02,.02,.285),(.025,-.075,.255),(.055,.075,.275),(.095,-.015,.245),(.12,.055,.23),(-.115,.09,.225),(.105,-.09,.225),(-.04,.115,.235),(.035,.115,.245)]
+    for i,end in enumerate(heads):
+        base=(end[0]*.18,end[1]*.18,.145); cylinder_between(f"BS_Stem_{i:02d}",base,end,.0028,green)
+        mid=((base[0]+end[0])*.55,(base[1]+end[1])*.55,(base[2]+end[2])*.55); add_leaf(f"BS_Leaf_{i:02d}",mid,math.atan2(end[1],end[0])+.65,green)
+        add_daisy(f"BS_Flower_{i:02d}",end,blush if i%3 else cream,gold,.025 if i%2 else .022)
+    return mat("BS_CeramicHelper",(.92,.89,.82,1))
+
+def build_marigold(row):
+    brass=import_source(row["primary_source_id"],"CC0_Brass"); fit_exact(brass,.34,.34,.34,0.0)
+    green=mat("BS_MarigoldStem",(.08,.18,.055,1),0,.72); orange=mat("BS_MarigoldOrange",(.95,.28,.035,1),0,.58); saffron=mat("BS_MarigoldSaffron",(1.0,.53,.045,1),0,.56)
+    heads=[]
+    for ring,count,z0 in ((.24,12,.66),(.16,10,.80),(.075,6,.93)):
+        for i in range(count):
+            a=2*math.pi*i/count + (0.18 if count==10 else 0); z=z0 + .035*math.sin(i*1.7); heads.append((math.cos(a)*ring,math.sin(a)*ring,z))
+    for i,end in enumerate(heads):
+        base=(end[0]*.22,end[1]*.22,.30); cylinder_between(f"BS_MehndiStem_{i:02d}",base,end,.0038,green)
+        if i%2==0:
+            mid=((base[0]+end[0])*.62,(base[1]+end[1])*.62,(base[2]+end[2])*.58); add_leaf(f"BS_MehndiLeaf_{i:02d}",mid,math.atan2(end[1],end[0])+.55,green,.050,.016)
+        add_marigold(f"BS_Marigold_{i:02d}",end,orange,saffron,.030 if i<12 else .027)
+    return mat("BS_BrassHelper",(.55,.30,.06,1),.72,.28)
 
 def build(row):
     kind=row["builder"]
-    if kind=="low_floral_centerpiece":
-        vase=import_source(row["primary_source_id"],"CC0_Vase"); blossoms=import_source(row["tertiary_source_id"],"CC0_Gazania")
-        helper=mat("BS_CeramicHelper",(0.92,0.89,0.82,1)); fit_exact(vase,.15,.15,.16,0.0)
-        fit_exact(blossoms,.29,.29,.13,.15)
-        duplicate_group(blossoms,"BS_BouquetCrown",((.025,.018,.005,32,.82),(-.025,-.015,.008,-36,.78),(0,.025,.018,92,.70)))
-        return helper
-    if kind=="marigold_brass_cluster":
-        brass=import_source(row["primary_source_id"],"CC0_Brass"); blossoms=import_source(row["tertiary_source_id"],"CC0_Gazania")
-        helper=mat("BS_BrassHelper",(0.55,0.30,0.06,1),.72,.28); fit_exact(brass,.34,.34,.34,0.0)
-        # Preserve a genuinely tall floor-decor silhouette instead of weakening the
-        # physical-scale guard. The base crown spans 0.68 m above a 0.30 m anchor;
-        # smaller overlapping copies add density without exceeding the 1.10 m envelope.
-        fit_exact(blossoms,.48,.48,.68,.30)
-        duplicate_group(blossoms,"BS_MarigoldCrown",((.045,0,.00,30,.72),(-.045,0,.00,-30,.72),(0,.045,.035,82,.56),(0,-.045,.035,-82,.56),(0,0,.08,18,.40)))
-        return helper
+    if kind=="low_floral_centerpiece": return build_low_floral(row)
+    if kind=="marigold_brass_cluster": return build_marigold(row)
     if kind=="mirror_welcome_sign":
-        mirror=import_source(row["primary_source_id"],"CC0_Mirror"); stand=mat("BS_Stand",(0.68,0.52,0.20,1),.65,.30); lettering=mat("BS_WelcomeLettering",(0.88,0.71,0.28,1),.45,.28)
+        mirror=import_source(row["primary_source_id"],"CC0_Mirror"); stand=mat("BS_Stand",(.68,.52,.20,1),.65,.30); lettering=mat("BS_WelcomeLettering",(.88,.71,.28,1),.45,.28)
         fit_exact(mirror,.70,.035,1.34,.16); cube("BS_FootL",(.16,.05,.025),(-.27,0,.0125),stand); cube("BS_FootR",(.16,.05,.025),(.27,0,.0125),stand); cube("BS_BracketL",(.028,.04,.16),(-.30,0,.09),stand); cube("BS_BracketR",(.028,.04,.16),(.30,0,.09),stand)
-        add_text_mesh("Welcome","BS_WelcomeText",(0,-.023,.99),lettering,.36,.18)
-        add_text_mesh("Celebrate with us","BS_SubtitleText",(0,-.023,.86),lettering,.30,.08)
-        return stand
+        add_text_mesh("Welcome","BS_WelcomeText",(0,-.023,.99),lettering,.36,.18); add_text_mesh("Celebrate with us","BS_SubtitleText",(0,-.023,.86),lettering,.30,.08); return stand
     raise RuntimeError(f"unknown builder {kind}")
 
 def triangles(objs):
     total=0
-    for o in objs: o.data.calc_loop_triangles(); total += len(o.data.loop_triangles)
+    for o in objs: o.data.calc_loop_triangles(); total+=len(o.data.loop_triangles)
     return total
 
 def decimate(objs,budget):
@@ -129,20 +150,19 @@ def decimate(objs,budget):
         bpy.context.view_layer.update()
     if triangles(objs)>budget: raise RuntimeError(f"decimation could not meet triangle budget {budget}")
 
-def source_ids(row):
-    return [row.get(k,"") for k in ("primary_source_id","secondary_source_id","tertiary_source_id") if row.get(k,"")]
+def source_ids(row): return [row.get(k,"") for k in ("primary_source_id","secondary_source_id","tertiary_source_id") if row.get(k,"")]
 
 def export(row,mrow,helper_mat):
     expected=(float(mrow["width_m"]),float(mrow["depth_m"]),float(mrow["height_m"])); meshes=[o for o in bpy.context.scene.objects if o.type=="MESH"]; lo,hi=bounds(meshes); c=(lo+hi)/2; move(meshes,Vector((-c.x,-c.y,-lo.z)))
     budget=int(mrow["lod0_triangle_budget"]); decimate(meshes,budget); bpy.context.view_layer.update(); lo,hi=bounds(meshes); actual=hi-lo
     for i,label in enumerate(("width","depth","height")):
-        if actual[i] > expected[i] + .02: raise RuntimeError(f"{label} {actual[i]:.4f} exceeds placement envelope {expected[i]:.4f}")
-        if actual[i] < expected[i] * .60: raise RuntimeError(f"{label} {actual[i]:.4f} is grossly undersized for placement envelope {expected[i]:.4f}")
+        if actual[i]>expected[i]+.02: raise RuntimeError(f"{label} {actual[i]:.4f} exceeds placement envelope {expected[i]:.4f}")
+        if actual[i]<expected[i]*.60: raise RuntimeError(f"{label} {actual[i]:.4f} is grossly undersized for placement envelope {expected[i]:.4f}")
     tc=triangles(meshes)
     if tc>budget: raise RuntimeError(f"triangle budget exceeded: {tc}")
     root=bpy.data.objects.new("BS_ROOT",None); bpy.context.collection.objects.link(root)
     for o in meshes: o.parent=root
-    ids=source_ids(row); root["bakesmart_asset_id"]=mrow["asset_id"]; root["bakesmart_catalog_id"]=mrow["catalog_id"]; root["bakesmart_units"]="metres"; root["bakesmart_dimensions_m"]=list(expected); root["bakesmart_anchor_type"]=mrow["anchor_type"]; root["bakesmart_scaling_policy"]=mrow["scaling_policy"]; root["bakesmart_manifest_version"]="production-assets-v1"; root["bakesmart_review_only"]=True; root["bakesmart_source_license"]="cc0_confirmed"; root["bakesmart_source_ids"]=ids
+    ids=source_ids(row); root["bakesmart_asset_id"]=mrow["asset_id"]; root["bakesmart_catalog_id"]=mrow["catalog_id"]; root["bakesmart_units"]="metres"; root["bakesmart_dimensions_m"]=list(expected); root["bakesmart_anchor_type"]=mrow["anchor_type"]; root["bakesmart_scaling_policy"]=mrow["scaling_policy"]; root["bakesmart_manifest_version"]="production-assets-v1"; root["bakesmart_review_only"]=True; root["bakesmart_source_license"]="cc0_confirmed"; root["bakesmart_source_ids"]=ids; root["bakesmart_local_authored_geometry"]=row["builder"] in {"low_floral_centerpiece","marigold_brass_cluster"}
     out=ROOT/mrow["glb_path"]; out.parent.mkdir(parents=True,exist_ok=True); bpy.ops.export_scene.gltf(filepath=str(out),export_format="GLB",export_extras=True,export_apply=True,export_yup=True,export_materials="EXPORT")
     return {"asset_id":row["asset_id"],"output":str(out.relative_to(ROOT)),"source_ids":ids,"source_license_status":"cc0_confirmed","redistribution_allowed":True,"true_dimensions_m":[round(float(v),4) for v in expected],"visible_mesh_bounds_m":[round(float(v),4) for v in actual],"triangle_count":tc,"status":"built_for_geometry_review"}
 
