@@ -82,41 +82,24 @@ def cube(name,dim,loc,m):
 def build(row):
     kind=row["builder"]
     if kind=="low_floral_centerpiece":
-        vase=import_source(row["primary_source_id"],"CC0_Vase")
-        greenery=import_source(row["secondary_source_id"],"CC0_Greenery")
-        blossoms=import_source(row["tertiary_source_id"],"CC0_Gazania")
-        helper=mat("BS_CeramicHelper",(0.92,0.89,0.82,1))
-        fit_exact(vase,.16,.16,.18,0.0)
-        # Greenery is restrained to a low collar instead of becoming the hero form.
+        vase=import_source(row["primary_source_id"],"CC0_Vase"); greenery=import_source(row["secondary_source_id"],"CC0_Greenery"); blossoms=import_source(row["tertiary_source_id"],"CC0_Gazania")
+        helper=mat("BS_CeramicHelper",(0.92,0.89,0.82,1)); fit_exact(vase,.16,.16,.18,0.0)
         fit_exact(greenery,.18,.18,.075,.155)
         duplicate_group(greenery,"BS_GreeneryFiller",((.075,0,-.005,35,.82),(-.075,0,-.005,-35,.82),(0,.075,-.008,90,.78),(0,-.075,-.008,-90,.78)))
-        # Actual orange/pink blossom clumps form the bouquet crown. Keep the crown
-        # low enough that the full visible arrangement remains table-safe.
         fit_exact(blossoms,.13,.13,.085,.19)
         duplicate_group(blossoms,"BS_BlossomCrown",((.09,0,-.005,35,.92),(-.09,0,-.005,-35,.92),(0,.09,-.01,80,.88),(0,-.09,-.01,-80,.88),(.065,.065,.005,125,.78),(-.065,.065,.005,-125,.78),(.065,-.065,.0,160,.78),(-.065,-.065,.0,-160,.78)))
         return helper
     if kind=="marigold_brass_cluster":
-        brass=import_source(row["primary_source_id"],"CC0_Brass")
-        foliage=import_source(row["secondary_source_id"],"CC0_FoliageSupport")
-        blossoms=import_source(row["tertiary_source_id"],"CC0_Gazania")
-        helper=mat("BS_BrassHelper",(0.55,0.30,0.06,1),.72,.28)
-        fit_exact(brass,.32,.32,.32,0.0)
-        # A small amount of foliage supplies vertical support, not the visual identity.
+        brass=import_source(row["primary_source_id"],"CC0_Brass"); foliage=import_source(row["secondary_source_id"],"CC0_FoliageSupport"); blossoms=import_source(row["tertiary_source_id"],"CC0_Gazania")
+        helper=mat("BS_BrassHelper",(0.55,0.30,0.06,1),.72,.28); fit_exact(brass,.32,.32,.32,0.0)
         fit_exact(foliage,.18,.18,.55,.28)
         duplicate_group(foliage,"BS_FoliageSupport",((.14,0,-.02,20,.78),(-.14,0,-.03,-22,.72),(0,.14,-.04,70,.68),(0,-.14,-.04,-70,.68)))
-        # Dense orange flowering clumps create the marigold-look mass around the pot
-        # and at staggered heights. This remains an approximation, not botanical ID.
         fit_exact(blossoms,.18,.18,.18,.28)
         duplicate_group(blossoms,"BS_MarigoldLook",((.17,0,.00,28,.90),(-.17,0,.00,-28,.90),(0,.17,-.01,78,.88),(0,-.17,-.01,-78,.88),(.12,.12,.10,118,.78),(-.12,.12,.12,-118,.78),(.12,-.12,.09,158,.78),(-.12,-.12,.11,-158,.78),(0,0,.30,42,.72),(0.08,0,.42,-18,.60),(-.08,.02,.50,18,.54)))
         return helper
     if kind=="mirror_welcome_sign":
-        mirror=import_source(row["primary_source_id"],"CC0_Mirror")
-        stand=mat("BS_Stand",(0.68,0.52,0.20,1),.65,.30); plaque=mat("BS_WelcomePlaque",(0.82,0.78,0.70,1),.08,.32)
-        fit_exact(mirror,.70,.035,1.34,.16)
-        cube("BS_FootL",(.16,.05,.025),(-.27,0,.0125),stand); cube("BS_FootR",(.16,.05,.025),(.27,0,.0125),stand)
-        cube("BS_BracketL",(.028,.04,.16),(-.30,0,.09),stand); cube("BS_BracketR",(.028,.04,.16),(.30,0,.09),stand)
-        cube("BS_ReplaceableWelcomePlaque",(.42,.014,.18),(0,-.024,.98),plaque)
-        return stand
+        mirror=import_source(row["primary_source_id"],"CC0_Mirror"); stand=mat("BS_Stand",(0.68,0.52,0.20,1),.65,.30); plaque=mat("BS_WelcomePlaque",(0.82,0.78,0.70,1),.08,.32)
+        fit_exact(mirror,.70,.035,1.34,.16); cube("BS_FootL",(.16,.05,.025),(-.27,0,.0125),stand); cube("BS_FootR",(.16,.05,.025),(.27,0,.0125),stand); cube("BS_BracketL",(.028,.04,.16),(-.30,0,.09),stand); cube("BS_BracketR",(.028,.04,.16),(.30,0,.09),stand); cube("BS_ReplaceableWelcomePlaque",(.42,.014,.18),(0,-.024,.98),plaque); return stand
     raise RuntimeError(f"unknown builder {kind}")
 
 def triangles(objs):
@@ -125,30 +108,31 @@ def triangles(objs):
     return total
 
 def decimate(objs,budget):
-    total=triangles(objs)
-    if total<=budget: return
-    ratio=max(.08,min(1.0,budget/total*.93))
-    for o in objs:
-        o.data.calc_loop_triangles()
-        if len(o.data.loop_triangles)<100: continue
-        mod=o.modifiers.new("BS_LOD0","DECIMATE"); mod.ratio=ratio; bpy.context.view_layer.objects.active=o; o.select_set(True); bpy.ops.object.modifier_apply(modifier=mod.name); o.select_set(False)
+    for _ in range(3):
+        total=triangles(objs)
+        if total<=budget: return
+        ratio=max(.05,min(.92,budget/max(total,1)*.84))
+        for o in objs:
+            o.data.calc_loop_triangles()
+            if len(o.data.loop_triangles)<100: continue
+            mod=o.modifiers.new("BS_LOD0","DECIMATE"); mod.ratio=ratio; bpy.context.view_layer.objects.active=o; o.select_set(True); bpy.ops.object.modifier_apply(modifier=mod.name); o.select_set(False)
+        bpy.context.view_layer.update()
+    if triangles(objs)>budget: raise RuntimeError(f"decimation could not meet triangle budget {budget}")
 
 def source_ids(row):
     return [row.get(k,"") for k in ("primary_source_id","secondary_source_id","tertiary_source_id") if row.get(k,"")]
 
 def export(row,mrow,helper_mat):
-    expected=(float(mrow["width_m"]),float(mrow["depth_m"]),float(mrow["height_m"]))
-    meshes=[o for o in bpy.context.scene.objects if o.type=="MESH"]; lo,hi=bounds(meshes); c=(lo+hi)/2; move(meshes,Vector((-c.x,-c.y,-lo.z)))
-    decimate(meshes,max(100,int(mrow["lod0_triangle_budget"])-200)); bpy.context.view_layer.update(); lo,hi=bounds(meshes); actual=hi-lo
+    expected=(float(mrow["width_m"]),float(mrow["depth_m"]),float(mrow["height_m"])); meshes=[o for o in bpy.context.scene.objects if o.type=="MESH"]; lo,hi=bounds(meshes); c=(lo+hi)/2; move(meshes,Vector((-c.x,-c.y,-lo.z)))
+    budget=int(mrow["lod0_triangle_budget"]); decimate(meshes,budget); bpy.context.view_layer.update(); lo,hi=bounds(meshes); actual=hi-lo
     for i,label in enumerate(("width","depth","height")):
         if actual[i] > expected[i] + .02: raise RuntimeError(f"{label} {actual[i]:.4f} exceeds placement envelope {expected[i]:.4f}")
         if actual[i] < expected[i] * .60: raise RuntimeError(f"{label} {actual[i]:.4f} is grossly undersized for placement envelope {expected[i]:.4f}")
     tc=triangles(meshes)
-    if tc>int(mrow["lod0_triangle_budget"]): raise RuntimeError(f"triangle budget exceeded: {tc}")
+    if tc>budget: raise RuntimeError(f"triangle budget exceeded: {tc}")
     root=bpy.data.objects.new("BS_ROOT",None); bpy.context.collection.objects.link(root)
     for o in meshes: o.parent=root
-    ids=source_ids(row)
-    root["bakesmart_asset_id"]=mrow["asset_id"]; root["bakesmart_catalog_id"]=mrow["catalog_id"]; root["bakesmart_units"]="metres"; root["bakesmart_dimensions_m"]=list(expected); root["bakesmart_anchor_type"]=mrow["anchor_type"]; root["bakesmart_scaling_policy"]=mrow["scaling_policy"]; root["bakesmart_manifest_version"]="production-assets-v1"; root["bakesmart_review_only"]=True; root["bakesmart_source_license"]="cc0_confirmed"; root["bakesmart_source_ids"]=ids
+    ids=source_ids(row); root["bakesmart_asset_id"]=mrow["asset_id"]; root["bakesmart_catalog_id"]=mrow["catalog_id"]; root["bakesmart_units"]="metres"; root["bakesmart_dimensions_m"]=list(expected); root["bakesmart_anchor_type"]=mrow["anchor_type"]; root["bakesmart_scaling_policy"]=mrow["scaling_policy"]; root["bakesmart_manifest_version"]="production-assets-v1"; root["bakesmart_review_only"]=True; root["bakesmart_source_license"]="cc0_confirmed"; root["bakesmart_source_ids"]=ids
     out=ROOT/mrow["glb_path"]; out.parent.mkdir(parents=True,exist_ok=True); bpy.ops.export_scene.gltf(filepath=str(out),export_format="GLB",export_extras=True,export_apply=True,export_yup=True,export_materials="EXPORT")
     return {"asset_id":row["asset_id"],"output":str(out.relative_to(ROOT)),"source_ids":ids,"source_license_status":"cc0_confirmed","redistribution_allowed":True,"true_dimensions_m":[round(float(v),4) for v in expected],"visible_mesh_bounds_m":[round(float(v),4) for v in actual],"triangle_count":tc,"status":"built_for_geometry_review"}
 
