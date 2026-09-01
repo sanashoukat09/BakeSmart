@@ -1,5 +1,5 @@
 {
-  "report_version": "production-candidate-build-v1",
+  "report_version": "production-candidate-build-v2",
   "review_only": true,
   "production_ready": false,
   "assets": [
@@ -17,12 +17,12 @@
         0.3
       ],
       "visible_mesh_bounds_m": [
-        0.2923,
-        0.3223,
-        0.292
+        0.3324,
+        0.3324,
+        0.2924
       ],
-      "triangle_count": 11736,
-      "status": "built_for_geometry_review"
+      "triangle_count": 16916,
+      "status": "built_for_final_visual_review"
     },
     {
       "asset_id": "prod-floor-marigold-clusters",
@@ -38,12 +38,12 @@
         1.1
       ],
       "visible_mesh_bounds_m": [
-        0.5359,
-        0.5374,
-        0.9796
+        0.5179,
+        0.5279,
+        1.0275
       ],
-      "triangle_count": 12104,
-      "status": "built_for_geometry_review"
+      "triangle_count": 20700,
+      "status": "built_for_final_visual_review"
     },
     {
       "asset_id": "prod-sign-mirror-welcome",
@@ -64,8 +64,8 @@
         1.5001
       ],
       "triangle_count": 11794,
-      "status": "built_for_geometry_review"
+      "status": "built_for_final_visual_review"
     }
   ],
-  "note": "Human visual review required before production_ready."
+  "note": "Automated structural validation and final human visual QA are required before production_ready."
 }
