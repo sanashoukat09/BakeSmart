@@ -29,14 +29,14 @@ REPORT_PATH = ROOT / "data" / "cake_references_v1" / "generated_review_manifest.
 
 VARIANTS = (
     ("neutral-classic", "classic-elegant-cake-01", 3, "#FFFDF7;#E7D8BF;#B59B6A"),
-    ("cocoa-nut", "dark-moody-chocolate-cake", 2, "#F2DFC0;#6A3219;#D29B52"),
-    ("rustic-berry", "rustic-boho-fruit-cake", 2, "#F3E7D3;#9C6B4F;#6F7A55"),
+    ("cocoa-nut", "dark-moody-chocolate-cake", 2, "#6A3219;#D29B52;#B8874D"),
+    ("rustic-berry", "rustic-boho-fruit-cake", 2, "#F3E7D3;#9C6B4F;#B59B6A"),
 )
 
 VISUAL_FINDINGS = {
-    "neutral-classic": "Three clear tiers, stable cake board, restrained neutral finish, and a distinct small topper cluster.",
-    "cocoa-nut": "Two clear tiers with warm cocoa frosting, contrasting piping, and a compact cocoa-and-nut topper cluster.",
-    "rustic-berry": "Two clear tiers with an earthy rustic finish, contrasting board and piping, and a readable berry-and-chocolate cluster.",
+    "neutral-classic": "Three clear ivory tiers, softened frosting edges, stable cake board, piped upper detail, and a proportionate floral topper cluster.",
+    "cocoa-nut": "Two clear cocoa tiers with warm frosting, contrasting double-edge piping, and a proportionate cocoa-and-nut topper cluster.",
+    "rustic-berry": "Two clear cream tiers with warm rustic accents, double-edge piping, and a readable berry-and-chocolate topper arrangement.",
 }
 
 

@@ -496,13 +496,20 @@ class ProceduralGlbBuilder:
     ) -> None:
         depth = dimensions.depth_m or dimensions.width_m
         frosting = (0.0, profile.frosting_roughness, 0.0)
+        # Cake palettes are ordered base frosting, secondary/accent, board.
+        # Using the last colour for the whole cake made ivory cakes look brown
+        # and rustic cakes green. Reference profiles may tune the finish, but
+        # the customer's primary palette colour remains authoritative.
+        base_frosting_color = palette[0]
+        secondary_color = palette[1] if len(palette) > 1 else palette[0]
+        board_color = palette[-1]
         board_height = min(0.025, max(0.012, dimensions.height_m * 0.045))
         if cake.shape.value in {"square", "rectangle"}:
             mesh.add_box(
                 (base[0], base[1] + board_height / 2, base[2]),
                 (dimensions.width_m * 1.12, board_height, depth * 1.12),
                 ProceduralGlbBuilder._mix(
-                    palette[-1], (0.84, 0.72, 0.46), 0.52
+                    board_color, (0.84, 0.72, 0.46), 0.52
                 ),
                 CAKE_BOARD,
             )
@@ -512,9 +519,9 @@ class ProceduralGlbBuilder:
                 max(dimensions.width_m, depth) * 0.56,
                 board_height,
                 ProceduralGlbBuilder._mix(
-                    palette[-1], (0.84, 0.72, 0.46), 0.52
+                    board_color, (0.84, 0.72, 0.46), 0.52
                 ),
-                segments=32,
+                segments=48,
                 material=CAKE_BOARD,
             )
 
@@ -535,8 +542,12 @@ class ProceduralGlbBuilder:
                 current_y + tier_height / 2,
                 base[2],
             )
+            # A small alternating tint keeps stacked tiers readable without
+            # replacing the requested frosting colour.
             tier_color = ProceduralGlbBuilder._mix(
-                palette[-1], palette[0], 0.12 * tier
+                base_frosting_color,
+                secondary_color,
+                0.055 if tier % 2 else 0.0,
             )
             if cake.shape.value in {"square", "rectangle"}:
                 mesh.add_box(
@@ -556,20 +567,57 @@ class ProceduralGlbBuilder:
                     radius,
                     tier_height * 0.94,
                     tier_color,
-                    segments=32,
+                    segments=48,
                     material=frosting,
                 )
                 piping_radius = max(
-                    0.003,
+                    0.0035,
                     dimensions.width_m * profile.piping_radius_fraction,
+                )
+                piping_color = ProceduralGlbBuilder._mix(
+                    tier_color, secondary_color, 0.22
                 )
                 mesh.add_torus(
                     (center[0], current_y + tier_height * 0.08, center[2]),
                     max(0.01, radius - piping_radius * 0.45),
                     piping_radius,
-                    ProceduralGlbBuilder._mix(tier_color, palette[0], 0.18),
+                    piping_color,
+                    major_segments=40,
+                    tube_segments=8,
                     material=frosting,
                 )
+                # A fine upper frosting lip removes the hard cylinder edge and
+                # gives each tier a hand-finished silhouette.
+                mesh.add_torus(
+                    (center[0], current_y + tier_height * 0.91, center[2]),
+                    max(0.01, radius - piping_radius * 0.35),
+                    piping_radius * 0.72,
+                    ProceduralGlbBuilder._mix(tier_color, (1.0, 1.0, 1.0), 0.08),
+                    major_segments=40,
+                    tube_segments=8,
+                    material=frosting,
+                )
+                # Small deterministic frosting beads add readable craft detail
+                # while remaining inexpensive enough for the mobile GLB.
+                if tier == cake.tiers - 1:
+                    bead_count = 12
+                    bead_radius = piping_radius * 1.18
+                    bead_ring = max(0.01, radius - bead_radius * 1.25)
+                    bead_y = current_y + tier_height * 0.94
+                    for bead in range(bead_count):
+                        angle = 2 * math.pi * bead / bead_count
+                        mesh.add_sphere(
+                            (
+                                center[0] + math.cos(angle) * bead_ring,
+                                bead_y,
+                                center[2] + math.sin(angle) * bead_ring,
+                            ),
+                            bead_radius,
+                            piping_color,
+                            latitude_segments=6,
+                            longitude_segments=8,
+                            material=frosting,
+                        )
             current_y += tier_height + tier_gap
 
         topper_y = base[1] + dimensions.height_m
@@ -596,38 +644,64 @@ class ProceduralGlbBuilder:
         else:
             accent_colors = (
                 ProceduralGlbBuilder._mix(
-                    palette[0], (1.0, 0.91, 0.74), 0.48
+                    palette[0], (1.0, 0.88, 0.9), 0.34
                 ),
-                (0.92, 0.45, 0.12),
                 ProceduralGlbBuilder._mix(
-                    palette[-1], (1.0, 0.96, 0.88), 0.65
+                    secondary_color, (1.0, 0.96, 0.91), 0.56
                 ),
-                (0.42, 0.62, 0.2),
                 ProceduralGlbBuilder._mix(
-                    palette[0], (1.0, 0.82, 0.72), 0.35
+                    board_color, (0.78, 0.62, 0.34), 0.42
+                ),
+                (0.48, 0.58, 0.34),
+                ProceduralGlbBuilder._mix(
+                    palette[0], (0.94, 0.72, 0.76), 0.38
                 ),
             )
         offsets = (
-            (-1.3, 0.0, 0.15),
-            (-0.45, 0.15, -0.55),
-            (0.35, 0.26, 0.05),
-            (1.15, 0.0, -0.25),
-            (0.2, 0.02, 0.85),
+            (-1.55, 0.0, 0.10),
+            (-0.85, 0.20, -0.72),
+            (-0.15, 0.36, 0.02),
+            (0.62, 0.19, -0.48),
+            (1.38, 0.0, 0.12),
+            (-0.62, 0.02, 0.92),
+            (0.28, 0.18, 0.82),
+            (0.94, 0.0, 0.62),
         )
-        for color, (x_offset, y_offset, z_offset) in zip(
-            accent_colors,
-            offsets,
-            strict=True,
+        topper_colors = tuple(
+            accent_colors[index % len(accent_colors)]
+            for index in range(len(offsets))
+        )
+        for index, (color, (x_offset, y_offset, z_offset)) in enumerate(
+            zip(topper_colors, offsets, strict=True)
         ):
+            radius = cluster_radius * (1.12 if index in {1, 3, 6} else 0.9)
             mesh.add_sphere(
                 (
                     base[0] + x_offset * cluster_radius,
-                    topper_y + cluster_radius * (0.65 + y_offset),
+                    topper_y + cluster_radius * (0.62 + y_offset),
                     base[2] + z_offset * cluster_radius,
                 ),
-                cluster_radius,
+                radius,
                 color,
+                latitude_segments=10,
+                longitude_segments=16,
                 material=frosting,
+            )
+        # Two small foliage accents broaden the arrangement and stop the
+        # topper reading as an isolated row of balls.
+        leaf_color = (0.24, 0.39, 0.13)
+        for x_offset, z_offset in ((-1.55, -0.55), (1.42, -0.42)):
+            mesh.add_sphere(
+                (
+                    base[0] + x_offset * cluster_radius,
+                    topper_y + cluster_radius * 0.55,
+                    base[2] + z_offset * cluster_radius,
+                ),
+                cluster_radius * 0.7,
+                leaf_color,
+                latitude_segments=8,
+                longitude_segments=12,
+                material=FOLIAGE,
             )
 
     @staticmethod

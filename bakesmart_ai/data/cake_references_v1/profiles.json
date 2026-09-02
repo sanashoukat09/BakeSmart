@@ -8,8 +8,8 @@
       "measured_height_to_width": 0.4,
       "tier_taper": 0.84,
       "frosting_roughness": 0.78,
-      "piping_radius_fraction": 0.018,
-      "topper_cluster_radius_fraction": 0.075,
+      "piping_radius_fraction": 0.022,
+      "topper_cluster_radius_fraction": 0.12,
       "accent_style": "palette-floral"
     },
     {
@@ -25,8 +25,8 @@
       "measured_height_to_width": 0.432846,
       "tier_taper": 0.85,
       "frosting_roughness": 0.72,
-      "piping_radius_fraction": 0.014,
-      "topper_cluster_radius_fraction": 0.07,
+      "piping_radius_fraction": 0.019,
+      "topper_cluster_radius_fraction": 0.115,
       "accent_style": "cocoa-and-nut"
     },
     {
@@ -44,8 +44,8 @@
       "measured_height_to_width": 0.324232,
       "tier_taper": 0.86,
       "frosting_roughness": 0.7,
-      "piping_radius_fraction": 0.014,
-      "topper_cluster_radius_fraction": 0.09,
+      "piping_radius_fraction": 0.019,
+      "topper_cluster_radius_fraction": 0.13,
       "accent_style": "berry-and-chocolate"
     }
   ],

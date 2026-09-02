@@ -50,3 +50,10 @@ def test_reference_profile_selection_is_deterministic_and_style_aware():
     assert chocolate.source_id == "ph-carrot-cake"
     assert classic.source_id == "bakesmart-authored-neutral"
     assert unknown == cake_reference_library.default
+
+
+def test_configurable_profiles_use_readable_piping_and_toppers():
+    """Prevent the tiny decoration regression found during visual QA."""
+    for profile in cake_reference_library.profiles:
+        assert profile.piping_radius_fraction >= 0.019
+        assert profile.topper_cluster_radius_fraction >= 0.11

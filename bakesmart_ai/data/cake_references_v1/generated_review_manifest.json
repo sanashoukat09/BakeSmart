@@ -8,7 +8,7 @@
     {
       "catalog_id": "classic-elegant-cake-01",
       "diagnostic_visual_decision": "pass_reference_integration",
-      "diagnostic_visual_finding": "Three clear tiers, stable cake board, restrained neutral finish, and a distinct small topper cluster.",
+      "diagnostic_visual_finding": "Three clear ivory tiers, softened frosting edges, stable cake board, piped upper detail, and a proportionate floral topper cluster.",
       "dimensions_m": [
         0.3,
         0.3,
@@ -18,14 +18,14 @@
       "render_path": "generated_review_renders/neutral-classic.png",
       "selected_reference_source_id": "bakesmart-authored-neutral",
       "tiers": 3,
-      "triangle_count": 2336,
+      "triangle_count": 8704,
       "variant_id": "neutral-classic",
-      "vertex_count": 2390
+      "vertex_count": 6620
     },
     {
       "catalog_id": "dark-moody-chocolate-cake",
       "diagnostic_visual_decision": "pass_reference_integration",
-      "diagnostic_visual_finding": "Two clear tiers with warm cocoa frosting, contrasting piping, and a compact cocoa-and-nut topper cluster.",
+      "diagnostic_visual_finding": "Two clear cocoa tiers with warm frosting, contrasting double-edge piping, and a proportionate cocoa-and-nut topper cluster.",
       "dimensions_m": [
         0.3,
         0.3,
@@ -35,14 +35,14 @@
       "render_path": "generated_review_renders/cocoa-nut.png",
       "selected_reference_source_id": "ph-carrot-cake",
       "tiers": 2,
-      "triangle_count": 1920,
+      "triangle_count": 7232,
       "variant_id": "cocoa-nut",
-      "vertex_count": 1895
+      "vertex_count": 5402
     },
     {
       "catalog_id": "rustic-boho-fruit-cake",
       "diagnostic_visual_decision": "pass_reference_integration",
-      "diagnostic_visual_finding": "Two clear tiers with an earthy rustic finish, contrasting board and piping, and a readable berry-and-chocolate cluster.",
+      "diagnostic_visual_finding": "Two clear cream tiers with warm rustic accents, double-edge piping, and a readable berry-and-chocolate topper arrangement.",
       "dimensions_m": [
         0.3,
         0.3,
@@ -52,9 +52,9 @@
       "render_path": "generated_review_renders/rustic-berry.png",
       "selected_reference_source_id": "ph-strawberry-chocolate-cake",
       "tiers": 2,
-      "triangle_count": 1920,
+      "triangle_count": 7232,
       "variant_id": "rustic-berry",
-      "vertex_count": 1895
+      "vertex_count": 5402
     }
   ]
 }
