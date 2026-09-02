@@ -1,0 +1,22 @@
+{
+  "ai_generated": false,
+  "downloaded_at": "2026-09-02T05:03:57.928720+00:00",
+  "files": [
+    {
+      "md5": "97063df1b26b5aa551508d233b10656b",
+      "provider_md5": "97063df1b26b5aa551508d233b10656b",
+      "relative_path": "lythwood_terrace_1k.hdr",
+      "size_bytes": 1794290,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/lythwood_terrace_1k.hdr"
+    }
+  ],
+  "license": "CC0-1.0",
+  "license_verified": true,
+  "provider": "Poly Haven",
+  "redistribution_allowed": true,
+  "schema_version": 1,
+  "source_id": "ph-lythwood-terrace",
+  "source_page": "https://polyhaven.com/a/lythwood_terrace",
+  "title": "Lythwood Terrace",
+  "total_size_bytes": 1794290
+}

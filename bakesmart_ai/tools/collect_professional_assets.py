@@ -11,6 +11,7 @@ import csv
 import hashlib
 import json
 import os
+from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import unquote, urlparse
@@ -20,6 +21,7 @@ from urllib.request import Request, urlopen
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_DIR = PACKAGE_ROOT / "data" / "professional_asset_sources_v1"
 DEFAULT_OUTPUT = PACKAGE_ROOT / "assets" / "third_party_cc0" / "raw"
+DEFAULT_RECEIPT_DIR = REGISTRY_DIR / "download_receipts"
 USER_AGENT = "BakeSmart-Professional-Asset-Collector/1.2"
 
 
@@ -178,6 +180,70 @@ def _polyhaven_model_plan(
     return plan
 
 
+def _polyhaven_texture_file(
+    files: dict[str, Any],
+    map_names: tuple[str, ...],
+) -> dict[str, Any] | None:
+    """Return the provider's 1K JPG record for the first matching map name."""
+
+    by_lower_name = {str(key).lower(): value for key, value in files.items()}
+    for map_name in map_names:
+        map_tree = by_lower_name.get(map_name.lower())
+        if not isinstance(map_tree, dict):
+            continue
+        one_k = map_tree.get("1k")
+        if not isinstance(one_k, dict):
+            continue
+        candidate = one_k.get("jpg")
+        if isinstance(candidate, dict) and isinstance(candidate.get("url"), str):
+            return candidate
+    return None
+
+
+def _polyhaven_pbr_plan(
+    files: dict[str, Any],
+    source_id: str,
+) -> list[tuple[Path, str, int | None, str | None]]:
+    """Select a complete WebGL-ready 1K PBR set, never a single map."""
+
+    required_maps = (
+        ("base color", ("Diffuse", "diffuse")),
+        ("OpenGL normal", ("nor_gl",)),
+        ("packed ARM", ("arm",)),
+    )
+    optional_maps = (
+        ("anisotropy strength", ("anisotropy_strength",)),
+        ("anisotropy rotation", ("anisotropy_rotation",)),
+    )
+    selected: list[dict[str, Any]] = []
+    missing: list[str] = []
+    for label, names in required_maps:
+        candidate = _polyhaven_texture_file(files, names)
+        if candidate is None:
+            missing.append(label)
+        else:
+            selected.append(candidate)
+    if missing:
+        raise RuntimeError(
+            f"Poly Haven material {source_id} is missing required 1K JPG maps: "
+            + ", ".join(missing)
+        )
+    for _label, names in optional_maps:
+        candidate = _polyhaven_texture_file(files, names)
+        if candidate is not None:
+            selected.append(candidate)
+
+    return [
+        (
+            Path(_filename_from_url(str(info["url"]), f"{source_id}.jpg")),
+            str(info["url"]),
+            int(info.get("size") or 0) or None,
+            info.get("md5"),
+        )
+        for info in selected
+    ]
+
+
 def _plan_polyhaven(
     row: dict[str, str],
 ) -> list[tuple[Path, str, int | None, str | None]]:
@@ -186,6 +252,8 @@ def _plan_polyhaven(
 
     if row["asset_type"] in {"model", "model_pack"}:
         return _polyhaven_model_plan(files, row["source_id"])
+    if row["asset_type"] == "pbr_material":
+        return _polyhaven_pbr_plan(files, row["source_id"])
 
     candidates = _flatten_files(files)
     if not candidates:
@@ -209,8 +277,26 @@ def _download(
     url: str,
     destination: Path,
     expected_md5: str | None,
-) -> tuple[int, str]:
+) -> tuple[int, str, bool]:
     destination.parent.mkdir(parents=True, exist_ok=True)
+    if destination.is_file():
+        existing_md5 = hashlib.md5()
+        size = 0
+        with destination.open("rb") as existing:
+            while True:
+                chunk = existing.read(1024 * 1024)
+                if not chunk:
+                    break
+                existing_md5.update(chunk)
+                size += len(chunk)
+        digest = existing_md5.hexdigest()
+        if expected_md5 and digest.lower() != expected_md5.lower():
+            raise RuntimeError(
+                f"existing file checksum mismatch for {destination.name}: "
+                f"expected {expected_md5}, got {digest}"
+            )
+        return size, digest, False
+
     request = Request(url, headers={"User-Agent": USER_AGENT})
     md5 = hashlib.md5()
     size = 0
@@ -231,7 +317,47 @@ def _download(
             f"expected {expected_md5}, got {digest}"
         )
     os.replace(temporary, destination)
-    return size, digest
+    return size, digest, True
+
+
+def _verify_receipts(receipt_dir: Path, output_dir: Path) -> int:
+    receipt_paths = sorted(receipt_dir.glob("*.json"))
+    if not receipt_paths:
+        print(f"No download receipts found in {receipt_dir}")
+        return 1
+
+    verified_files = 0
+    verified_bytes = 0
+    for receipt_path in receipt_paths:
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        source_id = str(receipt["source_id"])
+        for file_record in receipt["files"]:
+            relative_path = _safe_relative_path(str(file_record["relative_path"]))
+            asset_path = output_dir / source_id / relative_path
+            if not asset_path.is_file():
+                raise RuntimeError(f"Receipt file is missing: {asset_path}")
+            size = asset_path.stat().st_size
+            expected_size = int(file_record["size_bytes"])
+            if size != expected_size:
+                raise RuntimeError(
+                    f"Receipt size mismatch for {asset_path}: "
+                    f"expected {expected_size}, got {size}"
+                )
+            digest = hashlib.md5(asset_path.read_bytes()).hexdigest()
+            expected_digest = str(file_record["md5"])
+            if digest.lower() != expected_digest.lower():
+                raise RuntimeError(
+                    f"Receipt checksum mismatch for {asset_path}: "
+                    f"expected {expected_digest}, got {digest}"
+                )
+            verified_files += 1
+            verified_bytes += size
+        print(f"Verified receipt: {source_id}")
+    print(
+        f"PASS: {len(receipt_paths)} receipts, {verified_files} files, "
+        f"{verified_bytes} bytes"
+    )
+    return 0
 
 
 def main() -> int:
@@ -243,11 +369,24 @@ def main() -> int:
         action="store_true",
         help="Actually download an automatically supported source.",
     )
+    parser.add_argument(
+        "--verify-receipts",
+        action="store_true",
+        help="Verify every tracked receipt against the local raw workspace.",
+    )
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument(
+        "--receipt-dir",
+        type=Path,
+        default=DEFAULT_RECEIPT_DIR,
+        help="Directory for tracked checksum and provenance receipts.",
+    )
     args = parser.parse_args()
 
     rows = _rows()
     approved = [row for row in rows if _approved(row)]
+    if args.verify_receipts:
+        return _verify_receipts(args.receipt_dir, args.output)
     if args.list or not args.source_id:
         for row in approved:
             print(
@@ -293,12 +432,44 @@ def main() -> int:
         return 0
 
     total = 0
+    downloaded_files: list[dict[str, Any]] = []
     for relative_path, url, _expected_size, expected_md5 in plan:
         destination = source_output / relative_path
-        size, digest = _download(url, destination, expected_md5)
+        size, digest, newly_downloaded = _download(url, destination, expected_md5)
         total += size
-        print(f"Downloaded {size} bytes -> {destination}")
+        downloaded_files.append(
+            {
+                "relative_path": relative_path.as_posix(),
+                "source_url": url,
+                "size_bytes": size,
+                "md5": digest,
+                "provider_md5": expected_md5,
+            }
+        )
+        action = "Downloaded" if newly_downloaded else "Verified existing"
+        print(f"{action} {size} bytes -> {destination}")
         print(f"MD5 {digest}")
+    receipt = {
+        "schema_version": 1,
+        "source_id": selected["source_id"],
+        "title": selected["title"],
+        "provider": selected["provider"],
+        "source_page": selected["source_url"],
+        "license": selected["license"],
+        "license_verified": selected["license_verified"] == "true",
+        "redistribution_allowed": selected["redistribution_allowed"] == "true",
+        "ai_generated": selected["ai_generated"] == "true",
+        "downloaded_at": datetime.now(timezone.utc).isoformat(),
+        "files": downloaded_files,
+        "total_size_bytes": total,
+    }
+    args.receipt_dir.mkdir(parents=True, exist_ok=True)
+    receipt_path = args.receipt_dir / f'{selected["source_id"]}.json'
+    receipt_path.write_text(
+        json.dumps(receipt, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    print(f"Receipt: {receipt_path}")
     print(f"Downloaded source bundle: {len(plan)} files, {total} bytes total")
     return 0
 

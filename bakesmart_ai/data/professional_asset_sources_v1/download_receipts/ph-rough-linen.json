@@ -1,0 +1,50 @@
+{
+  "ai_generated": false,
+  "downloaded_at": "2026-09-02T05:02:05.435714+00:00",
+  "files": [
+    {
+      "md5": "663db789fb075462b685c1f740e58930",
+      "provider_md5": "663db789fb075462b685c1f740e58930",
+      "relative_path": "rough_linen_diff_1k.jpg",
+      "size_bytes": 835801,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rough_linen/rough_linen_diff_1k.jpg"
+    },
+    {
+      "md5": "3350269a2e9c472aa406bd3cc1eaf2c8",
+      "provider_md5": "3350269a2e9c472aa406bd3cc1eaf2c8",
+      "relative_path": "rough_linen_nor_gl_1k.jpg",
+      "size_bytes": 916843,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rough_linen/rough_linen_nor_gl_1k.jpg"
+    },
+    {
+      "md5": "ffe777973056d79d6b2a1324e8451295",
+      "provider_md5": "ffe777973056d79d6b2a1324e8451295",
+      "relative_path": "rough_linen_arm_1k.jpg",
+      "size_bytes": 1191393,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rough_linen/rough_linen_arm_1k.jpg"
+    },
+    {
+      "md5": "dc4df9fed4dae541a009d4c67421e7c9",
+      "provider_md5": "dc4df9fed4dae541a009d4c67421e7c9",
+      "relative_path": "rough_linen_anisotropy_strength_1k.jpg",
+      "size_bytes": 1103202,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rough_linen/rough_linen_anisotropy_strength_1k.jpg"
+    },
+    {
+      "md5": "995d0124204f9fa1547a89a6db5335bc",
+      "provider_md5": "995d0124204f9fa1547a89a6db5335bc",
+      "relative_path": "rough_linen_anisotropy_rotation_1k.jpg",
+      "size_bytes": 1148034,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rough_linen/rough_linen_anisotropy_rotation_1k.jpg"
+    }
+  ],
+  "license": "CC0-1.0",
+  "license_verified": true,
+  "provider": "Poly Haven",
+  "redistribution_allowed": true,
+  "schema_version": 1,
+  "source_id": "ph-rough-linen",
+  "source_page": "https://polyhaven.com/a/rough_linen",
+  "title": "Rough Linen",
+  "total_size_bytes": 5195273
+}

@@ -1,0 +1,172 @@
+{
+  "review_version": "professional-source-acquisition-review-v1",
+  "reviewed_at": "2026-09-02",
+  "production_ready": false,
+  "sources": [
+    {
+      "source_id": "ph-carrot-cake",
+      "acquisition_status": "downloaded_checksum_verified",
+      "intended_use": "realistic one-tier cake proportion and material reference",
+      "width_m": 0.225421,
+      "depth_m": 0.225384,
+      "height_m": 0.097573,
+      "triangle_count": 13790,
+      "texture_set": "1K diffuse OpenGL-normal and ARM",
+      "suitability": "processing_required",
+      "required_next_actions": [
+        "package the external glTF resources into GLB",
+        "confirm surface-center anchor and orientation visually",
+        "create a lower mobile LOD",
+        "review frosting and crumb appearance in the BakeSmart renderer"
+      ]
+    },
+    {
+      "source_id": "ph-strawberry-chocolate-cake",
+      "acquisition_status": "downloaded_checksum_verified",
+      "intended_use": "realistic rustic cake proportion material and topping reference",
+      "width_m": 0.244261,
+      "depth_m": 0.240268,
+      "height_m": 0.079197,
+      "triangle_count": 27054,
+      "texture_set": "1K diffuse OpenGL-normal and ARM",
+      "suitability": "processing_required",
+      "required_next_actions": [
+        "package the external glTF resources into GLB",
+        "confirm surface-center anchor and orientation visually",
+        "create medium and mobile LODs",
+        "keep this fixed rustic design out of configurable cake recommendations"
+      ]
+    },
+    {
+      "source_id": "ph-crepe-satin",
+      "acquisition_status": "downloaded_checksum_verified",
+      "intended_use": "wedding and Mehndi drapes runners and cushion materials",
+      "texture_set": "1K diffuse OpenGL-normal ARM anisotropy-strength and anisotropy-rotation",
+      "suitability": "processing_required",
+      "required_next_actions": [
+        "author a BakeSmart fabric material profile",
+        "test anisotropy support and fallback behavior in WebGL",
+        "apply only to locally modeled true-scale fabric geometry",
+        "visually review tiling color and highlights"
+      ]
+    },
+    {
+      "source_id": "ph-symmetrical-garden",
+      "acquisition_status": "downloaded_checksum_verified",
+      "intended_use": "formal outdoor event environment lighting",
+      "resolution": "1K HDR",
+      "suitability": "processing_required",
+      "required_next_actions": [
+        "create renderer-specific environment and prefiltered derivatives",
+        "verify exposure and color management",
+        "use as lighting context and never as a claimed customer venue",
+        "test download and GPU-memory behavior on mobile"
+      ]
+    },
+    {
+      "source_id": "ph-crepe-georgette",
+      "acquisition_status": "downloaded_checksum_verified",
+      "intended_use": "lightweight sheer drape and swag material",
+      "texture_set": "1K diffuse OpenGL-normal ARM anisotropy-strength and anisotropy-rotation",
+      "suitability": "processing_required",
+      "required_next_actions": [
+        "author a transparent double-sided BakeSmart material profile",
+        "test sorting and fallback behavior in WebGL",
+        "apply only to locally modeled true-scale drape geometry",
+        "visually review tiling transparency and highlights"
+      ]
+    },
+    {
+      "source_id": "ph-rough-linen",
+      "acquisition_status": "downloaded_checksum_verified",
+      "intended_use": "rustic runners backdrops cushions and table textiles",
+      "texture_set": "1K diffuse OpenGL-normal ARM anisotropy-strength and anisotropy-rotation",
+      "suitability": "processing_required",
+      "required_next_actions": [
+        "author a recolorable BakeSmart linen profile",
+        "preserve the provider's physical weave scale",
+        "apply only to locally modeled true-scale fabric geometry",
+        "visually review tiling and mobile filtering"
+      ]
+    },
+    {
+      "source_id": "ph-cotton-jersey",
+      "acquisition_status": "downloaded_checksum_verified",
+      "intended_use": "matte tablecloth cushion and secondary-panel material",
+      "texture_set": "1K diffuse OpenGL-normal ARM anisotropy-strength and anisotropy-rotation",
+      "suitability": "processing_required",
+      "required_next_actions": [
+        "author a soft matte BakeSmart fabric profile",
+        "preserve the provider's physical knit scale",
+        "apply only to locally modeled true-scale fabric geometry",
+        "visually review tiling and color variants"
+      ]
+    },
+    {
+      "source_id": "ph-lythwood-terrace",
+      "acquisition_status": "downloaded_checksum_verified",
+      "intended_use": "soft overcast terrace and outdoor event lighting",
+      "resolution": "1K HDR",
+      "suitability": "processing_required",
+      "required_next_actions": [
+        "create renderer-specific prefiltered derivatives",
+        "verify exposure and color management",
+        "use as lighting context and never as a claimed customer venue",
+        "test mobile GPU-memory behavior"
+      ]
+    },
+    {
+      "source_id": "ph-evening-museum-courtyard",
+      "acquisition_status": "downloaded_checksum_verified",
+      "intended_use": "mixed evening courtyard and restaurant event lighting",
+      "resolution": "1K HDR",
+      "suitability": "processing_required",
+      "required_next_actions": [
+        "create renderer-specific prefiltered derivatives",
+        "test mixed-light exposure and shadow readability",
+        "use as lighting context and never as a claimed customer venue",
+        "test mobile GPU-memory behavior"
+      ]
+    },
+    {
+      "source_id": "ph-floral-tent",
+      "acquisition_status": "downloaded_checksum_verified",
+      "intended_use": "garden canopy wedding Mehndi and birthday lighting",
+      "resolution": "1K HDR",
+      "suitability": "processing_required",
+      "required_next_actions": [
+        "create renderer-specific prefiltered derivatives",
+        "verify exposure and canopy color cast",
+        "use as lighting context and never as a claimed customer venue",
+        "test mobile GPU-memory behavior"
+      ]
+    },
+    {
+      "source_id": "ph-belfast-sunset-puresky",
+      "acquisition_status": "downloaded_checksum_verified",
+      "intended_use": "clean sunset environment lighting without location geometry",
+      "resolution": "1K HDR",
+      "suitability": "processing_required",
+      "required_next_actions": [
+        "create renderer-specific prefiltered derivatives",
+        "verify sunset exposure and white balance",
+        "use as lighting only and never as a claimed customer venue",
+        "test mobile GPU-memory behavior"
+      ]
+    },
+    {
+      "source_id": "ph-rosendal-park-sunset",
+      "acquisition_status": "downloaded_checksum_verified",
+      "intended_use": "warm park and lawn golden-hour lighting",
+      "resolution": "1K HDR",
+      "suitability": "processing_required",
+      "required_next_actions": [
+        "create renderer-specific prefiltered derivatives",
+        "verify exposure and warm color cast",
+        "use as lighting context and never as a claimed customer venue",
+        "test mobile GPU-memory behavior"
+      ]
+    }
+  ],
+  "decision": "All twelve automatically supported Batch 3 sources are safe and technically useful inputs to the production pipeline. None may be marked production_ready until conversion and human visual review are complete."
+}

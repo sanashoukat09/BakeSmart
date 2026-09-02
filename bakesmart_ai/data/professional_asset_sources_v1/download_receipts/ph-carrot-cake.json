@@ -1,0 +1,50 @@
+{
+  "ai_generated": false,
+  "downloaded_at": "2026-09-02T04:53:48.146258+00:00",
+  "files": [
+    {
+      "md5": "043edc5a13142cd57fe84d0ffa2e639d",
+      "provider_md5": "043edc5a13142cd57fe84d0ffa2e639d",
+      "relative_path": "carrot_cake_1k.gltf",
+      "size_bytes": 2682,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/carrot_cake/carrot_cake_1k.gltf"
+    },
+    {
+      "md5": "d9fe95ae571e7cdcc99bd7432411fed0",
+      "provider_md5": "d9fe95ae571e7cdcc99bd7432411fed0",
+      "relative_path": "textures/carrot_cake_nor_gl_1k.jpg",
+      "size_bytes": 1212755,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/carrot_cake/carrot_cake_nor_gl_1k.jpg"
+    },
+    {
+      "md5": "8acc0a0ec2901a981a951d1c5c93cec2",
+      "provider_md5": "8acc0a0ec2901a981a951d1c5c93cec2",
+      "relative_path": "textures/carrot_cake_diff_1k.jpg",
+      "size_bytes": 731484,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/carrot_cake/carrot_cake_diff_1k.jpg"
+    },
+    {
+      "md5": "085b7ba8dc8de57f5e8aadb9ed68dfe5",
+      "provider_md5": "085b7ba8dc8de57f5e8aadb9ed68dfe5",
+      "relative_path": "carrot_cake.bin",
+      "size_bytes": 377492,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/carrot_cake/carrot_cake.bin"
+    },
+    {
+      "md5": "06154f129926d6fbfc0c82408bc0611f",
+      "provider_md5": "06154f129926d6fbfc0c82408bc0611f",
+      "relative_path": "textures/carrot_cake_arm_1k.jpg",
+      "size_bytes": 1038430,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/carrot_cake/carrot_cake_arm_1k.jpg"
+    }
+  ],
+  "license": "CC0-1.0",
+  "license_verified": true,
+  "provider": "Poly Haven",
+  "redistribution_allowed": true,
+  "schema_version": 1,
+  "source_id": "ph-carrot-cake",
+  "source_page": "https://polyhaven.com/a/carrot_cake",
+  "title": "Carrot Cake",
+  "total_size_bytes": 3362843
+}

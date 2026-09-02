@@ -1,0 +1,50 @@
+{
+  "ai_generated": false,
+  "downloaded_at": "2026-09-02T05:00:43.805082+00:00",
+  "files": [
+    {
+      "md5": "1f51a03c412ce47592e3c16e6e2a426b",
+      "provider_md5": "1f51a03c412ce47592e3c16e6e2a426b",
+      "relative_path": "crepe_georgette_diff_1k.jpg",
+      "size_bytes": 474704,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/crepe_georgette/crepe_georgette_diff_1k.jpg"
+    },
+    {
+      "md5": "6d751dcec15aa2c7d4be2a619c0ba64f",
+      "provider_md5": "6d751dcec15aa2c7d4be2a619c0ba64f",
+      "relative_path": "crepe_georgette_nor_gl_1k.jpg",
+      "size_bytes": 585927,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/crepe_georgette/crepe_georgette_nor_gl_1k.jpg"
+    },
+    {
+      "md5": "92f53fd09040d91a9e87234b13cd701f",
+      "provider_md5": "92f53fd09040d91a9e87234b13cd701f",
+      "relative_path": "crepe_georgette_arm_1k.jpg",
+      "size_bytes": 830318,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/crepe_georgette/crepe_georgette_arm_1k.jpg"
+    },
+    {
+      "md5": "bed2a22cdda8f88a6884abe618a4f448",
+      "provider_md5": "bed2a22cdda8f88a6884abe618a4f448",
+      "relative_path": "crepe_georgette_anisotropy_strength_1k.jpg",
+      "size_bytes": 965934,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/crepe_georgette/crepe_georgette_anisotropy_strength_1k.jpg"
+    },
+    {
+      "md5": "5393a7c180757ed266a2e65fb9c53b75",
+      "provider_md5": "5393a7c180757ed266a2e65fb9c53b75",
+      "relative_path": "crepe_georgette_anisotropy_rotation_1k.jpg",
+      "size_bytes": 988244,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/crepe_georgette/crepe_georgette_anisotropy_rotation_1k.jpg"
+    }
+  ],
+  "license": "CC0-1.0",
+  "license_verified": true,
+  "provider": "Poly Haven",
+  "redistribution_allowed": true,
+  "schema_version": 1,
+  "source_id": "ph-crepe-georgette",
+  "source_page": "https://polyhaven.com/a/crepe_georgette",
+  "title": "Crepe Georgette",
+  "total_size_bytes": 3845127
+}

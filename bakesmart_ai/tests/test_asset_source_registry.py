@@ -1,4 +1,5 @@
 import csv
+import json
 from pathlib import Path
 
 
@@ -6,6 +7,13 @@ ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_DIR = ROOT / "data" / "professional_asset_sources_v1"
 REGISTRY = REGISTRY_DIR / "source_manifest.csv"
 EXCLUDED = ROOT / "data" / "professional_asset_sources_v1" / "excluded_candidates.csv"
+RECEIPT_DIR = ROOT / "data" / "professional_asset_sources_v1" / "download_receipts"
+ACQUISITION_REVIEW = (
+    ROOT
+    / "data"
+    / "professional_asset_sources_v1"
+    / "acquisition_review_batch1.json"
+)
 
 
 def _read(path):
@@ -64,3 +72,28 @@ def test_ambiguous_or_ai_sources_stay_out_of_approved_registry():
         row["provider"] == "Quaternius" and row["status"] == "needs_rights_resolution"
         for row in excluded
     )
+
+
+def test_download_receipts_reference_approved_rights_safe_sources():
+    approved = {row["source_id"] for row in _all_approved_sources()}
+    receipts = [
+        json.loads(path.read_text(encoding="utf-8"))
+        for path in sorted(RECEIPT_DIR.glob("*.json"))
+    ]
+
+    assert len(receipts) >= 12
+    assert all(receipt["source_id"] in approved for receipt in receipts)
+    assert all(receipt["license"] == "CC0-1.0" for receipt in receipts)
+    assert all(receipt["license_verified"] is True for receipt in receipts)
+    assert all(receipt["redistribution_allowed"] is True for receipt in receipts)
+    assert all(receipt["ai_generated"] is False for receipt in receipts)
+    assert all(receipt["files"] for receipt in receipts)
+
+
+def test_acquired_sources_are_not_promoted_before_processing_and_visual_review():
+    review = json.loads(ACQUISITION_REVIEW.read_text(encoding="utf-8"))
+
+    assert review["production_ready"] is False
+    assert len(review["sources"]) == 12
+    assert all(source["suitability"] == "processing_required" for source in review["sources"])
+    assert all(source["required_next_actions"] for source in review["sources"])

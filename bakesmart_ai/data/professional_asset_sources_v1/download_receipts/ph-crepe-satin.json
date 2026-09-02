@@ -1,0 +1,50 @@
+{
+  "ai_generated": false,
+  "downloaded_at": "2026-09-02T04:55:15.643658+00:00",
+  "files": [
+    {
+      "md5": "671816ccd82b5b619cd64bcb77cc9bfd",
+      "provider_md5": "671816ccd82b5b619cd64bcb77cc9bfd",
+      "relative_path": "crepe_satin_diff_1k.jpg",
+      "size_bytes": 604348,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/crepe_satin/crepe_satin_diff_1k.jpg"
+    },
+    {
+      "md5": "47b0d77868a6e16f8dcd8b1ebf6c5dff",
+      "provider_md5": "47b0d77868a6e16f8dcd8b1ebf6c5dff",
+      "relative_path": "crepe_satin_nor_gl_1k.jpg",
+      "size_bytes": 696153,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/crepe_satin/crepe_satin_nor_gl_1k.jpg"
+    },
+    {
+      "md5": "24dd6dcd2066040d516d0282f3261d72",
+      "provider_md5": "24dd6dcd2066040d516d0282f3261d72",
+      "relative_path": "crepe_satin_arm_1k.jpg",
+      "size_bytes": 885141,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/crepe_satin/crepe_satin_arm_1k.jpg"
+    },
+    {
+      "md5": "2624215fde0f84ab2472ef5a0cf658ac",
+      "provider_md5": "2624215fde0f84ab2472ef5a0cf658ac",
+      "relative_path": "crepe_satin_anisotropy_strength_1k.jpg",
+      "size_bytes": 849754,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/crepe_satin/crepe_satin_anisotropy_strength_1k.jpg"
+    },
+    {
+      "md5": "bb89b6f4d7395cf4df729e6f5eed8812",
+      "provider_md5": "bb89b6f4d7395cf4df729e6f5eed8812",
+      "relative_path": "crepe_satin_anisotropy_rotation_1k.jpg",
+      "size_bytes": 1032911,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/crepe_satin/crepe_satin_anisotropy_rotation_1k.jpg"
+    }
+  ],
+  "license": "CC0-1.0",
+  "license_verified": true,
+  "provider": "Poly Haven",
+  "redistribution_allowed": true,
+  "schema_version": 1,
+  "source_id": "ph-crepe-satin",
+  "source_page": "https://polyhaven.com/a/crepe_satin",
+  "title": "Crepe Satin",
+  "total_size_bytes": 4068307
+}

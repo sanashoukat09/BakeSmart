@@ -1,0 +1,22 @@
+{
+  "ai_generated": false,
+  "downloaded_at": "2026-09-02T05:04:52.610600+00:00",
+  "files": [
+    {
+      "md5": "1a632f50f9389b79ba9313dfc85c1a29",
+      "provider_md5": "1a632f50f9389b79ba9313dfc85c1a29",
+      "relative_path": "floral_tent_1k.hdr",
+      "size_bytes": 1762476,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/floral_tent_1k.hdr"
+    }
+  ],
+  "license": "CC0-1.0",
+  "license_verified": true,
+  "provider": "Poly Haven",
+  "redistribution_allowed": true,
+  "schema_version": 1,
+  "source_id": "ph-floral-tent",
+  "source_page": "https://polyhaven.com/a/floral_tent",
+  "title": "Floral Tent",
+  "total_size_bytes": 1762476
+}

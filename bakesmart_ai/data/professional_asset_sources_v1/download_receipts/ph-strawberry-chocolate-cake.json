@@ -1,0 +1,50 @@
+{
+  "ai_generated": false,
+  "downloaded_at": "2026-09-02T04:53:32.931502+00:00",
+  "files": [
+    {
+      "md5": "060570af2cd543750b34d5a520dcc695",
+      "provider_md5": "060570af2cd543750b34d5a520dcc695",
+      "relative_path": "strawberry_chocolate_cake_1k.gltf",
+      "size_bytes": 2933,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/strawberry_chocolate_cake/strawberry_chocolate_cake_1k.gltf"
+    },
+    {
+      "md5": "359a461cc65d23755b389bde0ad1a36d",
+      "provider_md5": "359a461cc65d23755b389bde0ad1a36d",
+      "relative_path": "textures/strawberry_chocolate_cake_arm_1k.jpg",
+      "size_bytes": 704974,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/strawberry_chocolate_cake/strawberry_chocolate_cake_arm_1k.jpg"
+    },
+    {
+      "md5": "4d0586780a0c750d3be11676476faf11",
+      "provider_md5": "4d0586780a0c750d3be11676476faf11",
+      "relative_path": "strawberry_chocolate_cake.bin",
+      "size_bytes": 661780,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/strawberry_chocolate_cake/strawberry_chocolate_cake.bin"
+    },
+    {
+      "md5": "a652617eedc0c3c16b938c37f78efb96",
+      "provider_md5": "a652617eedc0c3c16b938c37f78efb96",
+      "relative_path": "textures/strawberry_chocolate_cake_diff_1k.jpg",
+      "size_bytes": 882631,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/strawberry_chocolate_cake/strawberry_chocolate_cake_diff_1k.jpg"
+    },
+    {
+      "md5": "69cd18f0a333af320c6d90a0c0387016",
+      "provider_md5": "69cd18f0a333af320c6d90a0c0387016",
+      "relative_path": "textures/strawberry_chocolate_cake_nor_gl_1k.jpg",
+      "size_bytes": 1079301,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/strawberry_chocolate_cake/strawberry_chocolate_cake_nor_gl_1k.jpg"
+    }
+  ],
+  "license": "CC0-1.0",
+  "license_verified": true,
+  "provider": "Poly Haven",
+  "redistribution_allowed": true,
+  "schema_version": 1,
+  "source_id": "ph-strawberry-chocolate-cake",
+  "source_page": "https://polyhaven.com/a/strawberry_chocolate_cake",
+  "title": "Strawberry Chocolate Cake",
+  "total_size_bytes": 3331619
+}

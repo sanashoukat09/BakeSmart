@@ -1,0 +1,50 @@
+{
+  "ai_generated": false,
+  "downloaded_at": "2026-09-02T05:03:28.494245+00:00",
+  "files": [
+    {
+      "md5": "d2f4493fdd48634b50d40f810ce9deb7",
+      "provider_md5": "d2f4493fdd48634b50d40f810ce9deb7",
+      "relative_path": "cotton_jersey_diff_1k.jpg",
+      "size_bytes": 581360,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/cotton_jersey/cotton_jersey_diff_1k.jpg"
+    },
+    {
+      "md5": "2dcc9dda3b726477f607c808e52f1833",
+      "provider_md5": "2dcc9dda3b726477f607c808e52f1833",
+      "relative_path": "cotton_jersey_nor_gl_1k.jpg",
+      "size_bytes": 678670,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/cotton_jersey/cotton_jersey_nor_gl_1k.jpg"
+    },
+    {
+      "md5": "f568748c335892e00b767565a3d5b6ae",
+      "provider_md5": "f568748c335892e00b767565a3d5b6ae",
+      "relative_path": "cotton_jersey_arm_1k.jpg",
+      "size_bytes": 976674,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/cotton_jersey/cotton_jersey_arm_1k.jpg"
+    },
+    {
+      "md5": "97682e00051c2622b832b07c6ff31fe5",
+      "provider_md5": "97682e00051c2622b832b07c6ff31fe5",
+      "relative_path": "cotton_jersey_anisotropy_strength_1k.jpg",
+      "size_bytes": 1036375,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/cotton_jersey/cotton_jersey_anisotropy_strength_1k.jpg"
+    },
+    {
+      "md5": "a5ad6d60bda0bfc28650b718f53bdad1",
+      "provider_md5": "a5ad6d60bda0bfc28650b718f53bdad1",
+      "relative_path": "cotton_jersey_anisotropy_rotation_1k.jpg",
+      "size_bytes": 981121,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/cotton_jersey/cotton_jersey_anisotropy_rotation_1k.jpg"
+    }
+  ],
+  "license": "CC0-1.0",
+  "license_verified": true,
+  "provider": "Poly Haven",
+  "redistribution_allowed": true,
+  "schema_version": 1,
+  "source_id": "ph-cotton-jersey",
+  "source_page": "https://polyhaven.com/a/cotton_jersey",
+  "title": "Cotton Jersey",
+  "total_size_bytes": 4254200
+}

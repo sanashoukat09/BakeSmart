@@ -1,0 +1,22 @@
+{
+  "ai_generated": false,
+  "downloaded_at": "2026-09-02T04:56:06.582052+00:00",
+  "files": [
+    {
+      "md5": "f01fe5c189bccd19207378a8beb73c64",
+      "provider_md5": "f01fe5c189bccd19207378a8beb73c64",
+      "relative_path": "symmetrical_garden_1k.hdr",
+      "size_bytes": 1651349,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/symmetrical_garden_1k.hdr"
+    }
+  ],
+  "license": "CC0-1.0",
+  "license_verified": true,
+  "provider": "Poly Haven",
+  "redistribution_allowed": true,
+  "schema_version": 1,
+  "source_id": "ph-symmetrical-garden",
+  "source_page": "https://polyhaven.com/a/symmetrical_garden",
+  "title": "Symmetrical Garden",
+  "total_size_bytes": 1651349
+}

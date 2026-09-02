@@ -39,6 +39,8 @@ Batch 3 (`source_manifest_batch3.csv`) adds 13 sources verified from official pr
 - two realistic Poly Haven cake models as material, proportion and mobile-optimization references;
 - the Kenney CC0 Food Kit as a cake/dessert blocking and mobile-LOD source.
 
+The first acquisition slice downloaded and checksum-verified all 12 automatically supported Poly Haven sources from Batch 3: two cakes, four complete five-map fabric sets and six 1K outdoor HDRIs. This produced 36 verified source files totaling 33,562,512 bytes. Exact file receipts live in `download_receipts/`; `acquisition_review_batch1.json` records scale, triangle counts, intended use and the remaining production gates. The Kenney Food Kit remains a manual package-review item because the provider does not expose a stable file-metadata contract to this helper. These sources are useful inputs, but none is labeled `production_ready` before conversion and visual QA.
+
 The current Quaternius site-wide QAL v1.0 conflicts with older pack pages that still display CC0 and prohibits standalone asset redistribution. New direct Quaternius pack downloads therefore stay in `excluded_candidates.csv` as `needs_rights_resolution`. Existing Poly Pizza records remain governed by the explicit per-asset license displayed by that provider and still require a saved provenance record at download time.
 
 GitHub repository search did not reveal an event-specific model library with sufficiently clear per-asset CC0 provenance. A repository code license must never be assumed to license bundled 3D artwork.
@@ -61,9 +63,10 @@ The local helper is:
 python tools/collect_professional_assets.py --list
 python tools/collect_professional_assets.py --source-id ph-ceramic-vase-01
 python tools/collect_professional_assets.py --source-id ph-ceramic-vase-01 --download
+python tools/collect_professional_assets.py --verify-receipts
 ```
 
-The helper reads every `source_manifest*.csv` file, checks for duplicate IDs, and automatically plans/downloads Poly Haven sources using ordinary file retrieval. OpenGameArt, Poly Pizza and Kenney records remain manual-download queue items because their attachment/package URLs are not used as stable metadata contracts by this helper.
+The helper reads every `source_manifest*.csv` file, checks for duplicate IDs, and automatically plans/downloads Poly Haven sources using ordinary file retrieval. It selects complete 1K WebGL PBR sets instead of isolated texture maps, reuses an existing file only after verifying its provider checksum, and writes tracked provenance/checksum receipts to `download_receipts/`. OpenGameArt, Poly Pizza and Kenney records remain manual-download queue items because their attachment/package URLs are not used as stable metadata contracts by this helper.
 
 The Poly Haven live API is used only by this offline collection helper, not by BakeSmart's runtime AI or recommendation pipeline. The collected assets themselves are CC0. Respect the provider's current API terms and User-Agent requirements when running the helper.
 

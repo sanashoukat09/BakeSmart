@@ -1,0 +1,22 @@
+{
+  "ai_generated": false,
+  "downloaded_at": "2026-09-02T05:05:47.303547+00:00",
+  "files": [
+    {
+      "md5": "b2492087e3476bf89997189632b86f57",
+      "provider_md5": "b2492087e3476bf89997189632b86f57",
+      "relative_path": "rosendal_park_sunset_1k.hdr",
+      "size_bytes": 1616956,
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/rosendal_park_sunset_1k.hdr"
+    }
+  ],
+  "license": "CC0-1.0",
+  "license_verified": true,
+  "provider": "Poly Haven",
+  "redistribution_allowed": true,
+  "schema_version": 1,
+  "source_id": "ph-rosendal-park-sunset",
+  "source_page": "https://polyhaven.com/a/rosendal_park_sunset",
+  "title": "Rosendal Park Sunset",
+  "total_size_bytes": 1616956
+}
