@@ -15,6 +15,10 @@ from app.schemas.design import (
     ObjectPlacement,
     SceneSpecification,
 )
+from app.services.cake_references import (
+    CakeReferenceProfile,
+    cake_reference_library,
+)
 
 
 Color = tuple[float, float, float]
@@ -26,6 +30,7 @@ WOOD: Material = (0.0, 0.62, 0.0)
 METAL: Material = (0.92, 0.24, 0.0)
 FOLIAGE: Material = (0.0, 0.72, 0.0)
 FROSTING: Material = (0.0, 0.9, 0.0)
+CAKE_BOARD: Material = (0.08, 0.3, 0.0)
 GLOW: Material = (0.05, 0.28, 1.0)
 
 GLB_MAGIC = b"glTF"
@@ -295,6 +300,46 @@ class MeshAccumulator:
                 second = first + row
                 self.indices.extend((first, second, first + 1, second, second + 1, first + 1))
 
+    def add_torus(
+        self,
+        center: Vector3,
+        radius: float,
+        tube_radius: float,
+        color: Color,
+        major_segments: int = 24,
+        tube_segments: int = 6,
+        material: Material = FROSTING,
+    ) -> None:
+        """Add a horizontal piping ring in the XZ plane."""
+        start = self.vertex_count
+        for major in range(major_segments + 1):
+            angle = 2 * math.pi * major / major_segments
+            radial = (math.cos(angle), 0.0, math.sin(angle))
+            for tube in range(tube_segments + 1):
+                theta = 2 * math.pi * tube / tube_segments
+                normal = (
+                    radial[0] * math.cos(theta),
+                    math.sin(theta),
+                    radial[2] * math.cos(theta),
+                )
+                self._vertex(
+                    tuple(
+                        center[index] + radius * radial[index] + tube_radius * normal[index]
+                        for index in range(3)
+                    ),
+                    normal,
+                    color,
+                    material,
+                )
+        row = tube_segments + 1
+        for major in range(major_segments):
+            for tube in range(tube_segments):
+                first = start + major * row + tube
+                second = first + row
+                self.indices.extend(
+                    (first, second, first + 1, second, second + 1, first + 1)
+                )
+
     def add_drape(
         self, center: Vector3, width: float, height: float, color: Color,
         material: Material = FABRIC,
@@ -330,6 +375,7 @@ class ProceduralGlbBuilder:
         design_id: str,
     ) -> GeneratedGlb:
         palette = self._palette(palette_hex)
+        cake_profile = cake_reference_library.select(cake.catalog_id)
         mesh = MeshAccumulator()
         width = request.space.dimensions.width_m
         depth = request.space.dimensions.depth_m or 2.0
@@ -348,10 +394,16 @@ class ProceduralGlbBuilder:
                 palette,
                 width,
                 depth,
+                cake_profile,
             )
         if mesh.vertex_count > 65_535:
             raise ValueError("procedural scene exceeds the 16-bit viewer vertex limit")
-        return self._encode(mesh, design_id, scene.layers)
+        return self._encode(
+            mesh,
+            design_id,
+            scene.layers,
+            cake_profile=cake_profile,
+        )
 
     def _add_placement(
         self,
@@ -361,6 +413,7 @@ class ProceduralGlbBuilder:
         palette: list[Color],
         room_width: float,
         room_depth: float,
+        cake_profile: CakeReferenceProfile,
     ) -> None:
         dimensions = placement.dimensions or Dimensions(
             width_m=0.3,
@@ -372,7 +425,7 @@ class ProceduralGlbBuilder:
         if placement.role == "cake_table":
             self._add_table(mesh, base, dimensions, palette)
         elif placement.role == "cake":
-            self._add_cake(mesh, base, dimensions, cake, palette)
+            self._add_cake(mesh, base, dimensions, cake, palette, cake_profile)
         elif placement.role == "backdrop":
             self._add_backdrop(mesh, base, dimensions, palette, asset)
         elif placement.role == "lighting":
@@ -439,14 +492,47 @@ class ProceduralGlbBuilder:
         dimensions: Dimensions,
         cake: CakePlacement,
         palette: list[Color],
+        profile: CakeReferenceProfile,
     ) -> None:
         depth = dimensions.depth_m or dimensions.width_m
-        tier_height = dimensions.height_m / cake.tiers
+        frosting = (0.0, profile.frosting_roughness, 0.0)
+        board_height = min(0.025, max(0.012, dimensions.height_m * 0.045))
+        if cake.shape.value in {"square", "rectangle"}:
+            mesh.add_box(
+                (base[0], base[1] + board_height / 2, base[2]),
+                (dimensions.width_m * 1.12, board_height, depth * 1.12),
+                ProceduralGlbBuilder._mix(
+                    palette[-1], (0.84, 0.72, 0.46), 0.52
+                ),
+                CAKE_BOARD,
+            )
+        else:
+            mesh.add_cylinder(
+                (base[0], base[1] + board_height / 2, base[2]),
+                max(dimensions.width_m, depth) * 0.56,
+                board_height,
+                ProceduralGlbBuilder._mix(
+                    palette[-1], (0.84, 0.72, 0.46), 0.52
+                ),
+                segments=32,
+                material=CAKE_BOARD,
+            )
+
+        cake_height = max(0.02, dimensions.height_m - board_height)
+        tier_gap = min(0.008, cake_height * 0.018)
+        tier_height = max(
+            0.01,
+            (cake_height - tier_gap * (cake.tiers - 1)) / cake.tiers,
+        )
+        current_y = base[1] + board_height
         for tier in range(cake.tiers):
-            shrink = 1.0 - tier * 0.16
+            shrink = max(
+                cake_reference_library.minimum_tier_scale,
+                profile.tier_taper**tier,
+            )
             center = (
                 base[0],
-                base[1] + tier * tier_height + tier_height / 2,
+                current_y + tier_height / 2,
                 base[2],
             )
             tier_color = ProceduralGlbBuilder._mix(
@@ -461,23 +547,87 @@ class ProceduralGlbBuilder:
                         depth * shrink,
                     ),
                     tier_color,
-                    FROSTING,
+                    frosting,
                 )
             else:
+                radius = max(0.02, dimensions.width_m * shrink / 2)
                 mesh.add_cylinder(
                     center,
-                    max(0.02, dimensions.width_m * shrink / 2),
+                    radius,
                     tier_height * 0.94,
                     tier_color,
-                    material=FROSTING,
+                    segments=32,
+                    material=frosting,
                 )
-        topper_y = base[1] + dimensions.height_m + 0.025
-        for offset in (-0.07, 0.0, 0.07):
+                piping_radius = max(
+                    0.003,
+                    dimensions.width_m * profile.piping_radius_fraction,
+                )
+                mesh.add_torus(
+                    (center[0], current_y + tier_height * 0.08, center[2]),
+                    max(0.01, radius - piping_radius * 0.45),
+                    piping_radius,
+                    ProceduralGlbBuilder._mix(tier_color, palette[0], 0.18),
+                    material=frosting,
+                )
+            current_y += tier_height + tier_gap
+
+        topper_y = base[1] + dimensions.height_m
+        cluster_radius = max(
+            0.018,
+            min(dimensions.width_m, depth) * profile.topper_cluster_radius_fraction,
+        )
+        if profile.accent_style == "berry-and-chocolate":
+            accent_colors = (
+                (0.62, 0.035, 0.055),
+                (0.3, 0.08, 0.045),
+                (0.78, 0.08, 0.09),
+                (0.35, 0.09, 0.05),
+                (0.7, 0.045, 0.07),
+            )
+        elif profile.accent_style == "cocoa-and-nut":
+            accent_colors = (
+                (0.34, 0.11, 0.045),
+                (0.78, 0.64, 0.42),
+                (0.45, 0.17, 0.065),
+                (0.9, 0.8, 0.61),
+                (0.55, 0.23, 0.08),
+            )
+        else:
+            accent_colors = (
+                ProceduralGlbBuilder._mix(
+                    palette[0], (1.0, 0.91, 0.74), 0.48
+                ),
+                (0.92, 0.45, 0.12),
+                ProceduralGlbBuilder._mix(
+                    palette[-1], (1.0, 0.96, 0.88), 0.65
+                ),
+                (0.42, 0.62, 0.2),
+                ProceduralGlbBuilder._mix(
+                    palette[0], (1.0, 0.82, 0.72), 0.35
+                ),
+            )
+        offsets = (
+            (-1.3, 0.0, 0.15),
+            (-0.45, 0.15, -0.55),
+            (0.35, 0.26, 0.05),
+            (1.15, 0.0, -0.25),
+            (0.2, 0.02, 0.85),
+        )
+        for color, (x_offset, y_offset, z_offset) in zip(
+            accent_colors,
+            offsets,
+            strict=True,
+        ):
             mesh.add_sphere(
-                (base[0] + offset, topper_y + abs(offset) * 0.2, base[2]),
-                max(0.025, min(dimensions.width_m, depth) * 0.08),
-                palette[0],
-                material=FROSTING,
+                (
+                    base[0] + x_offset * cluster_radius,
+                    topper_y + cluster_radius * (0.65 + y_offset),
+                    base[2] + z_offset * cluster_radius,
+                ),
+                cluster_radius,
+                color,
+                material=frosting,
             )
 
     @staticmethod
@@ -675,6 +825,7 @@ class ProceduralGlbBuilder:
         mesh: MeshAccumulator,
         design_id: str,
         layers: Iterable[str],
+        cake_profile: CakeReferenceProfile,
     ) -> GeneratedGlb:
         position_values = tuple(mesh.positions)
         normal_values = tuple(mesh.normals)
@@ -752,6 +903,13 @@ class ProceduralGlbBuilder:
                     "units": "metres",
                     "procedural_concept": True,
                     "catalogue_aware": True,
+                    "cake_reference_profile_id": cake_profile.profile_id,
+                    "cake_reference_source_id": cake_profile.source_id,
+                    "cake_reference_source_ids_available": list(
+                        cake_reference_library.external_source_ids
+                    ),
+                    "cake_reference_usage": "proportion_and_material_cues_only",
+                    "cake_remains_configurable": True,
                     "material_channels": ["metallic", "roughness", "emissive"],
                 },
             },

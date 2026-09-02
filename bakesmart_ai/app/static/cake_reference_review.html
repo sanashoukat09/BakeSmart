@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#3f2430">
+    <title>BakeSmart Cake Reference Review</title>
+    <link rel="stylesheet" href="/static/viewer.css?v=20260902-1">
+    <link rel="stylesheet" href="/static/production_asset_review.css?v=20260902-1">
+  </head>
+  <body>
+    <main class="asset-review-shell">
+      <header class="asset-review-header">
+        <div>
+          <p class="eyebrow">BakeSmart configurable cake calibration • review only</p>
+          <h1>Realistic Cake Reference Review</h1>
+          <p class="subtitle">Compare fixed CC0 reference geometry at true size. These models calibrate proportions and materials; they are not customer-configurable assets.</p>
+        </div>
+        <div class="badges" aria-label="Review safeguards">
+          <span>Checksum verified</span>
+          <span>Embedded 1K PBR textures</span>
+          <span>Metre scale</span>
+          <span>Reference only</span>
+        </div>
+      </header>
+
+      <section class="asset-review-grid">
+        <aside class="asset-browser">
+          <div class="panel-heading"><span>References</span><strong id="queue-summary">Loading…</strong></div>
+          <nav id="asset-list" class="asset-list"></nav>
+        </aside>
+        <section class="asset-review-main">
+          <div class="viewer-stage asset-stage">
+            <canvas id="scene-canvas" aria-label="Interactive realistic cake reference"></canvas>
+            <div class="loading-card" id="loading-card" role="status" aria-live="polite">
+              <span class="spinner" aria-hidden="true"></span><span id="status-text">Loading cake…</span>
+            </div>
+          </div>
+          <div class="asset-view-actions">
+            <span>Drag to orbit • Scroll to zoom • Fixed scale 1.0</span>
+            <button id="reset-view" type="button" disabled>Reset view</button>
+          </div>
+        </section>
+        <aside class="asset-details">
+          <p class="eyebrow">Selected reference</p>
+          <h2 id="asset-name">Waiting for cake…</h2>
+          <dl class="asset-metadata">
+            <div><dt>True size</dt><dd id="asset-size">—</dd></div>
+            <div><dt>Triangles</dt><dd id="asset-triangles">—</dd></div>
+            <div><dt>Textures</dt><dd id="asset-textures">—</dd></div>
+            <div><dt>Licence</dt><dd id="asset-license">—</dd></div>
+            <div><dt>Usage</dt><dd>Proportion and material reference</dd></div>
+            <div><dt>Production status</dt><dd>Not production-ready</dd></div>
+          </dl>
+          <p class="review-safety-note">Customer cake geometry continues to come from the configurable BakeSmart generator and the customer’s measurements.</p>
+        </aside>
+      </section>
+    </main>
+    <script src="/static/renderer_core.js?v=20260829-7" defer></script>
+    <script src="/static/cake_reference_review.js?v=20260902-1" defer></script>
+  </body>
+</html>

@@ -1,0 +1,63 @@
+{
+  "default_profile_id": "bakesmart-neutral-celebration",
+  "profiles": [
+    {
+      "profile_id": "bakesmart-neutral-celebration",
+      "source_id": "bakesmart-authored-neutral",
+      "catalog_tokens": [],
+      "measured_height_to_width": 0.4,
+      "tier_taper": 0.84,
+      "frosting_roughness": 0.78,
+      "piping_radius_fraction": 0.018,
+      "topper_cluster_radius_fraction": 0.075,
+      "accent_style": "palette-floral"
+    },
+    {
+      "profile_id": "carrot-cocoa-reference",
+      "source_id": "ph-carrot-cake",
+      "catalog_tokens": [
+        "carrot",
+        "chocolate",
+        "cocoa",
+        "nut",
+        "bundt"
+      ],
+      "measured_height_to_width": 0.432846,
+      "tier_taper": 0.85,
+      "frosting_roughness": 0.72,
+      "piping_radius_fraction": 0.014,
+      "topper_cluster_radius_fraction": 0.07,
+      "accent_style": "cocoa-and-nut"
+    },
+    {
+      "profile_id": "strawberry-rustic-reference",
+      "source_id": "ph-strawberry-chocolate-cake",
+      "catalog_tokens": [
+        "rustic",
+        "boho",
+        "fruit",
+        "strawberry",
+        "berry",
+        "semi-naked",
+        "tropical-fruit"
+      ],
+      "measured_height_to_width": 0.324232,
+      "tier_taper": 0.86,
+      "frosting_roughness": 0.7,
+      "piping_radius_fraction": 0.014,
+      "topper_cluster_radius_fraction": 0.09,
+      "accent_style": "berry-and-chocolate"
+    }
+  ],
+  "rules": {
+    "reference_models_are_customer_assets": false,
+    "generated_cakes_remain_configurable": true,
+    "user_dimensions_always_win": true,
+    "minimum_tier_scale": 0.46
+  },
+  "available_external_reference_source_ids": [
+    "ph-carrot-cake",
+    "ph-strawberry-chocolate-cake"
+  ],
+  "schema_version": 1
+}

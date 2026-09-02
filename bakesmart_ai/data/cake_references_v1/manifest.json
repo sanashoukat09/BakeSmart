@@ -1,0 +1,46 @@
+{
+  "assets": [
+    {
+      "configurable": false,
+      "dimensions_m": {
+        "depth": 0.225384,
+        "height": 0.097573,
+        "width": 0.225421
+      },
+      "file_name": "ph-carrot-cake.glb",
+      "file_size_bytes": 3362248,
+      "license": "CC0-1.0",
+      "production_ready": false,
+      "sha256": "c9ce7b1b9af6c60d36c47bf63112459827b3d80e51d1805a978e10a328f9a718",
+      "source_id": "ph-carrot-cake",
+      "source_page": "https://polyhaven.com/a/carrot_cake",
+      "status": "reference_review",
+      "texture_count": 3,
+      "triangle_count": 13790,
+      "vertex_count": 9211
+    },
+    {
+      "configurable": false,
+      "dimensions_m": {
+        "depth": 0.240268,
+        "height": 0.079197,
+        "width": 0.244261
+      },
+      "file_name": "ph-strawberry-chocolate-cake.glb",
+      "file_size_bytes": 3330968,
+      "license": "CC0-1.0",
+      "production_ready": false,
+      "sha256": "d267599cdd6fc3f0bf097f199c583f1b3399c402d97b0611697746ee9353626d",
+      "source_id": "ph-strawberry-chocolate-cake",
+      "source_page": "https://polyhaven.com/a/strawberry_chocolate_cake",
+      "status": "reference_review",
+      "texture_count": 3,
+      "triangle_count": 27054,
+      "vertex_count": 15608
+    }
+  ],
+  "library_id": "cake-references-v1",
+  "production_ready": false,
+  "reference_only": true,
+  "schema_version": 1
+}

@@ -103,6 +103,25 @@ async def production_asset_review_viewer() -> FileResponse:
 
 
 @router.get(
+    "/viewer/cake-references/review",
+    response_class=FileResponse,
+    tags=["viewer"],
+)
+async def cake_reference_review_viewer() -> FileResponse:
+    """Open the fixed cake references for visual comparison and QA."""
+
+    return FileResponse(
+        STATIC_DIR / "cake_reference_review.html",
+        media_type="text/html",
+        headers={
+            **_viewer_headers(),
+            "X-BakeSmart-Reference-Only": "true",
+            "X-BakeSmart-Production-Ready": "false",
+        },
+    )
+
+
+@router.get(
     "/viewer/vertical-slice/{celebration}",
     response_class=FileResponse,
     tags=["viewer"],

@@ -83,6 +83,14 @@ def test_procedural_glb_is_deterministic_and_structurally_valid(
     )
     assert document["asset"]["extras"]["procedural_concept"] is True
     assert document["asset"]["extras"]["catalogue_aware"] is True
+    assert document["asset"]["extras"]["cake_remains_configurable"] is True
+    assert document["asset"]["extras"]["cake_reference_source_ids_available"] == [
+        "ph-carrot-cake",
+        "ph-strawberry-chocolate-cake",
+    ]
+    assert document["asset"]["extras"]["cake_reference_usage"] == (
+        "proportion_and_material_cues_only"
+    )
     assert document["scene"] == 0
     primitive = document["meshes"][0]["primitives"][0]
     assert primitive["attributes"] == {
@@ -100,6 +108,23 @@ def test_procedural_glb_is_deterministic_and_structurally_valid(
         for buffer_view in document["bufferViews"]
     )
     assert document["accessors"][4]["max"][0] < first.vertex_count
+
+
+def test_ten_tier_cake_uses_safe_reference_taper(valid_design_request):
+    valid_design_request["cake"]["tiers"] = 10
+
+    generated = _generated_scene(valid_design_request)
+
+    assert generated.vertex_count < 65_535
+    assert generated.triangle_count > 100
+    assert all(
+        minimum < maximum
+        for minimum, maximum in zip(
+            generated.bounds_min,
+            generated.bounds_max,
+            strict=True,
+        )
+    )
 
 
 def test_scene_artifact_store_rejects_path_traversal(tmp_path: Path):

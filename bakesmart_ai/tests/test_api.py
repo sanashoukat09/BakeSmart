@@ -195,3 +195,25 @@ def test_unknown_viewer_scene_returns_not_found(client):
     assert invalid.status_code == 404
     assert preview.status_code == 404
     assert preview_page.status_code == 404
+
+
+def test_cake_reference_review_resources_are_fixed_and_review_only(client):
+    catalog = client.get("/api/v1/assets/3d/cake-references")
+    viewer = client.get("/viewer/cake-references/review")
+
+    assert catalog.status_code == 200
+    body = catalog.json()
+    assert body["reference_only"] is True
+    assert body["production_ready"] is False
+    assert len(body["assets"]) == 2
+    assert all(asset["configurable"] is False for asset in body["assets"])
+    for asset in body["assets"]:
+        glb = client.get(asset["glb_url"])
+        assert glb.status_code == 200
+        assert glb.content[:4] == b"glTF"
+        assert glb.headers["x-bakesmart-reference-only"] == "true"
+        assert glb.headers["x-bakesmart-production-ready"] == "false"
+    assert viewer.status_code == 200
+    assert b"Realistic Cake Reference Review" in viewer.content
+    assert b"not customer-configurable assets" in viewer.content
+    assert client.get("/api/v1/assets/3d/cake-references/not-real.glb").status_code == 404

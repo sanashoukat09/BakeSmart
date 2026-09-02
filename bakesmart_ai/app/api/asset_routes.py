@@ -23,6 +23,7 @@ from app.schemas.renderer import (
     VerticalSliceSceneManifestResponse,
 )
 from app.services.production_asset_review import production_asset_review_service
+from app.services.cake_reference_assets import cake_reference_asset_store
 from app.services.production_assets import production_asset_registry
 from app.services.professional_renderer import (
     build_vertical_slice_scene,
@@ -32,6 +33,49 @@ from app.services.vertical_slice import vertical_slice_service
 
 
 router = APIRouter()
+
+
+@router.get(
+    "/assets/3d/cake-references",
+    tags=["production assets"],
+)
+async def cake_reference_catalog() -> dict:
+    """List fixed CC0 cake references used only to calibrate procedural cakes."""
+
+    return cake_reference_asset_store.response()
+
+
+@router.get(
+    "/assets/3d/cake-references/{source_id}.glb",
+    response_class=FileResponse,
+    tags=["production assets"],
+)
+async def cake_reference_glb(source_id: str) -> FileResponse:
+    """Serve a checksum-verified fixed cake model for visual review only."""
+
+    try:
+        path = cake_reference_asset_store.glb_path(source_id)
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "unknown_cake_reference", "message": "Unknown cake reference."},
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "invalid_cake_reference", "message": str(exc)},
+        ) from exc
+    return FileResponse(
+        path,
+        media_type="model/gltf-binary",
+        headers={
+            "Cache-Control": "private, no-store",
+            "Content-Disposition": f'inline; filename="{source_id}-reference.glb"',
+            "X-BakeSmart-Reference-Only": "true",
+            "X-BakeSmart-Production-Ready": "false",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.get(

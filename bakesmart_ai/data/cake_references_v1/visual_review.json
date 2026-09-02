@@ -1,0 +1,45 @@
+{
+  "review_version": "cake-reference-visual-review-v1",
+  "reviewed_at": "2026-09-02",
+  "method": "Deterministic CPU diagnostic render of the actual packaged GLB POSITION NORMAL TEXCOORD_0 indices and embedded base-color texture",
+  "final_webgl_mobile_review_pending": true,
+  "production_ready": false,
+  "assets": [
+    {
+      "source_id": "ph-carrot-cake",
+      "decision": "approve_limited_reference_use",
+      "visible_findings": [
+        "Recognizable one-tier chocolate or carrot Bundt-style cake",
+        "Continuous grounded silhouette with no obvious missing geometry",
+        "Nut crumb and chocolate surface variation remain visible",
+        "Shape is not representative of smooth buttercream or stacked celebration cakes"
+      ],
+      "approved_reference_cues": [
+        "cocoa and nut color variation",
+        "rough baked surface response",
+        "single-tier height-to-width comparison"
+      ],
+      "prohibited_use": "Do not use as the default wedding birthday or smooth-buttercream cake profile."
+    },
+    {
+      "source_id": "ph-strawberry-chocolate-cake",
+      "decision": "approve_limited_reference_use",
+      "visible_findings": [
+        "Recognizable dense rustic fruit-and-chocolate cake",
+        "Continuous grounded silhouette with no obvious missing geometry",
+        "Strawberries chocolate pieces and greenery remain visually distinct",
+        "Dense dome silhouette is unsuitable as a general configurable cake body"
+      ],
+      "approved_reference_cues": [
+        "berry cluster scale and color variation",
+        "rustic chocolate topping distribution",
+        "low one-tier height-to-width comparison"
+      ],
+      "prohibited_use": "Do not substitute this fixed model for customer-selected tiers shapes colors or decorations."
+    }
+  ],
+  "limitations": [
+    "The diagnostic renderer samples the embedded base-color map and geometry but does not reproduce the final WebGL normal-map or metallic-roughness response.",
+    "Final approval still requires inspection in the BakeSmart WebGL viewer on desktop and a representative mobile device."
+  ]
+}
