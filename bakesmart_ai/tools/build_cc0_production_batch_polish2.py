@@ -1,10 +1,11 @@
-"""Second visual-polish pass for the Batch-1 marigold candidate.
+"""Final visual-polish pass for the Batch-1 marigold candidate.
 
-The first corrected marigold already sits close to the 26k mobile triangle
-budget. This pass reuses/scales existing flower geometry, forces reliable
-mobile-safe materials directly onto meshes, and removes a subset of redundant
-long stems. It does not alter the approved low floral or corrected welcome
-mirror.
+The corrected marigold already sits close to the 26k mobile triangle budget.
+This pass therefore improves density and colour without adding geometry: it
+reuses/scales existing flower heads, compacts the authored crown, removes
+redundant stems/leaves, and forces low-specular saturated mobile-safe PBR
+materials directly onto the remaining meshes. It does not alter the approved
+low floral or corrected welcome mirror.
 """
 from __future__ import annotations
 
@@ -39,6 +40,13 @@ STEM_PREFIXES = (
     "BS_MehndiStem_",
     "BS_FinalFillStem_",
 )
+AUTHORED_PREFIXES = (
+    "BS_Mehndi",
+    "BS_Marigold",
+    "BS_Lower",
+    "BS_FinalFill",
+    "BS_FinalCollar",
+)
 
 
 def _scale_existing_meshes(prefixes: tuple[str, ...], factor: Vector) -> int:
@@ -58,6 +66,21 @@ def _force_material(obj: bpy.types.Object, mat: bpy.types.Material) -> None:
     else:
         for index in range(len(obj.data.materials)):
             obj.data.materials[index] = mat
+
+
+def _make_matte(mat: bpy.types.Material) -> None:
+    """Reduce white specular wash so marigold hues stay saturated in QA/mobile."""
+    if not mat.use_nodes:
+        return
+    bsdf = next((node for node in mat.node_tree.nodes if node.type == "BSDF_PRINCIPLED"), None)
+    if bsdf is None:
+        return
+    if "Specular IOR Level" in bsdf.inputs:
+        bsdf.inputs["Specular IOR Level"].default_value = 0.22
+    elif "Specular" in bsdf.inputs:
+        bsdf.inputs["Specular"].default_value = 0.22
+    if "Coat Weight" in bsdf.inputs:
+        bsdf.inputs["Coat Weight"].default_value = 0.0
 
 
 def _flower_group_index(name: str) -> int:
@@ -82,31 +105,56 @@ def _remove_redundant_long_stems() -> int:
     return removed
 
 
+def _remove_redundant_secondary_leaves() -> int:
+    """Thin the rigid leaf lattice while preserving broad visual foliage."""
+    removed = 0
+    for obj in list(bpy.context.scene.objects):
+        if obj.type != "MESH" or not obj.name.startswith("BS_MehndiLeafB_"):
+            continue
+        match = re.search(r"BS_MehndiLeafB_(\d+)", obj.name)
+        if match and int(match.group(1)) % 2 == 0:
+            bpy.data.objects.remove(obj, do_unlink=True)
+            removed += 1
+    bpy.context.view_layer.update()
+    return removed
+
+
 def polished_marigold(row: dict[str, str]) -> None:
     _previous_marigold(row)
 
+    # Make existing heads visibly fuller instead of adding more polygons. The
+    # current crown has enough envelope headroom for this increase.
     flower_count = _scale_existing_meshes(
         FLOWER_PREFIXES,
-        Vector((1.24, 1.24, 1.16)),
+        Vector((1.42, 1.42, 1.25)),
     )
-    # A little more foliage width hides the remaining support structure without
-    # adding triangles or materially changing the true-size footprint.
+    # Slightly reduce the earlier oversized foliage so the composition reads as
+    # flowers first, while still masking support stems at normal mobile distance.
     leaf_count = _scale_existing_meshes(
         LEAF_PREFIXES,
-        Vector((1.30, 1.30, 1.08)),
+        Vector((1.10, 1.10, 1.04)),
     )
     if flower_count == 0 or leaf_count == 0:
         raise RuntimeError(
             f"expected existing marigold geometry was not found: flowers={flower_count}, leaves={leaf_count}"
         )
 
-    # These scripted values are linear RGB. Keep luminance moderate but retain
-    # enough green in orange/saffron to avoid the coral/pink hue seen in QA.
-    orange = base.material("BS_PolishOrange", (0.50, 0.090, 0.003, 1.0), roughness=0.58)
-    saffron = base.material("BS_PolishSaffron", (0.72, 0.220, 0.004, 1.0), roughness=0.57)
-    yellow = base.material("BS_PolishYellow", (0.82, 0.520, 0.008, 1.0), roughness=0.60)
-    deep_stem = base.material("BS_PolishStem", (0.001, 0.008, 0.0005, 1.0), roughness=0.82)
-    deep_leaf = base.material("BS_PolishLeaf", (0.004, 0.032, 0.0015, 1.0), roughness=0.79)
+    # Compact the full authored arrangement vertically around the pot shoulder.
+    # This keeps the flower/stem connections intact while removing the sparse,
+    # tower-like upper silhouette. The resulting height still fills >85% of the
+    # 1.10 m production envelope required by the structural validator.
+    final.transform_authored(AUTHORED_PREFIXES, sz=0.92, pivot_z=0.34)
+
+    # Linear RGB values intentionally target deeper, saturated marigold hues.
+    # The previous brighter values were pushed toward peach/cream by the QA
+    # renderer's highlight compression. Lower specular response preserves hue.
+    orange = base.material("BS_PolishOrange", (0.24, 0.030, 0.0006, 1.0), roughness=0.72)
+    saffron = base.material("BS_PolishSaffron", (0.46, 0.105, 0.0015, 1.0), roughness=0.70)
+    yellow = base.material("BS_PolishYellow", (0.62, 0.285, 0.0040, 1.0), roughness=0.74)
+    deep_stem = base.material("BS_PolishStem", (0.0004, 0.0035, 0.0002, 1.0), roughness=0.90)
+    deep_leaf = base.material("BS_PolishLeaf", (0.0015, 0.012, 0.0007, 1.0), roughness=0.86)
+    for mat in (orange, saffron, yellow, deep_stem, deep_leaf):
+        _make_matte(mat)
 
     assigned_flowers = 0
     assigned_stems = 0
@@ -119,8 +167,10 @@ def polished_marigold(row: dict[str, str]) -> None:
             group_index = _flower_group_index(obj.name)
             if "_Core" in obj.name:
                 chosen = saffron
-            elif group_index % 4 == 0:
+            elif group_index % 5 == 0:
                 chosen = yellow
+            elif group_index % 3 == 0:
+                chosen = saffron
             else:
                 chosen = orange
             _force_material(obj, chosen)
@@ -133,10 +183,18 @@ def polished_marigold(row: dict[str, str]) -> None:
             assigned_leaves += 1
 
     removed_stems = _remove_redundant_long_stems()
-    if assigned_flowers == 0 or assigned_stems == 0 or assigned_leaves == 0 or removed_stems == 0:
+    removed_leaves = _remove_redundant_secondary_leaves()
+    if (
+        assigned_flowers == 0
+        or assigned_stems == 0
+        or assigned_leaves == 0
+        or removed_stems == 0
+        or removed_leaves == 0
+    ):
         raise RuntimeError(
             "marigold polish assignment failed: "
-            f"flowers={assigned_flowers}, stems={assigned_stems}, leaves={assigned_leaves}, removed={removed_stems}"
+            f"flowers={assigned_flowers}, stems={assigned_stems}, leaves={assigned_leaves}, "
+            f"removed_stems={removed_stems}, removed_leaves={removed_leaves}"
         )
 
 
