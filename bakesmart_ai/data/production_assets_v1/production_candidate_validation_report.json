@@ -36,8 +36,8 @@
     {
       "asset_id": "prod-floor-marigold-clusters",
       "valid": true,
-      "file_size_bytes": 4127668,
-      "triangle_count": 23773,
+      "file_size_bytes": 3935700,
+      "triangle_count": 21153,
       "checks": [
         "GLB magic header is valid.",
         "GLB version is 2.",
@@ -54,7 +54,7 @@
         "Visible mesh fills at least 85% of the installation envelope on every axis.",
         "Visible mesh stays within the installation envelope plus 2 cm tolerance.",
         "Embedded visible mesh bounds match independently calculated bounds within 2 cm.",
-        "LOD0 triangle count 23773 is within the 26000 triangle budget."
+        "LOD0 triangle count 21153 is within the 26000 triangle budget."
       ],
       "errors": [],
       "warnings": [
