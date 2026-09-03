@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 import bpy
-from mathutils import Matrix, Vector
+from mathutils import Vector
 
 TOOLS_DIR = Path(__file__).resolve().parent
 if str(TOOLS_DIR) not in sys.path:
@@ -54,42 +54,45 @@ def _offset_group(objects: list[bpy.types.Object], delta: Vector) -> None:
     bpy.context.view_layer.update()
 
 
-def _fit_world_exact(
+def _join_and_bake(objects: list[bpy.types.Object], name: str) -> list[bpy.types.Object]:
+    """Join a provider plant into one mesh while preserving materials and UVs.
+
+    Poly Haven botanical glTFs can contain several independently rotated mesh
+    pieces. Joining them and applying rotation/scale converts those transforms
+    into mesh coordinates, so the standard BakeSmart exact fitter can enforce a
+    predictable world-space AABB. Blender's join operation retains material
+    slots, texture-node links and UV layers used by the source PBR asset.
+    """
+    if not objects:
+        raise RuntimeError(f"cannot join empty botanical patch {name}")
+    bpy.ops.object.select_all(action="DESELECT")
+    for obj in objects:
+        obj.select_set(True)
+    bpy.context.view_layer.objects.active = objects[0]
+    bpy.ops.object.join()
+    joined = bpy.context.view_layer.objects.active
+    if joined is None or joined.type != "MESH":
+        raise RuntimeError(f"failed to join botanical patch {name}")
+    joined.name = name
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+    bpy.context.view_layer.update()
+    return [joined]
+
+
+def _verify_exact_bounds(
     objects: list[bpy.types.Object],
     width: float,
     depth: float,
     height: float,
-    z: float,
+    tolerance: float = 0.003,
 ) -> None:
-    """Enforce final world-space bounds for imported botanical patches."""
-    minimum, maximum = base.mesh_bounds(objects)
-    dimensions = maximum - minimum
-    center = (minimum + maximum) * 0.5
-    scale = Matrix.Diagonal(
-        (
-            width / max(dimensions.x, 1e-6),
-            depth / max(dimensions.y, 1e-6),
-            height / max(dimensions.z, 1e-6),
-            1.0,
-        )
-    )
-    pivot = Vector((center.x, center.y, minimum.z))
-    transform = Matrix.Translation(pivot) @ scale @ Matrix.Translation(-pivot)
-    for obj in objects:
-        obj.matrix_world = transform @ obj.matrix_world
-    bpy.context.view_layer.update()
-
-    minimum, maximum = base.mesh_bounds(objects)
-    center = (minimum + maximum) * 0.5
-    _offset_group(objects, Vector((-center.x, -center.y, z - minimum.z)))
-
     minimum, maximum = base.mesh_bounds(objects)
     actual = maximum - minimum
     targets = (width, depth, height)
     for index, target in enumerate(targets):
-        if abs(actual[index] - target) > 0.003:
+        if abs(actual[index] - target) > tolerance:
             raise RuntimeError(
-                f"real flower world fit failed on axis {index}: actual={actual[index]:.4f}, target={target:.4f}"
+                f"real flower exact fit failed on axis {index}: actual={actual[index]:.4f}, target={target:.4f}"
             )
 
 
@@ -102,12 +105,19 @@ def _place_real_flower_patch(
     z: float,
     offset: tuple[float, float, float],
 ) -> list[bpy.types.Object]:
-    objects = base.import_source(source_id, prefix)
-    # Keep the provider orientation. A previous decorative Z rotation coupled
-    # with anisotropic world scaling and inflated the final AABB. Natural source
-    # asymmetry plus different offsets already gives enough visual variation.
+    imported = base.import_source(source_id, prefix)
+    objects = _join_and_bake(imported, prefix + "_Patch")
+
+    # With provider transforms baked into one mesh, the standard true-size fit
+    # is deterministic and does not distort the source textures/materials.
     base.fit_exact(objects, width, depth, height, z)
-    _fit_world_exact(objects, width, depth, height, z)
+    bpy.ops.object.select_all(action="DESELECT")
+    objects[0].select_set(True)
+    bpy.context.view_layer.objects.active = objects[0]
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    bpy.context.view_layer.update()
+    _verify_exact_bounds(objects, width, depth, height)
+
     _offset_group(objects, Vector(offset))
     return objects
 
@@ -130,6 +140,8 @@ def polished_marigold(row: dict[str, str]) -> None:
             "real-flower marigold candidate requires ph-flower-empodium and ph-flower-gazania provenance"
         )
 
+    # Broad lower patch fills the pot rim while remaining subordinate to the
+    # orange Gazania hero layer.
     _place_real_flower_patch(
         secondary,
         "CC0_Empodium",
@@ -140,8 +152,8 @@ def polished_marigold(row: dict[str, str]) -> None:
         offset=(-0.010, 0.012, 0.0),
     )
 
-    # The Gazania hero layer reaches 0.96 m overall with the pot: above the
-    # 0.935 m validator minimum and safely below the 1.12 m maximum tolerance.
+    # Hero layer reaches 0.96 m overall with the pot: above the 0.935 m minimum
+    # and below the 1.12 m maximum installation tolerance.
     _place_real_flower_patch(
         tertiary,
         "CC0_Gazania",
