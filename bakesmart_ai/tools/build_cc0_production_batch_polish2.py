@@ -119,9 +119,8 @@ def _place_real_flower_patch(
     offset: tuple[float, float, float],
 ) -> list[bpy.types.Object]:
     objects = base.import_source(source_id, prefix)
-    # Poly Haven patches are preserved with their original UVs/textures. Exact
-    # fitting is intentional here because this is an authored event module with
-    # an authoritative 70 cm installation envelope, not a raw botanical asset.
+    # Preserve the real Poly Haven UVs/textures but fit each botanical patch into
+    # BakeSmart's authoritative installation envelope before composing it.
     base.fit_exact(objects, width, depth, height, z)
     _rotate_group(objects, rotation_deg)
     _offset_group(objects, Vector(offset))
@@ -143,30 +142,30 @@ def polished_marigold(row: dict[str, str]) -> None:
             "real-flower marigold candidate requires ph-flower-empodium and ph-flower-gazania provenance"
         )
 
-    # Yellow Empodium supplies a broad lower floral mass around the pot rim.
+    # Keep a safety margin around the 0.70 m envelope because rotating a fitted
+    # rectangle increases its axis-aligned bounds. The prior 0.7244 m result was
+    # only 4.4 mm beyond the validator tolerance; these dimensions provide a
+    # clear margin without making the crown look undersized.
     _place_real_flower_patch(
         secondary,
         "CC0_Empodium",
-        width=0.60,
-        depth=0.56,
+        width=0.56,
+        depth=0.52,
         height=0.34,
         z=0.38,
-        rotation_deg=-10.0,
-        offset=(-0.015, 0.018, 0.0),
+        rotation_deg=-8.0,
+        offset=(-0.008, 0.008, 0.0),
     )
 
-    # Orange Gazania supplies the taller hero layer. It is deliberately fitted
-    # inside the same envelope and later decimated by the standard exporter so
-    # the complete GLB remains under the manifest's 26k LOD0 budget.
     _place_real_flower_patch(
         tertiary,
         "CC0_Gazania",
-        width=0.64,
-        depth=0.60,
+        width=0.59,
+        depth=0.55,
         height=0.54,
         z=0.43,
-        rotation_deg=14.0,
-        offset=(0.018, -0.012, 0.0),
+        rotation_deg=10.0,
+        offset=(0.008, -0.006, 0.0),
     )
 
     # Keep the remaining authored greenery/supports visually subordinate to the
