@@ -28,7 +28,9 @@
       "asset_id": "prod-floor-marigold-clusters",
       "output": "app/assets/production/floor-marigold-clusters.glb",
       "source_ids": [
-        "ph-brass-pot-01"
+        "ph-brass-pot-01",
+        "ph-flower-empodium",
+        "ph-flower-gazania"
       ],
       "source_license_status": "cc0_confirmed",
       "redistribution_allowed": true,
@@ -38,11 +40,11 @@
         1.1
       ],
       "visible_mesh_bounds_m": [
-        0.6908,
-        0.6929,
-        0.9809
+        0.6784,
+        0.601,
+        0.946
       ],
-      "triangle_count": 25520,
+      "triangle_count": 23773,
       "status": "built_for_final_visual_review"
     },
     {
