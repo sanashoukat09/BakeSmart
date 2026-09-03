@@ -58,3 +58,32 @@ class VerticalSliceSceneManifestResponse(StrictModel):
     modules: list[ModularSceneModule] = Field(default_factory=list, max_length=50)
     viewer_url: str = Field(min_length=1, max_length=500)
     notes: list[str] = Field(default_factory=list, max_length=24)
+
+
+class CustomerSceneModule(StrictModel):
+    asset_id: str = Field(pattern=r"^prod-[a-z0-9]+(?:-[a-z0-9]+)*$")
+    catalog_id: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+    role: Literal[
+        "backdrop",
+        "decoration",
+        "lighting",
+        "signage",
+    ]
+    instance_index: int = Field(ge=1, le=50)
+    glb_url: str = Field(min_length=1, max_length=260)
+    translation_m: tuple[float, float, float]
+    uniform_scale: Literal[1.0] = 1.0
+    dimensions: Dimensions
+
+
+class CustomerSceneManifestResponse(StrictModel):
+    scene_version: Literal["customer-production-modular-v1"] = (
+        "customer-production-modular-v1"
+    )
+    design_id: str = Field(pattern=r"^design-[0-9a-f]{20}$")
+    units: Literal["metres"] = "metres"
+    production_module_count: int = Field(ge=0, le=50)
+    procedural_glb_url: str = Field(min_length=1, max_length=260)
+    modules: list[CustomerSceneModule] = Field(default_factory=list, max_length=50)
+    procedural_fallback_catalog_ids: list[str] = Field(default_factory=list, max_length=50)
+    notes: list[str] = Field(default_factory=list, max_length=20)

@@ -132,10 +132,12 @@ def test_current_candidates_report_independent_visible_and_collision_bounds():
     assert result.collision_envelope_m.depth_m == 0.09
 
 
-def test_undersized_visible_candidate_fails_true_scale_gate():
+def test_corrected_low_floral_passes_true_scale_gate_but_stays_unapproved():
     result = production_asset_registry.validate_asset("prod-table-low-floral")
 
-    assert result.status == "invalid_glb"
+    assert result.status == "not_approved"
     assert result.visible_coverage is not None
-    assert result.visible_coverage.width_fraction < 0.85
-    assert any("too small" in error for error in result.errors)
+    assert result.visible_coverage.width_fraction >= 0.85
+    assert result.visible_coverage.depth_fraction >= 0.85
+    assert result.visible_coverage.height_fraction >= 0.85
+    assert result.errors == []

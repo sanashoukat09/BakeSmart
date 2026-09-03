@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Stage 7 upgrades the BakeSmart browser renderer without weakening the Stage-5 production-asset gate. It makes the local viewer capable of assembling and rendering multiple independent GLB 2.0 modules at metre-based transforms while the current customer pipeline continues to use its procedural fallback until production assets are approved.
+Stage 7 upgrades the BakeSmart browser renderer without weakening the Stage-5 production-asset gate. It makes the local viewer capable of assembling and rendering multiple independent GLB 2.0 modules at metre-based transforms. Ordinary customer scenes now load each fully approved production module at true scale while keeping only the remaining unapproved catalogue items in the procedural fallback GLB.
 
 ## Implemented
 
@@ -39,6 +39,6 @@ The customer viewer can now use the Stage-7 renderer, but its current scene rema
 - Real production LOD1/LOD2 files and runtime LOD switching.
 - Artist-reviewed PBR texture sets.
 - Production-ready modular GLBs (target 80–120).
-- Integration of approved production modules into normal customer recommendation scenes.
+- Completion of the asset library and approval of enough modules for full production scenes without procedural fallback.
 - Camera-calibrated photo projection/occlusion.
 - Device-class performance benchmarking.

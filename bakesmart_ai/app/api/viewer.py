@@ -56,6 +56,22 @@ def _artifact_or_404(design_id: str) -> Path:
     return path
 
 
+def _module_manifest_or_404(design_id: str) -> Path:
+    try:
+        path = artifact_store.existing_manifest_path(design_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Scene module manifest not found",
+        ) from exc
+    if path is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Scene module manifest not found",
+        )
+    return path
+
+
 def _viewer_headers() -> dict[str, str]:
     return {
         "Cache-Control": "no-store",
@@ -154,6 +170,23 @@ async def scene_glb(design_id: str) -> FileResponse:
         headers={
             "Cache-Control": "private, no-cache",
             "Content-Disposition": f'inline; filename="{design_id}.glb"',
+        },
+    )
+
+
+@router.get(
+    "/api/v1/designs/{design_id}/modules.json",
+    response_class=FileResponse,
+    tags=["viewer"],
+)
+async def scene_modules(design_id: str) -> FileResponse:
+    path = _module_manifest_or_404(design_id)
+    return FileResponse(
+        path,
+        media_type="application/json",
+        headers={
+            "Cache-Control": "private, no-cache",
+            "X-Content-Type-Options": "nosniff",
         },
     )
 

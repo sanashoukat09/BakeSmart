@@ -24,6 +24,7 @@ from app.services.photo_artifacts import (
     temporary_photo_store,
 )
 from app.services.photo_preview_builder import PhotoPreviewBuilder
+from app.services.professional_renderer import build_customer_scene_manifest
 from app.services.room_constraints import RoomConstraintEngine
 from app.services.scene_artifacts import SceneArtifactStore
 from app.services.scene_builder import SceneBuilder, SceneBuildResult
@@ -147,33 +148,64 @@ class RecommendationService:
         preview = result.preview
         try:
             palette = self.catalog_store.themes[result.selected_theme_id]["palette_hex"]
+            module_manifest = build_customer_scene_manifest(
+                design_id,
+                request,
+                scene,
+            )
+            production_catalog_ids = {
+                module.catalog_id for module in module_manifest.modules
+            }
             generated = self.glb_builder.build(
                 request,
                 scene,
                 result.cake,
                 palette,
                 design_id,
+                omitted_catalog_ids=production_catalog_ids,
             )
             self.artifact_store.write(design_id, generated.data)
+            self.artifact_store.write_manifest(
+                design_id,
+                module_manifest.model_dump(mode="json"),
+            )
             scene = scene.model_copy(
-                update={"asset_status": "generated_procedural_glb"}
+                update={
+                    "asset_status": (
+                        "production_modular_glbs_with_procedural_fallback"
+                        if module_manifest.production_module_count
+                        else "generated_procedural_glb"
+                    )
+                }
             )
             preview = PreviewAvailability(
                 interactive_3d_ready=True,
                 viewer_3d_url=(
                     f"/viewer/{design_id}?package={recommended_package_id}"
                 ),
-                viewer_label="Open Basic 3D Layout Preview",
+                viewer_label=(
+                    "Open Detailed 3D View"
+                    if module_manifest.production_module_count
+                    else "Open Basic 3D Layout Preview"
+                ),
                 scene_glb_url=f"/api/v1/designs/{design_id}/scene.glb",
                 ar_supported=None,
                 ar_url=None,
                 fallback_label=None,
             )
-            warnings.append(
-                "The 3D planning preview uses procedural catalogue-aware geometry in "
-                "metre-based scene coordinates. It is not a camera-calibrated photo "
-                "reconstruction or a textured PBR asset view."
-            )
+            if module_manifest.production_module_count:
+                warnings.append(
+                    f"The 3D preview uses {module_manifest.production_module_count} "
+                    "approved production module(s) at true scale 1.0; remaining scene "
+                    "items use procedural geometry. It is not a camera-calibrated "
+                    "photo reconstruction."
+                )
+            else:
+                warnings.append(
+                    "The 3D planning preview uses procedural catalogue-aware geometry in "
+                    "metre-based scene coordinates. It is not a camera-calibrated photo "
+                    "reconstruction or a textured PBR asset view."
+                )
         except (KeyError, OSError, OverflowError, ValueError):
             warnings.append(
                 "Interactive 3D generation failed; use Concept preview—not to scale. "

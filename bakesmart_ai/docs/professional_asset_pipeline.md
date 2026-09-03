@@ -63,7 +63,7 @@ Stage 3 ranking gives a preference to a catalogue item only when its production 
 - Production-ready GLBs: 0 until geometry, visible scale, materials and rights are reviewed.
 - Professional library target: 80–120 modular production GLBs.
 - External modular-GLB scene assembly and supported PBR rendering: implemented in the Stage-7 review renderer.
-- Approved production-module integration into the normal customer scene: not implemented yet.
+- Approved production-module integration into the normal customer scene: implemented with checksum-bound promotion, true-scale multi-GLB loading, and procedural fallback for only the unapproved items.
 - Full photo-calibrated 3D projection: not implemented yet.
 
 ## Next stage

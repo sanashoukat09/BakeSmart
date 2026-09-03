@@ -6,7 +6,7 @@ import json
 import math
 import struct
 from dataclasses import dataclass, field
-from typing import Iterable
+from typing import AbstractSet, Iterable
 
 from app.schemas.design import (
     CakePlacement,
@@ -373,6 +373,7 @@ class ProceduralGlbBuilder:
         cake: CakePlacement,
         palette_hex: str,
         design_id: str,
+        omitted_catalog_ids: AbstractSet[str] = frozenset(),
     ) -> GeneratedGlb:
         palette = self._palette(palette_hex)
         cake_profile = cake_reference_library.select(cake.catalog_id)
@@ -387,6 +388,11 @@ class ProceduralGlbBuilder:
         )
 
         for placement in scene.objects:
+            if (
+                placement.catalog_id is not None
+                and placement.catalog_id in omitted_catalog_ids
+            ):
+                continue
             self._add_placement(
                 mesh,
                 placement,

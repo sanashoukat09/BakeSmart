@@ -167,6 +167,45 @@ async def production_asset_visual_review_glb(asset_id: str) -> FileResponse:
     )
 
 
+@router.get(
+    "/assets/3d/production/{asset_id}.glb",
+    response_class=FileResponse,
+    tags=["production assets"],
+)
+async def production_asset_customer_glb(asset_id: str) -> FileResponse:
+    """Serve only a fully approved, rights-cleared production module."""
+
+    try:
+        record = production_asset_registry.by_asset_id[asset_id]
+        path = production_asset_registry.customer_glb_path(asset_id)
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "unknown_production_asset",
+                "message": f"Unknown production asset '{asset_id}'.",
+            },
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "production_asset_not_customer_ready",
+                "message": str(exc),
+            },
+        ) from exc
+    return FileResponse(
+        path,
+        media_type="model/gltf-binary",
+        headers={
+            "Cache-Control": "private, no-cache",
+            "Content-Disposition": f'inline; filename="{record.catalog_id}.glb"',
+            "X-BakeSmart-Production-Ready": "true",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
 @router.post(
     "/assets/3d/production-review/decision",
     response_model=ProductionAssetReviewSubmissionResponse,

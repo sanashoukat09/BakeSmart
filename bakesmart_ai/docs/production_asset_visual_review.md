@@ -16,6 +16,16 @@ The reviewer can choose `Approve`, `Needs correction`, or `Reject`. Reject and N
 
 An approval is review evidence only. It does **not** update `asset_manifest.csv`, does not set `production_ready`, and does not make the asset customer-renderable. Promotion remains a separate explicit pipeline step after visual/material review.
 
+## Production promotion
+
+After the exact GLB revision is approved in the review page and passes both desktop and mobile BakeSmart viewer QA, run the fail-closed promotion command:
+
+`python -m tools.promote_production_ready --asset-id <prod-id> --reviewer-id <reviewer> --desktop-viewer-passed --mobile-viewer-passed --approve-production`
+
+The command refuses missing or stale checksum-bound approvals, pending rights, failed structural validation, missing viewport QA, and any asset not currently in `geometry_review`. A successful promotion writes an audit receipt and changes only the verified manifest row to `production_ready`.
+
+Ordinary customer recommendations then load that exact module at uniform scale `1.0`. Any selected catalogue items that are not production-ready remain inside the procedural fallback GLB, so a partial production library never exposes an unapproved asset or creates duplicate geometry.
+
 ## Current Batch 1
 
 The page discovers built geometry-review candidates and re-runs structural and visible-bounds validation against the actual GLB before listing them. A stored decision is tied to the exact GLB SHA-256 digest; rebuilding an asset automatically makes an older decision stale and returns the new revision to pending review.

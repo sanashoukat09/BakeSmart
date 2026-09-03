@@ -19,7 +19,7 @@
           <span>Local multi-mesh GLB renderer</span>
           <span>PBR material + texture aware</span>
           <span>Metre-based scene data</span>
-          <span>Procedural customer fallback</span>
+          <span id="render-mode-badge">Procedural customer fallback</span>
         </div>
       </header>
 
@@ -47,11 +47,11 @@
         </div>
       </footer>
 
-      <p class="notice">
+      <p class="notice" id="scene-notice">
         Stage 7 upgrades the local renderer to understand multiple GLB nodes/modules, PBR metallic-roughness factors,
-        supported embedded/same-origin textures, selection and planar contact shadows. This particular customer scene
-        is still the procedural planning fallback until reviewed production assets are approved. It is not a
-        camera-calibrated photo reconstruction or ray-traced render.
+        supported embedded/same-origin textures, selection and planar contact shadows. Fully approved production
+        modules load at true scale when available; every other item remains in the procedural planning fallback. This
+        is not a camera-calibrated photo reconstruction or ray-traced render.
       </p>
     </main>
     <script src="/static/renderer_core.js?v=20260829-7" defer></script>

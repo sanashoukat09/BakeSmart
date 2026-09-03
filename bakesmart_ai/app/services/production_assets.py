@@ -474,7 +474,7 @@ class ProductionAssetRegistry:
     _limitations = [
         "The manifest is a production requirement registry; planned rows are not finished 3D assets.",
         "A GLB is renderable only after geometry, PBR, metadata, license, and redistribution checks pass.",
-        "The current customer viewer still renders a single procedural GLB and does not assemble these external modular GLBs yet.",
+        "The customer viewer assembles approved external modules at true scale and keeps unapproved catalogue items in its procedural fallback GLB.",
         "True-size structural assets are not stretched to fill a large venue; use modular repetition or larger approved modules.",
         "The professional library target is 80-120 production-ready modular GLBs; this v1 manifest first covers every current real catalogue archetype.",
     ]
@@ -672,6 +672,20 @@ class ProductionAssetRegistry:
         if asset is None or asset.production_status != "production_ready":
             return False
         return self.validate_asset(asset.asset_id).status == "ready"
+
+    def customer_glb_path(self, asset_id: str) -> Path:
+        record = self.by_asset_id.get(asset_id)
+        if record is None:
+            raise KeyError(asset_id)
+        validation = self.validate_asset(asset_id)
+        if validation.status != "ready" or not validation.renderable:
+            raise ValueError(
+                f"Asset '{asset_id}' has not passed every production and rights gate."
+            )
+        path = self.package_root / record.glb_path
+        if not path.is_file():
+            raise ValueError(f"Asset '{asset_id}' production GLB is missing.")
+        return path
 
     def validate_asset(self, asset_id: str) -> ProductionAssetValidationResponse:
         cached = self._validation_cache.get(asset_id)

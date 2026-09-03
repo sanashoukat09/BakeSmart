@@ -155,6 +155,7 @@ def test_viewer_and_glb_urls_are_real_local_resources(client, valid_design_reque
     glb = client.get(recommendation["preview"]["scene_glb_url"])
     viewer_script = client.get("/static/viewer.js")
     renderer_core = client.get("/static/renderer_core.js")
+    modules = client.get(f"/api/v1/designs/{recommendation['design_id']}/modules.json")
 
     assert viewer.status_code == 200
     assert viewer.headers["content-type"].startswith("text/html")
@@ -171,12 +172,26 @@ def test_viewer_and_glb_urls_are_real_local_resources(client, valid_design_reque
     assert glb.content[:4] == b"glTF"
     assert viewer_script.status_code == 200
     assert renderer_core.status_code == 200
+    assert modules.status_code == 200
+    assert modules.json()["scene_version"] == "customer-production-modular-v1"
+    assert modules.json()["production_module_count"] == 0
     assert b"pointermove" in renderer_core.content
     assert b"wheel" in renderer_core.content
     assert b"pbrMetallicRoughness" in renderer_core.content
     assert b"uShadowPass" in renderer_core.content
     assert b"photo-fallback" in viewer.content
     assert renderer_core.content.count(b"precision highp float;") == 2
+
+
+def test_unapproved_production_glb_is_never_customer_served(client):
+    response = client.get(
+        "/api/v1/assets/3d/production/prod-sign-mirror-welcome.glb"
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["code"] == (
+        "production_asset_not_customer_ready"
+    )
 
 
 def test_unknown_viewer_scene_returns_not_found(client):

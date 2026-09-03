@@ -5,11 +5,17 @@ from __future__ import annotations
 from urllib.parse import urlencode
 
 from app.schemas.assets import VerticalSliceCompositionRequest
-from app.schemas.design import Dimensions
+from app.schemas.design import DesignRequest, Dimensions, SceneSpecification
 from app.schemas.renderer import (
+    CustomerSceneManifestResponse,
+    CustomerSceneModule,
     ModularSceneModule,
     RendererCapabilitiesResponse,
     VerticalSliceSceneManifestResponse,
+)
+from app.services.production_assets import (
+    ProductionAssetRegistry,
+    production_asset_registry,
 )
 from app.services.vertical_slice import vertical_slice_service
 
@@ -27,6 +33,67 @@ _RENDERER_LIMITATIONS = [
 
 def renderer_capabilities() -> RendererCapabilitiesResponse:
     return RendererCapabilitiesResponse(limitations=list(_RENDERER_LIMITATIONS))
+
+
+def build_customer_scene_manifest(
+    design_id: str,
+    request: DesignRequest,
+    scene: SceneSpecification,
+    registry: ProductionAssetRegistry = production_asset_registry,
+) -> CustomerSceneManifestResponse:
+    """Expose only fully approved production modules to an ordinary design."""
+
+    room_width = request.space.dimensions.width_m
+    room_depth = request.space.dimensions.depth_m or 2.0
+    modules: list[CustomerSceneModule] = []
+    fallback_catalog_ids: list[str] = []
+    instance_counts: dict[str, int] = {}
+
+    for placement in scene.objects:
+        catalog_id = placement.catalog_id
+        if not catalog_id:
+            continue
+        record = registry.for_catalog_id(catalog_id)
+        if record is None:
+            continue
+        if not registry.is_renderable_catalog_item(catalog_id):
+            fallback_catalog_ids.append(catalog_id)
+            continue
+        instance_counts[catalog_id] = instance_counts.get(catalog_id, 0) + 1
+        role = (
+            placement.role
+            if placement.role in {"backdrop", "lighting", "signage"}
+            else "decoration"
+        )
+        modules.append(
+            CustomerSceneModule(
+                asset_id=record.asset_id,
+                catalog_id=catalog_id,
+                role=role,
+                instance_index=instance_counts[catalog_id],
+                glb_url=f"/api/v1/assets/3d/production/{record.asset_id}.glb",
+                translation_m=(
+                    placement.position.x_m - room_width / 2,
+                    placement.position.z_m,
+                    placement.position.y_m - room_depth / 2,
+                ),
+                uniform_scale=1.0,
+                dimensions=record.dimensions,
+            )
+        )
+
+    notes = [
+        "Every production module passed the live GLB validator, rights gate and explicit production-status gate before inclusion.",
+        "Approved modules keep uniform scale 1.0; unapproved catalogue items remain in the procedural fallback GLB.",
+    ]
+    return CustomerSceneManifestResponse(
+        design_id=design_id,
+        production_module_count=len(modules),
+        procedural_glb_url=f"/api/v1/designs/{design_id}/scene.glb",
+        modules=modules,
+        procedural_fallback_catalog_ids=list(dict.fromkeys(fallback_catalog_ids)),
+        notes=notes,
+    )
 
 
 def build_vertical_slice_scene(

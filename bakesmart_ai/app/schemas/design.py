@@ -401,6 +401,7 @@ class SceneSpecification(StrictModel):
     asset_status: Literal[
         "catalog_references_require_3d_asset_creation",
         "generated_procedural_glb",
+        "production_modular_glbs_with_procedural_fallback",
     ]
     layers: list[
         Literal[
