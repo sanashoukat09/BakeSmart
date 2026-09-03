@@ -1,11 +1,10 @@
-"""Final visual-polish pass for the Batch-1 marigold candidate.
+"""Production visual-polish entrypoint for Batch-1 assets.
 
-The corrected marigold already sits close to the 26k mobile triangle budget.
-This pass therefore improves density and colour without adding geometry: it
-reuses/scales existing flower heads, compacts the authored crown, removes
-redundant stems/leaves, and forces low-specular saturated mobile-safe PBR
-materials directly onto the remaining meshes. It does not alter the approved
-low floral or corrected welcome mirror.
+For the Mehndi floor arrangement this pass replaces the procedural flower-ball
+heads with vetted real CC0 flower geometry/textures from Poly Haven while
+preserving the corrected brass pot, true-size envelope, placement metadata and
+mobile triangle budget. The approved low floral and corrected mirror are not
+changed by this wrapper.
 """
 from __future__ import annotations
 
@@ -25,7 +24,7 @@ import build_cc0_production_batch_final as final
 base = final.base
 _previous_marigold = base.build_marigold
 
-FLOWER_PREFIXES = (
+PROCEDURAL_FLOWER_PREFIXES = (
     "BS_Marigold_",
     "BS_LowerMarigold_",
     "BS_FinalFillMarigold_",
@@ -40,162 +39,146 @@ STEM_PREFIXES = (
     "BS_MehndiStem_",
     "BS_FinalFillStem_",
 )
-AUTHORED_PREFIXES = (
-    "BS_Mehndi",
-    "BS_Marigold",
-    "BS_Lower",
-    "BS_FinalFill",
-    "BS_FinalCollar",
+AUTHORED_SUPPORT_PREFIXES = (
+    "BS_MehndiStem_",
+    "BS_MehndiLeaf",
+    "BS_LowerLeaf",
+    "BS_FinalFillStem_",
+    "BS_FinalFillLeaf",
 )
 
 
-def _scale_existing_meshes(prefixes: tuple[str, ...], factor: Vector) -> int:
-    changed = 0
+def _delete_prefixes(prefixes: tuple[str, ...]) -> int:
+    removed = 0
+    for obj in list(bpy.context.scene.objects):
+        if obj.type == "MESH" and any(obj.name.startswith(prefix) for prefix in prefixes):
+            bpy.data.objects.remove(obj, do_unlink=True)
+            removed += 1
+    bpy.context.view_layer.update()
+    return removed
+
+
+def _remove_redundant_supports() -> tuple[int, int]:
+    """Reduce the old authored lattice before placing realistic flower patches."""
+    removed_stems = 0
+    removed_leaves = 0
+    for obj in list(bpy.context.scene.objects):
+        if obj.type != "MESH":
+            continue
+        if obj.name.startswith("BS_MehndiStem_"):
+            match = re.search(r"BS_MehndiStem_(\d+)", obj.name)
+            if match and int(match.group(1)) % 2 == 1:
+                bpy.data.objects.remove(obj, do_unlink=True)
+                removed_stems += 1
+        elif obj.name.startswith("BS_MehndiLeafB_"):
+            match = re.search(r"BS_MehndiLeafB_(\d+)", obj.name)
+            if match and int(match.group(1)) % 2 == 0:
+                bpy.data.objects.remove(obj, do_unlink=True)
+                removed_leaves += 1
+    bpy.context.view_layer.update()
+    return removed_stems, removed_leaves
+
+
+def _darken_support_materials() -> None:
+    stem = base.material("BS_RealFlowerStem", (0.006, 0.030, 0.003, 1.0), roughness=0.86)
+    leaf = base.material("BS_RealFlowerLeaf", (0.010, 0.060, 0.006, 1.0), roughness=0.82)
     for obj in bpy.context.scene.objects:
-        if obj.type != "MESH" or not any(obj.name.startswith(prefix) for prefix in prefixes):
+        if obj.type != "MESH":
             continue
-        obj.scale = Vector((obj.scale.x * factor.x, obj.scale.y * factor.y, obj.scale.z * factor.z))
-        changed += 1
+        if any(obj.name.startswith(prefix) for prefix in STEM_PREFIXES):
+            obj.data.materials.clear()
+            obj.data.materials.append(stem)
+        elif any(obj.name.startswith(prefix) for prefix in LEAF_PREFIXES):
+            obj.data.materials.clear()
+            obj.data.materials.append(leaf)
+
+
+def _rotate_group(objects: list[bpy.types.Object], degrees: float) -> None:
+    import math
+
+    radians = math.radians(degrees)
+    for obj in objects:
+        obj.rotation_euler[2] += radians
     bpy.context.view_layer.update()
-    return changed
 
 
-def _force_material(obj: bpy.types.Object, mat: bpy.types.Material) -> None:
-    if len(obj.data.materials) == 0:
-        obj.data.materials.append(mat)
-    else:
-        for index in range(len(obj.data.materials)):
-            obj.data.materials[index] = mat
-
-
-def _make_matte(mat: bpy.types.Material) -> None:
-    """Reduce white specular wash so marigold hues stay saturated in QA/mobile."""
-    if not mat.use_nodes:
-        return
-    bsdf = next((node for node in mat.node_tree.nodes if node.type == "BSDF_PRINCIPLED"), None)
-    if bsdf is None:
-        return
-    if "Specular IOR Level" in bsdf.inputs:
-        bsdf.inputs["Specular IOR Level"].default_value = 0.22
-    elif "Specular" in bsdf.inputs:
-        bsdf.inputs["Specular"].default_value = 0.22
-    if "Coat Weight" in bsdf.inputs:
-        bsdf.inputs["Coat Weight"].default_value = 0.0
-
-
-def _flower_group_index(name: str) -> int:
-    match = re.search(r"Marigold_(\d+)", name)
-    if match:
-        return int(match.group(1))
-    digits = re.findall(r"\d+", name)
-    return int(digits[0]) if digits else 0
-
-
-def _remove_redundant_long_stems() -> int:
-    """Remove alternate original long stems to stop the cage-like silhouette."""
-    removed = 0
-    for obj in list(bpy.context.scene.objects):
-        if obj.type != "MESH" or not obj.name.startswith("BS_MehndiStem_"):
-            continue
-        match = re.search(r"BS_MehndiStem_(\d+)", obj.name)
-        if match and int(match.group(1)) % 2 == 1:
-            bpy.data.objects.remove(obj, do_unlink=True)
-            removed += 1
+def _offset_group(objects: list[bpy.types.Object], delta: Vector) -> None:
+    for obj in objects:
+        obj.location += delta
     bpy.context.view_layer.update()
-    return removed
 
 
-def _remove_redundant_secondary_leaves() -> int:
-    """Thin the rigid leaf lattice while preserving broad visual foliage."""
-    removed = 0
-    for obj in list(bpy.context.scene.objects):
-        if obj.type != "MESH" or not obj.name.startswith("BS_MehndiLeafB_"):
-            continue
-        match = re.search(r"BS_MehndiLeafB_(\d+)", obj.name)
-        if match and int(match.group(1)) % 2 == 0:
-            bpy.data.objects.remove(obj, do_unlink=True)
-            removed += 1
-    bpy.context.view_layer.update()
-    return removed
+def _place_real_flower_patch(
+    source_id: str,
+    prefix: str,
+    width: float,
+    depth: float,
+    height: float,
+    z: float,
+    rotation_deg: float,
+    offset: tuple[float, float, float],
+) -> list[bpy.types.Object]:
+    objects = base.import_source(source_id, prefix)
+    # Poly Haven patches are preserved with their original UVs/textures. Exact
+    # fitting is intentional here because this is an authored event module with
+    # an authoritative 70 cm installation envelope, not a raw botanical asset.
+    base.fit_exact(objects, width, depth, height, z)
+    _rotate_group(objects, rotation_deg)
+    _offset_group(objects, Vector(offset))
+    return objects
 
 
 def polished_marigold(row: dict[str, str]) -> None:
     _previous_marigold(row)
 
-    # Make existing heads visibly fuller instead of adding more polygons. The
-    # current crown has enough envelope headroom for this increase.
-    flower_count = _scale_existing_meshes(
-        FLOWER_PREFIXES,
-        Vector((1.42, 1.42, 1.25)),
-    )
-    # Slightly reduce the earlier oversized foliage so the composition reads as
-    # flowers first, while still masking support stems at normal mobile distance.
-    leaf_count = _scale_existing_meshes(
-        LEAF_PREFIXES,
-        Vector((1.10, 1.10, 1.04)),
-    )
-    if flower_count == 0 or leaf_count == 0:
+    removed_flowers = _delete_prefixes(PROCEDURAL_FLOWER_PREFIXES)
+    removed_stems, removed_leaves = _remove_redundant_supports()
+    if removed_flowers == 0:
+        raise RuntimeError("expected procedural marigold heads were not found")
+
+    secondary = row.get("secondary_source_id", "").strip()
+    tertiary = row.get("tertiary_source_id", "").strip()
+    if secondary != "ph-flower-empodium" or tertiary != "ph-flower-gazania":
         raise RuntimeError(
-            f"expected existing marigold geometry was not found: flowers={flower_count}, leaves={leaf_count}"
+            "real-flower marigold candidate requires ph-flower-empodium and ph-flower-gazania provenance"
         )
 
-    # Compact the full authored arrangement vertically around the pot shoulder.
-    # This keeps the flower/stem connections intact while removing the sparse,
-    # tower-like upper silhouette. The resulting height still fills >85% of the
-    # 1.10 m production envelope required by the structural validator.
-    final.transform_authored(AUTHORED_PREFIXES, sz=0.92, pivot_z=0.34)
+    # Yellow Empodium supplies a broad lower floral mass around the pot rim.
+    _place_real_flower_patch(
+        secondary,
+        "CC0_Empodium",
+        width=0.60,
+        depth=0.56,
+        height=0.34,
+        z=0.38,
+        rotation_deg=-10.0,
+        offset=(-0.015, 0.018, 0.0),
+    )
 
-    # Use sRGB-targeted linear ratios with substantially more green so orange does
-    # not drift toward coral/peach under the QA renderer. Low specular response
-    # preserves saturation and keeps the three flower colours distinct.
-    orange = base.material("BS_PolishOrange", (0.90, 0.250, 0.0020, 1.0), roughness=0.72)
-    saffron = base.material("BS_PolishSaffron", (1.00, 0.430, 0.0040, 1.0), roughness=0.70)
-    yellow = base.material("BS_PolishYellow", (1.00, 0.700, 0.0200, 1.0), roughness=0.74)
-    deep_stem = base.material("BS_PolishStem", (0.0004, 0.0035, 0.0002, 1.0), roughness=0.90)
-    deep_leaf = base.material("BS_PolishLeaf", (0.0015, 0.012, 0.0007, 1.0), roughness=0.86)
-    for mat in (orange, saffron, yellow, deep_stem, deep_leaf):
-        _make_matte(mat)
+    # Orange Gazania supplies the taller hero layer. It is deliberately fitted
+    # inside the same envelope and later decimated by the standard exporter so
+    # the complete GLB remains under the manifest's 26k LOD0 budget.
+    _place_real_flower_patch(
+        tertiary,
+        "CC0_Gazania",
+        width=0.64,
+        depth=0.60,
+        height=0.54,
+        z=0.43,
+        rotation_deg=14.0,
+        offset=(0.018, -0.012, 0.0),
+    )
 
-    assigned_flowers = 0
-    assigned_stems = 0
-    assigned_leaves = 0
-    for obj in bpy.context.scene.objects:
-        if obj.type != "MESH":
-            continue
-        material_names = " ".join(mat.name.lower() for mat in obj.data.materials if mat is not None)
-        if any(obj.name.startswith(prefix) for prefix in FLOWER_PREFIXES) or "marigold" in material_names:
-            group_index = _flower_group_index(obj.name)
-            if "_Core" in obj.name:
-                chosen = saffron
-            elif group_index % 5 == 0:
-                chosen = yellow
-            elif group_index % 3 == 0:
-                chosen = saffron
-            else:
-                chosen = orange
-            _force_material(obj, chosen)
-            assigned_flowers += 1
-        elif any(obj.name.startswith(prefix) for prefix in STEM_PREFIXES) or "stem" in material_names:
-            _force_material(obj, deep_stem)
-            assigned_stems += 1
-        elif any(obj.name.startswith(prefix) for prefix in LEAF_PREFIXES) or "leaf" in material_names:
-            _force_material(obj, deep_leaf)
-            assigned_leaves += 1
+    # Keep the remaining authored greenery/supports visually subordinate to the
+    # real flower textures; no additional geometry is introduced here.
+    final.transform_authored(AUTHORED_SUPPORT_PREFIXES, sz=0.90, pivot_z=0.34)
+    _darken_support_materials()
 
-    removed_stems = _remove_redundant_long_stems()
-    removed_leaves = _remove_redundant_secondary_leaves()
-    if (
-        assigned_flowers == 0
-        or assigned_stems == 0
-        or assigned_leaves == 0
-        or removed_stems == 0
-        or removed_leaves == 0
-    ):
-        raise RuntimeError(
-            "marigold polish assignment failed: "
-            f"flowers={assigned_flowers}, stems={assigned_stems}, leaves={assigned_leaves}, "
-            f"removed_stems={removed_stems}, removed_leaves={removed_leaves}"
-        )
+    print(
+        "real-flower replacement: "
+        f"removed procedural heads={removed_flowers}, "
+        f"removed stems={removed_stems}, removed leaves={removed_leaves}"
+    )
 
 
 base.build_marigold = polished_marigold
