@@ -1,10 +1,10 @@
 """Second visual-polish pass for the Batch-1 marigold candidate.
 
 The first corrected marigold already sits close to the 26k mobile triangle
-budget.  This pass therefore works by reusing/scaling existing flower geometry,
-forcing reliable mobile-safe materials directly onto meshes, and removing a
-subset of redundant long stems.  It does not alter the approved low floral or
-the corrected welcome mirror.
+budget. This pass reuses/scales existing flower geometry, forces reliable
+mobile-safe materials directly onto meshes, and removes a subset of redundant
+long stems. It does not alter the approved low floral or corrected welcome
+mirror.
 """
 from __future__ import annotations
 
@@ -64,7 +64,6 @@ def _flower_group_index(name: str) -> int:
     match = re.search(r"Marigold_(\d+)", name)
     if match:
         return int(match.group(1))
-    # Final fill/collar names contain the same numbered token after Marigold_.
     digits = re.findall(r"\d+", name)
     return int(digits[0]) if digits else 0
 
@@ -90,23 +89,24 @@ def polished_marigold(row: dict[str, str]) -> None:
         FLOWER_PREFIXES,
         Vector((1.24, 1.24, 1.16)),
     )
+    # A little more foliage width hides the remaining support structure without
+    # adding triangles or materially changing the true-size footprint.
     leaf_count = _scale_existing_meshes(
         LEAF_PREFIXES,
-        Vector((1.22, 1.22, 1.08)),
+        Vector((1.30, 1.30, 1.08)),
     )
     if flower_count == 0 or leaf_count == 0:
         raise RuntimeError(
             f"expected existing marigold geometry was not found: flowers={flower_count}, leaves={leaf_count}"
         )
 
-    # Use explicit new materials and assign them directly to every mesh.  This
-    # avoids Blender's .001/.002 material-name reuse and keeps the exported GLB
-    # consistent under headless rebuilds and mobile PBR viewers.
-    orange = base.material("BS_PolishOrange", (0.42, 0.012, 0.001, 1.0), roughness=0.58)
-    saffron = base.material("BS_PolishSaffron", (0.60, 0.065, 0.002, 1.0), roughness=0.57)
-    yellow = base.material("BS_PolishYellow", (0.72, 0.36, 0.006, 1.0), roughness=0.60)
-    deep_stem = base.material("BS_PolishStem", (0.004, 0.026, 0.001, 1.0), roughness=0.80)
-    deep_leaf = base.material("BS_PolishLeaf", (0.008, 0.060, 0.003, 1.0), roughness=0.77)
+    # These scripted values are linear RGB. Keep luminance moderate but retain
+    # enough green in orange/saffron to avoid the coral/pink hue seen in QA.
+    orange = base.material("BS_PolishOrange", (0.50, 0.090, 0.003, 1.0), roughness=0.58)
+    saffron = base.material("BS_PolishSaffron", (0.72, 0.220, 0.004, 1.0), roughness=0.57)
+    yellow = base.material("BS_PolishYellow", (0.82, 0.520, 0.008, 1.0), roughness=0.60)
+    deep_stem = base.material("BS_PolishStem", (0.001, 0.008, 0.0005, 1.0), roughness=0.82)
+    deep_leaf = base.material("BS_PolishLeaf", (0.004, 0.032, 0.0015, 1.0), roughness=0.79)
 
     assigned_flowers = 0
     assigned_stems = 0
@@ -114,7 +114,8 @@ def polished_marigold(row: dict[str, str]) -> None:
     for obj in bpy.context.scene.objects:
         if obj.type != "MESH":
             continue
-        if any(obj.name.startswith(prefix) for prefix in FLOWER_PREFIXES):
+        material_names = " ".join(mat.name.lower() for mat in obj.data.materials if mat is not None)
+        if any(obj.name.startswith(prefix) for prefix in FLOWER_PREFIXES) or "marigold" in material_names:
             group_index = _flower_group_index(obj.name)
             if "_Core" in obj.name:
                 chosen = saffron
@@ -124,10 +125,10 @@ def polished_marigold(row: dict[str, str]) -> None:
                 chosen = orange
             _force_material(obj, chosen)
             assigned_flowers += 1
-        elif any(obj.name.startswith(prefix) for prefix in STEM_PREFIXES):
+        elif any(obj.name.startswith(prefix) for prefix in STEM_PREFIXES) or "stem" in material_names:
             _force_material(obj, deep_stem)
             assigned_stems += 1
-        elif any(obj.name.startswith(prefix) for prefix in LEAF_PREFIXES):
+        elif any(obj.name.startswith(prefix) for prefix in LEAF_PREFIXES) or "leaf" in material_names:
             _force_material(obj, deep_leaf)
             assigned_leaves += 1
 
