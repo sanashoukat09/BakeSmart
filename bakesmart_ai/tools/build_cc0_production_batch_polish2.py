@@ -119,8 +119,6 @@ def _place_real_flower_patch(
     offset: tuple[float, float, float],
 ) -> list[bpy.types.Object]:
     objects = base.import_source(source_id, prefix)
-    # Preserve the real Poly Haven UVs/textures but fit each botanical patch into
-    # BakeSmart's authoritative installation envelope before composing it.
     base.fit_exact(objects, width, depth, height, z)
     _rotate_group(objects, rotation_deg)
     _offset_group(objects, Vector(offset))
@@ -142,34 +140,31 @@ def polished_marigold(row: dict[str, str]) -> None:
             "real-flower marigold candidate requires ph-flower-empodium and ph-flower-gazania provenance"
         )
 
-    # Keep a safety margin around the 0.70 m envelope because rotating a fitted
-    # rectangle increases its axis-aligned bounds. The prior 0.7244 m result was
-    # only 4.4 mm beyond the validator tolerance; these dimensions provide a
-    # clear margin without making the crown look undersized.
+    # Maintain width headroom while bringing the visible depth above the
+    # validator's 85% minimum (0.595 m for the 0.70 m envelope). Small rotations
+    # keep the two real flower patches organic without inflating their AABB.
     _place_real_flower_patch(
         secondary,
         "CC0_Empodium",
         width=0.56,
-        depth=0.52,
+        depth=0.55,
         height=0.34,
         z=0.38,
-        rotation_deg=-8.0,
-        offset=(-0.008, 0.008, 0.0),
+        rotation_deg=-6.0,
+        offset=(-0.006, 0.010, 0.0),
     )
 
     _place_real_flower_patch(
         tertiary,
         "CC0_Gazania",
         width=0.59,
-        depth=0.55,
+        depth=0.59,
         height=0.54,
         z=0.43,
-        rotation_deg=10.0,
-        offset=(0.008, -0.006, 0.0),
+        rotation_deg=7.0,
+        offset=(0.006, -0.008, 0.0),
     )
 
-    # Keep the remaining authored greenery/supports visually subordinate to the
-    # real flower textures; no additional geometry is introduced here.
     final.transform_authored(AUTHORED_SUPPORT_PREFIXES, sz=0.90, pivot_z=0.34)
     _darken_support_materials()
 
