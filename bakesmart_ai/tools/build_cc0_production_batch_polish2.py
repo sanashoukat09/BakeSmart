@@ -145,12 +145,12 @@ def polished_marigold(row: dict[str, str]) -> None:
     # 1.10 m production envelope required by the structural validator.
     final.transform_authored(AUTHORED_PREFIXES, sz=0.92, pivot_z=0.34)
 
-    # Linear RGB values intentionally target deeper, saturated marigold hues.
-    # The previous brighter values were pushed toward peach/cream by the QA
-    # renderer's highlight compression. Lower specular response preserves hue.
-    orange = base.material("BS_PolishOrange", (0.24, 0.030, 0.0006, 1.0), roughness=0.72)
-    saffron = base.material("BS_PolishSaffron", (0.46, 0.105, 0.0015, 1.0), roughness=0.70)
-    yellow = base.material("BS_PolishYellow", (0.62, 0.285, 0.0040, 1.0), roughness=0.74)
+    # Use sRGB-targeted linear ratios with substantially more green so orange does
+    # not drift toward coral/peach under the QA renderer. Low specular response
+    # preserves saturation and keeps the three flower colours distinct.
+    orange = base.material("BS_PolishOrange", (0.90, 0.250, 0.0020, 1.0), roughness=0.72)
+    saffron = base.material("BS_PolishSaffron", (1.00, 0.430, 0.0040, 1.0), roughness=0.70)
+    yellow = base.material("BS_PolishYellow", (1.00, 0.700, 0.0200, 1.0), roughness=0.74)
     deep_stem = base.material("BS_PolishStem", (0.0004, 0.0035, 0.0002, 1.0), roughness=0.90)
     deep_leaf = base.material("BS_PolishLeaf", (0.0015, 0.012, 0.0007, 1.0), roughness=0.86)
     for mat in (orange, saffron, yellow, deep_stem, deep_leaf):
