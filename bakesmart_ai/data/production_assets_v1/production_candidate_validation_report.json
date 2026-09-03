@@ -36,7 +36,7 @@
     {
       "asset_id": "prod-floor-marigold-clusters",
       "valid": true,
-      "file_size_bytes": 1883372,
+      "file_size_bytes": 1883316,
       "triangle_count": 25520,
       "checks": [
         "GLB magic header is valid.",
