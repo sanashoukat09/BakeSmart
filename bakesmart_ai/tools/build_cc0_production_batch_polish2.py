@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 TOOLS_DIR = Path(__file__).resolve().parent
 if str(TOOLS_DIR) not in sys.path:
@@ -63,6 +63,53 @@ def _offset_group(objects: list[bpy.types.Object], delta: Vector) -> None:
     bpy.context.view_layer.update()
 
 
+def _fit_world_exact(
+    objects: list[bpy.types.Object],
+    width: float,
+    depth: float,
+    height: float,
+    z: float,
+) -> None:
+    """Enforce final world-space bounds after imported transforms/rotation.
+
+    Poly Haven plant assets can contain nested/rotated source transforms. The
+    base fitter is sufficient for ordinary props, but a final world-space pass
+    is needed here so the strict BakeSmart installation-envelope validator sees
+    exactly the intended botanical footprint and height.
+    """
+    minimum, maximum = base.mesh_bounds(objects)
+    dimensions = maximum - minimum
+    center = (minimum + maximum) * 0.5
+    scale = Matrix.Diagonal(
+        (
+            width / max(dimensions.x, 1e-6),
+            depth / max(dimensions.y, 1e-6),
+            height / max(dimensions.z, 1e-6),
+            1.0,
+        )
+    )
+    pivot = Vector((center.x, center.y, minimum.z))
+    transform = Matrix.Translation(pivot) @ scale @ Matrix.Translation(-pivot)
+    for obj in objects:
+        obj.matrix_world = transform @ obj.matrix_world
+    bpy.context.view_layer.update()
+
+    minimum, maximum = base.mesh_bounds(objects)
+    center = (minimum + maximum) * 0.5
+    _offset_group(objects, Vector((-center.x, -center.y, z - minimum.z)))
+
+    # Fail immediately if Blender transforms did not converge to the requested
+    # world dimensions; this prevents another misleading downstream QA run.
+    minimum, maximum = base.mesh_bounds(objects)
+    actual = maximum - minimum
+    targets = (width, depth, height)
+    for index, target in enumerate(targets):
+        if abs(actual[index] - target) > 0.003:
+            raise RuntimeError(
+                f"real flower world fit failed on axis {index}: actual={actual[index]:.4f}, target={target:.4f}"
+            )
+
+
 def _place_real_flower_patch(
     source_id: str,
     prefix: str,
@@ -74,10 +121,12 @@ def _place_real_flower_patch(
     offset: tuple[float, float, float],
 ) -> list[bpy.types.Object]:
     objects = base.import_source(source_id, prefix)
-    # Preserve the provider UVs, alpha masks and PBR textures. BakeSmart only
-    # performs true-size composition and the standard mobile LOD pass.
+    # First normalize the provider asset, then rotate it into the arrangement,
+    # and finally enforce exact world-space dimensions. UVs, alpha masks and
+    # PBR textures remain untouched.
     base.fit_exact(objects, width, depth, height, z)
     _rotate_group(objects, rotation_deg)
+    _fit_world_exact(objects, width, depth, height, z)
     _offset_group(objects, Vector(offset))
     return objects
 
@@ -103,8 +152,6 @@ def polished_marigold(row: dict[str, str]) -> None:
             "real-flower marigold candidate requires ph-flower-empodium and ph-flower-gazania provenance"
         )
 
-    # A broad yellow/pale lower patch fills the pot rim and hides the imported
-    # plants' base. Its lower height keeps it subordinate to the orange layer.
     _place_real_flower_patch(
         secondary,
         "CC0_Empodium",
@@ -116,9 +163,8 @@ def polished_marigold(row: dict[str, str]) -> None:
         offset=(-0.010, 0.012, 0.0),
     )
 
-    # The orange Gazania patch is the hero layer. It overlaps the lower patch
-    # closely enough to read as one bouquet while keeping the complete module
-    # inside the 0.70 x 0.70 x 1.10 m production envelope.
+    # Exact world-space placement gives a 0.96 m overall visible height when
+    # combined with the pot: above the 0.935 m minimum yet safely below 1.12 m.
     _place_real_flower_patch(
         tertiary,
         "CC0_Gazania",
