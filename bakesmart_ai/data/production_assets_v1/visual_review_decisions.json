@@ -3,12 +3,66 @@
   "review_only": true,
   "production_ready": false,
   "decisions": {
+    "prod-backdrop-balloon-garland": {
+      "asset_id": "prod-backdrop-balloon-garland",
+      "decision": "needs_correction",
+      "notes": "Balloons are faceted, sparse and arranged as a simple single row. Create a fuller organic garland with varied sizes, smoother balloons and a better-finished photo wall.",
+      "reviewed_at": "2026-09-04T13:53:21.675187Z",
+      "artifact_sha256": "1fb3123e420a36c323743fbdb0346c16e8e943578ab64e0f8fc94f1fe5a1646e",
+      "manifest_changed": false,
+      "production_promoted": false
+    },
+    "prod-backdrop-floral-arch": {
+      "asset_id": "prod-backdrop-floral-arch",
+      "decision": "needs_correction",
+      "notes": "The floral coverage is far too sparse and resembles small decorations on a bare frame rather than a full ceremony arch. Add dense layered flowers and foliage with balanced coverage.",
+      "reviewed_at": "2026-09-04T13:53:34.142194Z",
+      "artifact_sha256": "09d047f58fdc76aa457fdbd63ba7ac679d59b852d60d8573cf940cd04fe1a8d9",
+      "manifest_changed": false,
+      "production_promoted": false
+    },
+    "prod-backdrop-round-arch": {
+      "asset_id": "prod-backdrop-round-arch",
+      "decision": "needs_correction",
+      "notes": "Fabric appears as a rigid flat board rather than removable draped fabric and obscures much of the arch. Improve fabric folds, attachment, positioning and metal finish.",
+      "reviewed_at": "2026-09-04T13:53:05.235880Z",
+      "artifact_sha256": "31de6abec5cc205286ae0092270be1f21ed5c655ee34a1b7b0c9f9353fee3a92",
+      "manifest_changed": false,
+      "production_promoted": false
+    },
     "prod-floor-marigold-clusters": {
       "asset_id": "prod-floor-marigold-clusters",
       "decision": "approve",
       "notes": "Passed corrected-asset visual review on desktop and mobile.",
       "reviewed_at": "2026-09-04T11:33:25Z",
       "artifact_sha256": "2c54abbaaec689dbf90a9b22894e1b7a7d531867a33e85706b46c024ed2e639d",
+      "manifest_changed": false,
+      "production_promoted": false
+    },
+    "prod-lighting-curtain": {
+      "asset_id": "prod-lighting-curtain",
+      "decision": "needs_correction",
+      "notes": "The curtain is functional but too sparse and visually weak. Increase warm-light density and glow, improve wire appearance and make the top support less heavy and dark.",
+      "reviewed_at": "2026-09-04T14:01:17.956003Z",
+      "artifact_sha256": "711a8fb0f32e6421a9586be8a6cb83551a8f4c6afdd8571ceb9d5515f7c308c9",
+      "manifest_changed": false,
+      "production_promoted": false
+    },
+    "prod-lighting-led-candles": {
+      "asset_id": "prod-lighting-led-candles",
+      "decision": "needs_correction",
+      "notes": "The candles are too basic and difficult to inspect. Improve wax shapes, LED flame glow, height variation and cluster arrangement while retaining the correct true size.",
+      "reviewed_at": "2026-09-04T14:01:38.250714Z",
+      "artifact_sha256": "e88cf1c06c51859b165a8f711a0113494c2913ff0e575bf9870d62b1f468097a",
+      "manifest_changed": false,
+      "production_promoted": false
+    },
+    "prod-lighting-uplight-set": {
+      "asset_id": "prod-lighting-uplight-set",
+      "decision": "needs_correction",
+      "notes": "The uplight is overly basic and lacks a realistic adjustable housing, bracket, lens detail and visible light-beam effect. Improve the fixture while keeping it mobile optimized.",
+      "reviewed_at": "2026-09-04T14:01:28.325709Z",
+      "artifact_sha256": "42e9d015b597ee29252d4cb1641e15c3d56a5f55e1787e77ede862dd96a1f1aa",
       "manifest_changed": false,
       "production_promoted": false
     },

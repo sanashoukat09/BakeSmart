@@ -12,7 +12,7 @@ from app.services.production_assets import ProductionAssetRegistry, production_a
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_DATA = PACKAGE_ROOT / "data" / "production_assets_v1"
-ASSET_ID = "prod-sign-mirror-welcome"
+ASSET_ID = "prod-backdrop-round-arch"
 
 
 def _review_registry(tmp_path: Path) -> ProductionAssetRegistry:
@@ -48,7 +48,7 @@ def test_real_geometry_review_queue_contains_built_candidates(tmp_path: Path) ->
         and registry.validate_asset(asset.asset_id).status == "not_approved"
     }
     assert ids == expected
-    assert "prod-sign-mirror-welcome" in ids
+    assert ASSET_ID in ids
     assert response.production_ready is False
     assert all(asset.true_size_scale == 1.0 for asset in response.assets)
     assert all(asset.customer_renderable is False for asset in response.assets)
@@ -63,7 +63,7 @@ def test_approve_records_review_without_promoting_manifest(tmp_path: Path) -> No
     )
     result = service.submit(
         ProductionAssetReviewSubmission(
-            asset_id="prod-sign-mirror-welcome",
+            asset_id=ASSET_ID,
             decision="approve",
         )
     )
@@ -71,9 +71,9 @@ def test_approve_records_review_without_promoting_manifest(tmp_path: Path) -> No
     assert result.record.production_promoted is False
     assert result.record.manifest_changed is False
     assert result.record.artifact_sha256 is not None
-    assert registry.by_asset_id["prod-sign-mirror-welcome"].production_status == "geometry_review"
+    assert registry.by_asset_id[ASSET_ID].production_status == "geometry_review"
     saved = service.candidates()
-    selected = next(asset for asset in saved.assets if asset.asset_id == "prod-sign-mirror-welcome")
+    selected = next(asset for asset in saved.assets if asset.asset_id == ASSET_ID)
     assert selected.decision is not None
     assert selected.decision.decision == "approve"
 
@@ -87,7 +87,7 @@ def test_correction_and_reject_require_notes(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="require a short reviewer note"):
         service.submit(
             ProductionAssetReviewSubmission(
-                asset_id="prod-sign-mirror-welcome",
+                asset_id=ASSET_ID,
                 decision="needs_correction",
             )
         )
@@ -101,7 +101,7 @@ def test_planned_asset_cannot_enter_visual_review(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="not an eligible geometry-review"):
         service.submit(
             ProductionAssetReviewSubmission(
-                asset_id="prod-backdrop-round-arch",
+                asset_id="prod-backdrop-chiara-panels",
                 decision="approve",
             )
         )
@@ -113,8 +113,8 @@ def test_review_glb_revalidates_and_stays_true_size(tmp_path: Path) -> None:
         registry=registry,
         review_path=tmp_path / "visual_reviews.json",
     )
-    path = service.glb_path("prod-sign-mirror-welcome")
-    assert path.name == "sign-mirror-welcome.glb"
+    path = service.glb_path(ASSET_ID)
+    assert path.name == "backdrop-round-arch.glb"
     assert path.is_file()
 
 
@@ -128,8 +128,8 @@ def test_decision_without_matching_artifact_digest_is_stale(tmp_path: Path) -> N
                 "review_only": True,
                 "production_ready": False,
                 "decisions": {
-                    "prod-sign-mirror-welcome": {
-                        "asset_id": "prod-sign-mirror-welcome",
+                    ASSET_ID: {
+                        "asset_id": ASSET_ID,
                         "decision": "approve",
                         "notes": "Decision belongs to an older GLB revision.",
                         "reviewed_at": "2026-09-01T08:08:00Z",
@@ -149,7 +149,7 @@ def test_decision_without_matching_artifact_digest_is_stale(tmp_path: Path) -> N
     selected = next(
         asset
         for asset in service.candidates().assets
-        if asset.asset_id == "prod-sign-mirror-welcome"
+            if asset.asset_id == ASSET_ID
     )
 
     assert selected.decision is None

@@ -64,8 +64,8 @@ def test_production_manifest_covers_current_real_catalogue():
     assert summary.mapped_catalog_item_count == 30
     assert summary.material_profile_count == 14
     assert summary.production_ready_count == 3
-    assert summary.missing_glb_count == 27
-    assert summary.pending_rights_review_count == 27
+    assert summary.missing_glb_count == 21
+    assert summary.pending_rights_review_count == 21
     assert summary.target_min_assets == 80
     assert summary.target_max_assets == 120
     assert summary.library_target_met is False
@@ -90,7 +90,11 @@ def test_manifest_requires_true_size_instead_of_large_uniform_stretching():
 
 
 def test_planned_asset_is_not_claimed_renderable():
-    asset = production_asset_registry.assets[0]
+    asset = next(
+        item
+        for item in production_asset_registry.assets
+        if item.production_status == "planned"
+    )
     result = production_asset_registry.validate_asset(asset.asset_id)
 
     assert result.status == "missing_glb"

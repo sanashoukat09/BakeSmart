@@ -30,14 +30,14 @@ def test_production_asset_catalog_exposes_true_size_and_pbr_rules(client):
         "height_m": 2.2,
     }
     assert arch["max_uniform_scale"] == 1.02
-    assert arch["production_status"] == "planned"
+    assert arch["production_status"] == "geometry_review"
     assert arch["renderable"] is False
 
 
 def test_production_asset_validation_reports_missing_planned_glb(client):
     response = client.post(
         "/api/v1/assets/3d/validate",
-        json={"asset_id": "prod-backdrop-round-arch"},
+        json={"asset_id": "prod-backdrop-chiara-panels"},
     )
 
     assert response.status_code == 200
