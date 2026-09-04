@@ -4,68 +4,133 @@
   "production_ready": false,
   "assets": [
     {
-      "asset_id": "prod-table-low-floral",
-      "output": "app/assets/production/table-low-floral.glb",
+      "asset_id": "prod-backdrop-round-arch",
+      "output": "app/assets/production/backdrop-round-arch.glb",
       "source_ids": [
-        "ph-ceramic-vase-04"
+        "pp-arch-kay-lousberg",
+        "ph-terlenka"
       ],
       "source_license_status": "cc0_confirmed",
       "redistribution_allowed": true,
       "true_dimensions_m": [
-        0.45,
-        0.45,
-        0.3
+        2.0,
+        0.55,
+        2.2
       ],
       "visible_mesh_bounds_m": [
-        0.3923,
-        0.3923,
-        0.2785
+        2.0,
+        0.55,
+        2.2
       ],
-      "triangle_count": 15516,
+      "triangle_count": 764,
       "status": "built_for_final_visual_review"
     },
     {
-      "asset_id": "prod-floor-marigold-clusters",
-      "output": "app/assets/production/floor-marigold-clusters.glb",
+      "asset_id": "prod-backdrop-balloon-garland",
+      "output": "app/assets/production/backdrop-balloon-garland.glb",
       "source_ids": [
-        "ph-brass-pot-01",
-        "ph-flower-empodium",
-        "ph-flower-gazania"
+        "oga-balloons-pack",
+        "pp-arch-creativetrio"
       ],
       "source_license_status": "cc0_confirmed",
       "redistribution_allowed": true,
       "true_dimensions_m": [
-        0.7,
-        0.7,
-        1.1
+        2.2,
+        0.55,
+        2.1
       ],
       "visible_mesh_bounds_m": [
-        0.62,
-        0.617,
-        0.96
+        2.2004,
+        0.55,
+        2.1
       ],
-      "triangle_count": 21153,
+      "triangle_count": 2264,
       "status": "built_for_final_visual_review"
     },
     {
-      "asset_id": "prod-sign-mirror-welcome",
-      "output": "app/assets/production/sign-mirror-welcome.glb",
+      "asset_id": "prod-backdrop-floral-arch",
+      "output": "app/assets/production/backdrop-floral-arch.glb",
       "source_ids": [
-        "ph-ornate-mirror-01"
+        "pp-arch-kay-lousberg",
+        "pp-flower-group-quaternius",
+        "pp-flower-single-quaternius"
       ],
       "source_license_status": "cc0_confirmed",
       "redistribution_allowed": true,
       "true_dimensions_m": [
-        0.75,
-        0.05,
-        1.5
+        2.8,
+        0.9,
+        2.5
       ],
       "visible_mesh_bounds_m": [
-        0.7,
-        0.0573,
-        1.5001
+        2.8,
+        0.9,
+        2.5
       ],
-      "triangle_count": 11825,
+      "triangle_count": 10304,
+      "status": "built_for_final_visual_review"
+    },
+    {
+      "asset_id": "prod-lighting-curtain",
+      "output": "app/assets/production/lighting-curtain.glb",
+      "source_ids": [
+        "ph-terlenka"
+      ],
+      "source_license_status": "cc0_confirmed",
+      "redistribution_allowed": true,
+      "true_dimensions_m": [
+        3.0,
+        0.08,
+        2.5
+      ],
+      "visible_mesh_bounds_m": [
+        3.0,
+        0.08,
+        2.5
+      ],
+      "triangle_count": 3532,
+      "status": "built_for_final_visual_review"
+    },
+    {
+      "asset_id": "prod-lighting-uplight-set",
+      "output": "app/assets/production/lighting-uplight-set.glb",
+      "source_ids": [
+        "pp-lantern-kay"
+      ],
+      "source_license_status": "cc0_confirmed",
+      "redistribution_allowed": true,
+      "true_dimensions_m": [
+        0.2,
+        0.2,
+        0.25
+      ],
+      "visible_mesh_bounds_m": [
+        0.2,
+        0.2,
+        0.25
+      ],
+      "triangle_count": 116,
+      "status": "built_for_final_visual_review"
+    },
+    {
+      "asset_id": "prod-lighting-led-candles",
+      "output": "app/assets/production/lighting-led-candles.glb",
+      "source_ids": [
+        "oga-medieval-candles"
+      ],
+      "source_license_status": "cc0_confirmed",
+      "redistribution_allowed": true,
+      "true_dimensions_m": [
+        0.08,
+        0.08,
+        0.18
+      ],
+      "visible_mesh_bounds_m": [
+        0.08,
+        0.08,
+        0.18
+      ],
+      "triangle_count": 240,
       "status": "built_for_final_visual_review"
     }
   ],
