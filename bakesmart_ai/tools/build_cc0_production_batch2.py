@@ -162,6 +162,7 @@ BUILDERS = {
     "uplight_set": build_uplight_set,
     "led_candles": build_led_candles,
 }
+MANIFEST_BY_ID = {row["asset_id"]: row for row in base.read_rows(base.MANIFEST)}
 
 
 def build(row):
@@ -169,6 +170,15 @@ def build(row):
         BUILDERS[row["builder"]](row)
     except KeyError as exc:
         raise RuntimeError(f"unknown Batch 2 builder {row['builder']}") from exc
+    manifest = MANIFEST_BY_ID[row["asset_id"]]
+    meshes = [obj for obj in bpy.context.scene.objects if obj.type == "MESH"]
+    base.fit_exact(
+        meshes,
+        float(manifest["width_m"]),
+        float(manifest["depth_m"]),
+        float(manifest["height_m"]),
+        0.0,
+    )
 
 
 if __name__ == "__main__":
