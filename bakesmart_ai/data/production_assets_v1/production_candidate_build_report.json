@@ -22,7 +22,7 @@
         0.55,
         2.2
       ],
-      "triangle_count": 764,
+      "triangle_count": 1180,
       "status": "built_for_final_visual_review"
     },
     {
@@ -40,11 +40,11 @@
         2.1
       ],
       "visible_mesh_bounds_m": [
-        2.2004,
+        2.2006,
         0.55,
         2.1
       ],
-      "triangle_count": 2264,
+      "triangle_count": 6120,
       "status": "built_for_final_visual_review"
     },
     {
@@ -65,9 +65,9 @@
       "visible_mesh_bounds_m": [
         2.8,
         0.9,
-        2.5
+        2.4994
       ],
-      "triangle_count": 10304,
+      "triangle_count": 33048,
       "status": "built_for_final_visual_review"
     },
     {
@@ -88,7 +88,7 @@
         0.08,
         2.5
       ],
-      "triangle_count": 3532,
+      "triangle_count": 7212,
       "status": "built_for_final_visual_review"
     },
     {
@@ -106,10 +106,10 @@
       ],
       "visible_mesh_bounds_m": [
         0.2,
-        0.2,
-        0.25
+        0.1995,
+        0.2505
       ],
-      "triangle_count": 116,
+      "triangle_count": 440,
       "status": "built_for_final_visual_review"
     },
     {
@@ -130,7 +130,7 @@
         0.08,
         0.18
       ],
-      "triangle_count": 240,
+      "triangle_count": 3120,
       "status": "built_for_final_visual_review"
     }
   ],
