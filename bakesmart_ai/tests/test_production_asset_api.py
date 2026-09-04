@@ -6,7 +6,7 @@ def test_production_asset_summary_is_truthful(client):
     assert body["manifest_version"] == "production-assets-v1"
     assert body["total_asset_requirements"] == 30
     assert body["mapped_catalog_item_count"] == 30
-    assert body["production_ready_count"] == 0
+    assert body["production_ready_count"] == 1
     assert body["target_min_assets"] == 80
     assert body["library_target_met"] is False
     assert body["runtime_external_glb_assembly_ready"] is False

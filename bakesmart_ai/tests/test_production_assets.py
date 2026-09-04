@@ -63,7 +63,7 @@ def test_production_manifest_covers_current_real_catalogue():
     assert summary.real_catalog_item_count == 30
     assert summary.mapped_catalog_item_count == 30
     assert summary.material_profile_count == 14
-    assert summary.production_ready_count == 0
+    assert summary.production_ready_count == 1
     assert summary.missing_glb_count == 27
     assert summary.pending_rights_review_count == 27
     assert summary.target_min_assets == 80
@@ -132,10 +132,17 @@ def test_current_candidates_report_independent_visible_and_collision_bounds():
     assert result.collision_envelope_m.depth_m == 0.09
 
 
-def test_corrected_low_floral_passes_true_scale_gate_but_stays_unapproved():
+def test_approved_low_floral_passes_true_scale_and_customer_gates():
     result = production_asset_registry.validate_asset("prod-table-low-floral")
 
-    assert result.status == "not_approved"
+    assert result.status == "ready"
+    assert result.renderable is True
+    assert production_asset_registry.is_renderable_catalog_item(
+        "table-low-floral"
+    ) is True
+    assert production_asset_registry.customer_glb_path(
+        "prod-table-low-floral"
+    ).is_file()
     assert result.visible_coverage is not None
     assert result.visible_coverage.width_fraction >= 0.85
     assert result.visible_coverage.depth_fraction >= 0.85

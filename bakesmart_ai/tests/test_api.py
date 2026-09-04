@@ -110,13 +110,15 @@ def test_recommendation_returns_three_budget_aware_packages(client, valid_design
     assert body["preview"] == {
         "interactive_3d_ready": True,
         "viewer_3d_url": f"/viewer/{body['design_id']}?package=balanced",
-        "viewer_label": "Open Basic 3D Layout Preview",
+        "viewer_label": "Open Detailed 3D View",
         "scene_glb_url": f"/api/v1/designs/{body['design_id']}/scene.glb",
         "ar_supported": None,
         "ar_url": None,
         "fallback_label": None,
     }
-    assert body["scene"]["asset_status"] == "generated_procedural_glb"
+    assert body["scene"]["asset_status"] == (
+        "production_modular_glbs_with_procedural_fallback"
+    )
     assert body["scene"]["concept_not_to_scale"] is False
     assert any("real catalogue price ranges" in warning for warning in body["warnings"])
     assert any("not a camera-calibrated" in warning for warning in body["warnings"])
@@ -174,7 +176,9 @@ def test_viewer_and_glb_urls_are_real_local_resources(client, valid_design_reque
     assert renderer_core.status_code == 200
     assert modules.status_code == 200
     assert modules.json()["scene_version"] == "customer-production-modular-v1"
-    assert modules.json()["production_module_count"] == 0
+    assert modules.json()["production_module_count"] == 1
+    assert modules.json()["modules"][0]["asset_id"] == "prod-table-low-floral"
+    assert modules.json()["modules"][0]["uniform_scale"] == 1.0
     assert b"pointermove" in renderer_core.content
     assert b"wheel" in renderer_core.content
     assert b"pbrMetallicRoughness" in renderer_core.content

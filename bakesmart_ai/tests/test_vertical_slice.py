@@ -15,8 +15,18 @@ def test_vertical_slice_has_twelve_structurally_valid_review_glbs():
     for celebration in summary.celebrations:
         assert celebration.present_glb_count == celebration.required_asset_count
         assert celebration.structurally_valid_count == celebration.required_asset_count
-        assert celebration.production_ready_count == 0
+        expected_ready = sum(
+            production_asset_registry.is_renderable_catalog_item(asset.catalog_id)
+            for asset in celebration.assets
+        )
+        assert celebration.production_ready_count == expected_ready
         assert celebration.customer_slice_ready is False
+    wedding = next(
+        celebration
+        for celebration in summary.celebrations
+        if celebration.celebration == "wedding"
+    )
+    assert wedding.production_ready_count == 1
 
 
 def test_review_binaries_pass_stage5_structural_contract():
@@ -29,7 +39,7 @@ def test_review_binaries_pass_stage5_structural_contract():
             assert triangle_count is not None and triangle_count > 0
             assert production_asset_registry.is_renderable_catalog_item(
                 record.catalog_id
-            ) is False
+            ) is (record.production_status == "production_ready")
 
 
 def test_birthday_composition_never_stretches_modules():

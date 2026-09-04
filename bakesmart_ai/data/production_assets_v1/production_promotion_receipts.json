@@ -1,0 +1,17 @@
+{
+  "receipt_version": "production-promotion-v1",
+  "receipts": {
+    "prod-table-low-floral": {
+      "artifact_sha256": "764b4313d2882cdc7779e5ac022b5ce151a17a0171ce81c0944c5a20f20be8f6",
+      "asset_id": "prod-table-low-floral",
+      "catalog_id": "table-low-floral",
+      "desktop_viewer_passed": true,
+      "mobile_viewer_passed": true,
+      "promoted_at": "2026-09-04T09:44:19.358483+00:00",
+      "redistribution_allowed": true,
+      "reviewed_at": "2026-09-03T08:44:56.493361Z",
+      "reviewer_id": "sanashoukat09",
+      "source_license_status": "cc0_confirmed"
+    }
+  }
+}
