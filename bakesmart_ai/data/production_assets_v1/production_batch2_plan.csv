@@ -1,0 +1,7 @@
+asset_id,builder,primary_source_id,secondary_source_id,tertiary_source_id,source_license_status,redistribution_allowed,review_event,notes
+prod-backdrop-round-arch,round_arch,pp-arch-kay-lousberg,ph-terlenka,,cc0_confirmed,true,wedding,CC0 arch reference and fabric material reference guide a locally authored true-size modular metal arch with removable matte textile panel.
+prod-backdrop-balloon-garland,balloon_garland,oga-balloons-pack,pp-arch-creativetrio,,cc0_confirmed,true,birthday,CC0 balloon and arch references guide a locally authored compact photo wall with a mobile-safe balloon garland.
+prod-backdrop-floral-arch,floral_arch,pp-arch-kay-lousberg,pp-flower-group-quaternius,pp-flower-single-quaternius,cc0_confirmed,true,wedding,CC0 arch and flower references guide a locally authored full artificial floral ceremony arch.
+prod-lighting-curtain,fairy_light_curtain,ph-terlenka,,,cc0_confirmed,true,engagement,CC0 textile reference guides a locally authored warm LED curtain with lightweight repeated bulbs.
+prod-lighting-uplight-set,uplight_set,pp-lantern-kay,,,cc0_confirmed,true,corporate,CC0 lantern reference guides a locally authored compact static LED uplight module.
+prod-lighting-led-candles,led_candles,oga-medieval-candles,,,cc0_confirmed,true,anniversary,CC0 candle reference guides a locally authored battery LED pillar candle cluster with no open flame.

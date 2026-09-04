@@ -1,0 +1,82 @@
+name: Build professional CC0 asset candidates - Batch 2
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "Sana's-work"
+    paths:
+      - ".github/workflows/build-professional-assets-batch2.yml"
+      - "bakesmart_ai/tools/build_cc0_production_batch2.py"
+      - "bakesmart_ai/tools/promote_geometry_review_batch2.py"
+      - "bakesmart_ai/data/production_assets_v1/production_batch2_plan.csv"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: professional-assets-batch2-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out Sana's-work
+        uses: actions/checkout@v4
+        with:
+          ref: "Sana's-work"
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install validator and Blender
+        run: |
+          set -euxo pipefail
+          python -m pip install "pydantic>=2,<3"
+          sudo apt-get update
+          sudo apt-get install -y blender python3-numpy libegl1 libgl1-mesa-dri xvfb
+      - name: Build and validate six review candidates
+        working-directory: bakesmart_ai
+        run: |
+          set -euxo pipefail
+          blender --background --python tools/build_cc0_production_batch2.py -- \
+            --plan data/production_assets_v1/production_batch2_plan.csv \
+            --report data/production_assets_v1/production_candidate_build_report.json
+          python tools/validate_production_candidates.py
+          python tools/promote_geometry_review_batch2.py
+      - name: Render all Batch 2 candidates
+        working-directory: bakesmart_ai
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          set -euxo pipefail
+          xvfb-run -a -s "-screen 0 1920x1080x24" blender -b \
+            --python tools/render_production_asset_reviews.py -- \
+            --output-dir "$RUNNER_TEMP/batch2-review-renders"
+          test "$(find "$RUNNER_TEMP/batch2-review-renders" -name front.png | wc -l)" -eq 6
+      - uses: actions/upload-artifact@v4
+        with:
+          name: production-asset-batch2-review-renders
+          path: ${{ runner.temp }}/batch2-review-renders
+          if-no-files-found: error
+          retention-days: 14
+      - name: Commit generated candidates to Sana's-work only
+        run: |
+          set -euxo pipefail
+          git config user.name "BakeSmart Asset Builder"
+          git config user.email "bakesmart-asset-builder@users.noreply.github.com"
+          git add \
+            bakesmart_ai/app/assets/production/backdrop-round-arch.glb \
+            bakesmart_ai/app/assets/production/backdrop-balloon-garland.glb \
+            bakesmart_ai/app/assets/production/backdrop-floral-arch.glb \
+            bakesmart_ai/app/assets/production/lighting-curtain.glb \
+            bakesmart_ai/app/assets/production/lighting-uplight-set.glb \
+            bakesmart_ai/app/assets/production/lighting-led-candles.glb \
+            bakesmart_ai/data/production_assets_v1/asset_manifest.csv \
+            bakesmart_ai/data/production_assets_v1/production_candidate_build_report.json \
+            bakesmart_ai/data/production_assets_v1/production_candidate_validation_report.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Build second CC0 production asset batch"
+          git push origin HEAD:"Sana's-work"
