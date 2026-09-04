@@ -187,15 +187,23 @@ def test_viewer_and_glb_urls_are_real_local_resources(client, valid_design_reque
     assert renderer_core.content.count(b"precision highp float;") == 2
 
 
-def test_unapproved_production_glb_is_never_customer_served(client):
+def test_approved_production_glb_is_customer_served(client):
     response = client.get(
         "/api/v1/assets/3d/production/prod-sign-mirror-welcome.glb"
     )
 
-    assert response.status_code == 409
-    assert response.json()["detail"]["code"] == (
-        "production_asset_not_customer_ready"
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "model/gltf-binary"
+    assert response.content[:4] == b"glTF"
+
+
+def test_unapproved_planned_glb_is_never_customer_served(client):
+    response = client.get(
+        "/api/v1/assets/3d/production/prod-backdrop-round-arch.glb"
     )
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["code"] == "production_asset_not_customer_ready"
 
 
 def test_unknown_viewer_scene_returns_not_found(client):

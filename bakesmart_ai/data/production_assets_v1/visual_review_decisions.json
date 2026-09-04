@@ -5,19 +5,19 @@
   "decisions": {
     "prod-floor-marigold-clusters": {
       "asset_id": "prod-floor-marigold-clusters",
-      "decision": "needs_correction",
-      "notes": "Flower density and colour separation are improved, but the pot still renders nearly black instead of brass, and the stems/leaves are excessively dark. Brighten the brass, stem and foliage materials.",
-      "reviewed_at": "2026-09-04T10:06:30.457477Z",
-      "artifact_sha256": "55fd69bb7d7d6386cb597fe8bd18048c2c96cf76de9819b8422e4c78c17f0178",
+      "decision": "approve",
+      "notes": "Passed corrected-asset visual review on desktop and mobile.",
+      "reviewed_at": "2026-09-04T11:33:25Z",
+      "artifact_sha256": "2c54abbaaec689dbf90a9b22894e1b7a7d531867a33e85706b46c024ed2e639d",
       "manifest_changed": false,
       "production_promoted": false
     },
     "prod-sign-mirror-welcome": {
       "asset_id": "prod-sign-mirror-welcome",
-      "decision": "needs_correction",
-      "notes": "Text readability is improved, but the face still appears as a flat black panel rather than reflective mirror material. Brighten the mirror face, frame and supports while retaining strong text contrast.",
-      "reviewed_at": "2026-09-04T10:06:52.512574Z",
-      "artifact_sha256": "dda7a5f7951e52f944a7f2cce52812cb5885debfc6f0438422b3df71c8db47ee",
+      "decision": "approve",
+      "notes": "Passed corrected-asset visual review on desktop and mobile.",
+      "reviewed_at": "2026-09-04T11:33:25Z",
+      "artifact_sha256": "803c0d4ff422fb86884c6bb126405dffa2d65fe98b56f17ca3ca6e1993a3007d",
       "manifest_changed": false,
       "production_promoted": false
     },

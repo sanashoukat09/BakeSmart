@@ -1,6 +1,30 @@
 {
   "receipt_version": "production-promotion-v1",
   "receipts": {
+    "prod-floor-marigold-clusters": {
+      "artifact_sha256": "2c54abbaaec689dbf90a9b22894e1b7a7d531867a33e85706b46c024ed2e639d",
+      "asset_id": "prod-floor-marigold-clusters",
+      "catalog_id": "floor-marigold-clusters",
+      "desktop_viewer_passed": true,
+      "mobile_viewer_passed": true,
+      "promoted_at": "2026-09-04T11:33:46.365946+00:00",
+      "redistribution_allowed": true,
+      "reviewed_at": "2026-09-04T11:33:25Z",
+      "reviewer_id": "sanashoukat09",
+      "source_license_status": "cc0_confirmed"
+    },
+    "prod-sign-mirror-welcome": {
+      "artifact_sha256": "803c0d4ff422fb86884c6bb126405dffa2d65fe98b56f17ca3ca6e1993a3007d",
+      "asset_id": "prod-sign-mirror-welcome",
+      "catalog_id": "sign-mirror-welcome",
+      "desktop_viewer_passed": true,
+      "mobile_viewer_passed": true,
+      "promoted_at": "2026-09-04T11:33:46.365946+00:00",
+      "redistribution_allowed": true,
+      "reviewed_at": "2026-09-04T11:33:25Z",
+      "reviewer_id": "sanashoukat09",
+      "source_license_status": "cc0_confirmed"
+    },
     "prod-table-low-floral": {
       "artifact_sha256": "764b4313d2882cdc7779e5ac022b5ce151a17a0171ce81c0944c5a20f20be8f6",
       "asset_id": "prod-table-low-floral",

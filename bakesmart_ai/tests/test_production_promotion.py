@@ -1,3 +1,4 @@
+import csv
 import hashlib
 import json
 import shutil
@@ -26,6 +27,18 @@ CATALOG_ID = "sign-mirror-welcome"
 def _workspace(tmp_path: Path, *, stale: bool = False) -> tuple[Path, Path, Path]:
     data_dir = tmp_path / "production_assets_v1"
     shutil.copytree(SOURCE_DATA, data_dir)
+    manifest_path = data_dir / "asset_manifest.csv"
+    with manifest_path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        fieldnames = list(reader.fieldnames or [])
+        rows = list(reader)
+    for row in rows:
+        if row["asset_id"] == ASSET_ID:
+            row["production_status"] = "geometry_review"
+    with manifest_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
     glb_path = PACKAGE_ROOT / "app" / "assets" / "production" / f"{CATALOG_ID}.glb"
     digest = hashlib.sha256(glb_path.read_bytes()).hexdigest()
     if stale:
@@ -52,7 +65,7 @@ def _workspace(tmp_path: Path, *, stale: bool = False) -> tuple[Path, Path, Path
         ),
         encoding="utf-8",
     )
-    return data_dir / "asset_manifest.csv", review_path, data_dir / "receipts.json"
+    return manifest_path, review_path, data_dir / "receipts.json"
 
 
 def _promote(tmp_path: Path) -> ProductionAssetRegistry:
