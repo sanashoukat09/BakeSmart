@@ -5,11 +5,13 @@ Run with Blender. Geometry is authored deterministically and uses no AI service.
 from __future__ import annotations
 
 import math
+import sys
 from pathlib import Path
 
 import bpy
 from mathutils import Vector
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build_cc0_production_batch as base
 
 
