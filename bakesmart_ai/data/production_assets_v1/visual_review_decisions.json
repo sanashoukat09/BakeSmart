@@ -6,18 +6,18 @@
     "prod-floor-marigold-clusters": {
       "asset_id": "prod-floor-marigold-clusters",
       "decision": "needs_correction",
-      "notes": "Brass pot renders black, and the floral crown is too narrow and sparse with overly exposed straight stems. Increase floral density and width, improve orange/yellow colour separation, and restore a convincing brass material.",
-      "reviewed_at": "2026-09-03T08:44:37.476618Z",
-      "artifact_sha256": "d89b9fad088801a005af63c6ca916933b06e4b2e31e29ad17b3da54b96efd42f",
+      "notes": "Flower density and colour separation are improved, but the pot still renders nearly black instead of brass, and the stems/leaves are excessively dark. Brighten the brass, stem and foliage materials.",
+      "reviewed_at": "2026-09-04T10:06:30.457477Z",
+      "artifact_sha256": "55fd69bb7d7d6386cb597fe8bd18048c2c96cf76de9819b8422e4c78c17f0178",
       "manifest_changed": false,
       "production_promoted": false
     },
     "prod-sign-mirror-welcome": {
       "asset_id": "prod-sign-mirror-welcome",
       "decision": "needs_correction",
-      "notes": "Mirror face appears as a nearly black panel instead of reflective mirror material. Frame details and supports are too dark, while the gold text is dim and may be unreadable on mobile. Brighten and rebalance the materials and improve text contrast.",
-      "reviewed_at": "2026-09-03T08:45:12.582655Z",
-      "artifact_sha256": "a7d60e733df10c4b4ee1d78b391b7882edad7cf7bc7d20d9688734062ed2c191",
+      "notes": "Text readability is improved, but the face still appears as a flat black panel rather than reflective mirror material. Brighten the mirror face, frame and supports while retaining strong text contrast.",
+      "reviewed_at": "2026-09-04T10:06:52.512574Z",
+      "artifact_sha256": "dda7a5f7951e52f944a7f2cce52812cb5885debfc6f0438422b3df71c8db47ee",
       "manifest_changed": false,
       "production_promoted": false
     },
