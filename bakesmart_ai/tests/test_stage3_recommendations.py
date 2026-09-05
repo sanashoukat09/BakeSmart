@@ -76,3 +76,51 @@ def test_stage3_explanations_name_real_price_evidence(valid_design_request):
     for row, _, _ in plan.selected:
         assert "Price range evidence:" in row["reason"]
         assert row["safety_notes"]
+
+
+def test_stage3_prefers_approved_modules_for_a_flower_theme(valid_design_request):
+    selected = {
+        row["item_id"]
+        for row, _, _ in _plans(valid_design_request)["balanced"].selected
+    }
+
+    assert {
+        "backdrop-round-arch",
+        "table-low-floral",
+        "lighting-curtain",
+    } <= selected
+
+
+def test_stage3_uses_different_approved_assets_for_kids_and_glam_events(
+    valid_design_request,
+):
+    kids = deepcopy(valid_design_request)
+    kids["event"].update(
+        {
+            "event_type": "kids_birthday",
+            "theme_id": "whimsical-kids",
+            "preferred_colors": ["pink", "cream"],
+            "excluded_colors": [],
+        }
+    )
+    kids_ids = {
+        row["item_id"] for row, _, _ in _plans(kids)["essential"].selected
+    }
+
+    glam = deepcopy(valid_design_request)
+    glam["event"].update(
+        {
+            "event_type": "wedding",
+            "theme_id": "glam-gold",
+            "preferred_colors": ["gold", "blush"],
+            "excluded_colors": [],
+        }
+    )
+    glam["decoration_budget_pkr"] = 100_000
+    glam_ids = {
+        row["item_id"] for row, _, _ in _plans(glam)["statement"].selected
+    }
+
+    assert "backdrop-balloon-garland" in kids_ids
+    assert {"backdrop-floral-arch", "lighting-uplight-set"} <= glam_ids
+    assert kids_ids != glam_ids

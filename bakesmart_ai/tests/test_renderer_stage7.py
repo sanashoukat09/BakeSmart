@@ -16,7 +16,7 @@ def test_stage7_renderer_capabilities_are_truthful(client):
     assert body["object_selection"] is True
     assert body["metric_module_transforms"] is True
     assert body["runtime_lod_switching"] is False
-    assert body["customer_production_modular_scene_ready"] is False
+    assert body["customer_production_modular_scene_ready"] is True
 
 
 def test_birthday_modular_scene_manifest_keeps_true_scale(client):

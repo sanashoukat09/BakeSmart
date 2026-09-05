@@ -10,12 +10,14 @@ from app.schemas.design import ObjectPlacement, SpaceInput, StrictModel
 class PreviewCapabilityState(StrictModel):
     """Machine-readable truth about the currently shipped 3D preview."""
 
-    geometry_mode: Literal["procedural_planning_geometry"] = (
-        "procedural_planning_geometry"
+    geometry_mode: Literal["hybrid_production_modules_with_procedural_fallback"] = (
+        "hybrid_production_modules_with_procedural_fallback"
     )
-    asset_mode: Literal["generated_procedural_glb"] = "generated_procedural_glb"
+    asset_mode: Literal["approved_local_glb_modules"] = "approved_local_glb_modules"
     renderer_mode: Literal["local_webgl"] = "local_webgl"
-    material_mode: Literal["vertex_color_lit"] = "vertex_color_lit"
+    material_mode: Literal["pbr_metallic_roughness_with_fallback"] = (
+        "pbr_metallic_roughness_with_fallback"
+    )
     metric_scene_coordinates: Literal[True] = True
     camera_navigation_ready: Literal[True] = True
     photo_projection_ready: Literal[False] = False

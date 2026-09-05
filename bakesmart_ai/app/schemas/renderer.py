@@ -28,7 +28,7 @@ class RendererCapabilitiesResponse(StrictModel):
     metric_module_transforms: Literal[True] = True
     runtime_lod_switching: Literal[False] = False
     image_based_lighting: Literal[False] = False
-    customer_production_modular_scene_ready: Literal[False] = False
+    customer_production_modular_scene_ready: Literal[True] = True
     limitations: list[str] = Field(default_factory=list, max_length=12)
 
 

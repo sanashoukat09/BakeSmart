@@ -26,10 +26,10 @@ def test_capabilities_use_metres_and_pkr(client):
     )
     assert body["calibration_reference_api_ready"] is True
     assert body["preview"] == {
-        "geometry_mode": "procedural_planning_geometry",
-        "asset_mode": "generated_procedural_glb",
+        "geometry_mode": "hybrid_production_modules_with_procedural_fallback",
+        "asset_mode": "approved_local_glb_modules",
         "renderer_mode": "local_webgl",
-        "material_mode": "vertex_color_lit",
+        "material_mode": "pbr_metallic_roughness_with_fallback",
         "metric_scene_coordinates": True,
         "camera_navigation_ready": True,
         "photo_projection_ready": False,
@@ -176,9 +176,16 @@ def test_viewer_and_glb_urls_are_real_local_resources(client, valid_design_reque
     assert renderer_core.status_code == 200
     assert modules.status_code == 200
     assert modules.json()["scene_version"] == "customer-production-modular-v1"
-    assert modules.json()["production_module_count"] == 1
-    assert modules.json()["modules"][0]["asset_id"] == "prod-table-low-floral"
-    assert modules.json()["modules"][0]["uniform_scale"] == 1.0
+    assert modules.json()["production_module_count"] == 3
+    assert {module["asset_id"] for module in modules.json()["modules"]} == {
+        "prod-backdrop-round-arch",
+        "prod-table-low-floral",
+        "prod-lighting-curtain",
+    }
+    assert all(
+        module["uniform_scale"] == 1.0
+        for module in modules.json()["modules"]
+    )
     assert b"pointermove" in renderer_core.content
     assert b"wheel" in renderer_core.content
     assert b"pbrMetallicRoughness" in renderer_core.content
@@ -199,7 +206,7 @@ def test_approved_production_glb_is_customer_served(client):
 
 def test_unapproved_planned_glb_is_never_customer_served(client):
     response = client.get(
-        "/api/v1/assets/3d/production/prod-backdrop-round-arch.glb"
+        "/api/v1/assets/3d/production/prod-backdrop-chiara-panels.glb"
     )
 
     assert response.status_code == 409

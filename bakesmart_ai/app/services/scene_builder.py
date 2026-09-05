@@ -191,8 +191,8 @@ class SceneBuilder:
             "The bootstrap model was trained on synthetic labels and is not production-approved.",
             "All prices are synthetic planning estimates, not vendor or bakery quotes.",
             (
-                "The interactive scene uses procedural placeholder geometry; detailed "
-                "catalogue art assets are not available yet."
+                "The interactive scene uses approved true-scale production GLBs where "
+                "available and procedural geometry for remaining catalogue items."
             ),
             (
                 "The supplied cake image is retained as a design reference; the "

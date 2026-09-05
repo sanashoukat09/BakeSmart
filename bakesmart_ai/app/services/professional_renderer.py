@@ -27,7 +27,7 @@ _RENDERER_LIMITATIONS = [
     "Contact shadows are a deterministic planar approximation, not ray-traced shadows.",
     "Runtime LOD switching is not enabled until reviewed LOD1/LOD2 production files exist.",
     "The Stage-6 Birthday/Wedding/Mehndi assets remain review-only low-poly prototypes and are not customer production assets.",
-    "Customer modular rendering remains gated on production-ready, rights-cleared assets even though the renderer can assemble multiple GLBs.",
+    "Customer scenes use production modules only when their exact GLBs are production-ready and rights-cleared; other catalogue items remain procedural fallbacks.",
 ]
 
 
