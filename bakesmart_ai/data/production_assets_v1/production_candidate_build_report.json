@@ -22,7 +22,7 @@
         0.55,
         2.2
       ],
-      "triangle_count": 1180,
+      "triangle_count": 4112,
       "status": "built_for_final_visual_review"
     },
     {
@@ -40,11 +40,11 @@
         2.1
       ],
       "visible_mesh_bounds_m": [
-        2.2006,
+        2.2009,
         0.55,
         2.1
       ],
-      "triangle_count": 6120,
+      "triangle_count": 24056,
       "status": "built_for_final_visual_review"
     },
     {
@@ -65,72 +65,9 @@
       "visible_mesh_bounds_m": [
         2.8,
         0.9,
-        2.4994
+        2.498
       ],
-      "triangle_count": 33048,
-      "status": "built_for_final_visual_review"
-    },
-    {
-      "asset_id": "prod-lighting-curtain",
-      "output": "app/assets/production/lighting-curtain.glb",
-      "source_ids": [
-        "ph-terlenka"
-      ],
-      "source_license_status": "cc0_confirmed",
-      "redistribution_allowed": true,
-      "true_dimensions_m": [
-        3.0,
-        0.08,
-        2.5
-      ],
-      "visible_mesh_bounds_m": [
-        3.0,
-        0.08,
-        2.5
-      ],
-      "triangle_count": 7212,
-      "status": "built_for_final_visual_review"
-    },
-    {
-      "asset_id": "prod-lighting-uplight-set",
-      "output": "app/assets/production/lighting-uplight-set.glb",
-      "source_ids": [
-        "pp-lantern-kay"
-      ],
-      "source_license_status": "cc0_confirmed",
-      "redistribution_allowed": true,
-      "true_dimensions_m": [
-        0.2,
-        0.2,
-        0.25
-      ],
-      "visible_mesh_bounds_m": [
-        0.2,
-        0.1995,
-        0.2505
-      ],
-      "triangle_count": 440,
-      "status": "built_for_final_visual_review"
-    },
-    {
-      "asset_id": "prod-lighting-led-candles",
-      "output": "app/assets/production/lighting-led-candles.glb",
-      "source_ids": [
-        "oga-medieval-candles"
-      ],
-      "source_license_status": "cc0_confirmed",
-      "redistribution_allowed": true,
-      "true_dimensions_m": [
-        0.08,
-        0.08,
-        0.18
-      ],
-      "visible_mesh_bounds_m": [
-        0.08,
-        0.08,
-        0.18
-      ],
-      "triangle_count": 3120,
+      "triangle_count": 49440,
       "status": "built_for_final_visual_review"
     }
   ],

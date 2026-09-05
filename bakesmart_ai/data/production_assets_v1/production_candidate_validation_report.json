@@ -7,8 +7,8 @@
     {
       "asset_id": "prod-backdrop-round-arch",
       "valid": true,
-      "file_size_bytes": 90404,
-      "triangle_count": 1180,
+      "file_size_bytes": 151796,
+      "triangle_count": 4112,
       "checks": [
         "GLB magic header is valid.",
         "GLB version is 2.",
@@ -25,7 +25,7 @@
         "Visible mesh fills at least 85% of the installation envelope on every axis.",
         "Visible mesh stays within the installation envelope plus 2 cm tolerance.",
         "Embedded visible mesh bounds match independently calculated bounds within 2 cm.",
-        "LOD0 triangle count 1180 is within the 40000 triangle budget."
+        "LOD0 triangle count 4112 is within the 40000 triangle budget."
       ],
       "errors": [],
       "warnings": [
@@ -36,8 +36,8 @@
     {
       "asset_id": "prod-backdrop-balloon-garland",
       "valid": true,
-      "file_size_bytes": 232244,
-      "triangle_count": 6120,
+      "file_size_bytes": 575860,
+      "triangle_count": 24056,
       "checks": [
         "GLB magic header is valid.",
         "GLB version is 2.",
@@ -54,7 +54,7 @@
         "Visible mesh fills at least 85% of the installation envelope on every axis.",
         "Visible mesh stays within the installation envelope plus 2 cm tolerance.",
         "Embedded visible mesh bounds match independently calculated bounds within 2 cm.",
-        "LOD0 triangle count 6120 is within the 50000 triangle budget."
+        "LOD0 triangle count 24056 is within the 50000 triangle budget."
       ],
       "errors": [],
       "warnings": [
@@ -65,8 +65,8 @@
     {
       "asset_id": "prod-backdrop-floral-arch",
       "valid": true,
-      "file_size_bytes": 2580272,
-      "triangle_count": 33048,
+      "file_size_bytes": 2498648,
+      "triangle_count": 49440,
       "checks": [
         "GLB magic header is valid.",
         "GLB version is 2.",
@@ -83,94 +83,7 @@
         "Visible mesh fills at least 85% of the installation envelope on every axis.",
         "Visible mesh stays within the installation envelope plus 2 cm tolerance.",
         "Embedded visible mesh bounds match independently calculated bounds within 2 cm.",
-        "LOD0 triangle count 33048 is within the 60000 triangle budget."
-      ],
-      "errors": [],
-      "warnings": [
-        "Texture pixel dimensions and visual material quality still require Blender/export review; the binary inspector does not decode every embedded image."
-      ],
-      "review_only": true
-    },
-    {
-      "asset_id": "prod-lighting-curtain",
-      "valid": true,
-      "file_size_bytes": 558144,
-      "triangle_count": 7212,
-      "checks": [
-        "GLB magic header is valid.",
-        "GLB version is 2.",
-        "GLB declared length matches file length.",
-        "glTF asset.version is 2.0.",
-        "At least one node is present.",
-        "At least one mesh is present.",
-        "No unsupported required mesh-compression extension is declared.",
-        "All materials define pbrMetallicRoughness.",
-        "Embedded asset id matches the manifest.",
-        "Embedded units are metres.",
-        "Embedded anchor type matches the manifest.",
-        "Embedded true-size dimensions match the manifest within 2 cm.",
-        "Visible mesh fills at least 85% of the installation envelope on every axis.",
-        "Visible mesh stays within the installation envelope plus 2 cm tolerance.",
-        "Embedded visible mesh bounds match independently calculated bounds within 2 cm.",
-        "LOD0 triangle count 7212 is within the 20000 triangle budget."
-      ],
-      "errors": [],
-      "warnings": [
-        "Texture pixel dimensions and visual material quality still require Blender/export review; the binary inspector does not decode every embedded image."
-      ],
-      "review_only": true
-    },
-    {
-      "asset_id": "prod-lighting-uplight-set",
-      "valid": true,
-      "file_size_bytes": 35432,
-      "triangle_count": 440,
-      "checks": [
-        "GLB magic header is valid.",
-        "GLB version is 2.",
-        "GLB declared length matches file length.",
-        "glTF asset.version is 2.0.",
-        "At least one node is present.",
-        "At least one mesh is present.",
-        "No unsupported required mesh-compression extension is declared.",
-        "All materials define pbrMetallicRoughness.",
-        "Embedded asset id matches the manifest.",
-        "Embedded units are metres.",
-        "Embedded anchor type matches the manifest.",
-        "Embedded true-size dimensions match the manifest within 2 cm.",
-        "Visible mesh fills at least 85% of the installation envelope on every axis.",
-        "Visible mesh stays within the installation envelope plus 2 cm tolerance.",
-        "Embedded visible mesh bounds match independently calculated bounds within 2 cm.",
-        "LOD0 triangle count 440 is within the 14000 triangle budget."
-      ],
-      "errors": [],
-      "warnings": [
-        "Texture pixel dimensions and visual material quality still require Blender/export review; the binary inspector does not decode every embedded image."
-      ],
-      "review_only": true
-    },
-    {
-      "asset_id": "prod-lighting-led-candles",
-      "valid": true,
-      "file_size_bytes": 186648,
-      "triangle_count": 3120,
-      "checks": [
-        "GLB magic header is valid.",
-        "GLB version is 2.",
-        "GLB declared length matches file length.",
-        "glTF asset.version is 2.0.",
-        "At least one node is present.",
-        "At least one mesh is present.",
-        "No unsupported required mesh-compression extension is declared.",
-        "All materials define pbrMetallicRoughness.",
-        "Embedded asset id matches the manifest.",
-        "Embedded units are metres.",
-        "Embedded anchor type matches the manifest.",
-        "Embedded true-size dimensions match the manifest within 2 cm.",
-        "Visible mesh fills at least 85% of the installation envelope on every axis.",
-        "Visible mesh stays within the installation envelope plus 2 cm tolerance.",
-        "Embedded visible mesh bounds match independently calculated bounds within 2 cm.",
-        "LOD0 triangle count 3120 is within the 10000 triangle budget."
+        "LOD0 triangle count 49440 is within the 60000 triangle budget."
       ],
       "errors": [],
       "warnings": [
