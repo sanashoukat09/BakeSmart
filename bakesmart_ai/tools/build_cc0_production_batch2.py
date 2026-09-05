@@ -44,32 +44,53 @@ def tube_arc(name: str, radius: float, center_z: float, mat, segments: int = 24,
 def build_round_arch(_row):
     metal = base.material("BS_WarmGoldMetal", (0.82, 0.52, 0.15, 1), metallic=0.82, roughness=0.20)
     fabric_a = base.material("BS_IvoryFabricLight", (0.96, 0.88, 0.77, 1), roughness=0.88)
-    fabric_b = base.material("BS_IvoryFabricShade", (0.79, 0.67, 0.56, 1), roughness=0.92)
     for x in (-0.985, 0.985):
         base.cylinder_between("BS_ArchPost", (x, 0, 0.04), (x, 0, 1.215), 0.018, metal, 10)
     tube_arc("BS_ArchTop", 0.982, 1.20, metal, tube_radius=0.018)
     base.cube("BS_FootL", (0.30, 0.55, 0.04), (-0.85, 0, 0.02), metal)
     base.cube("BS_FootR", (0.30, 0.55, 0.04), (0.85, 0, 0.02), metal)
-    # Overlapping narrow panels create readable vertical folds instead of a rigid board.
-    for index in range(15):
-        x = -0.70 + index * 0.10
-        y = -0.025 + 0.055 * math.sin(index * 1.35)
-        bottom = 0.10 + 0.045 * (0.5 + 0.5 * math.sin(index * 1.7))
-        top = 1.88 - 0.08 * abs(x) + 0.035 * math.sin(index * 0.9)
-        panel = base.cube(
-            f"BS_FabricFold_{index:02d}",
-            (0.125, 0.026, top - bottom),
-            (x, y, (top + bottom) / 2),
-            fabric_a if index % 2 else fabric_b,
-        )
-        panel.rotation_euler[2] = 0.018 * math.sin(index)
-    for x in (-0.58, 0.58):
-        base.ico("BS_FabricTie", (x, -0.055, 1.52), (0.06, 0.04, 0.08), metal)
+    # One continuous, lightly rippled mesh reads as cloth instead of separate boards.
+    columns, rows = 28, 20
+    vertices = []
+    for row in range(rows + 1):
+        v = row / rows
+        z = 0.10 + 1.78 * v
+        for column in range(columns + 1):
+            u = column / columns
+            x = -0.72 + 1.44 * u
+            fold = 0.045 * math.sin(u * math.tau * 5.0) * (0.72 + 0.28 * math.sin(v * math.pi))
+            billow = 0.018 * math.sin(v * math.pi * 2.0 + u * 3.0)
+            vertices.append((x, -0.04 + fold + billow, z + 0.018 * math.sin(u * math.pi)))
+    faces = []
+    stride = columns + 1
+    for row in range(rows):
+        for column in range(columns):
+            a = row * stride + column
+            faces.append((a, a + 1, a + stride + 1, a + stride))
+    mesh = bpy.data.meshes.new("BS_ContinuousDrapeMesh")
+    mesh.from_pydata(vertices, [], faces)
+    mesh.update()
+    drape = bpy.data.objects.new("BS_ContinuousDrape", mesh)
+    bpy.context.collection.objects.link(drape)
+    drape.data.materials.append(fabric_a)
+    for polygon in drape.data.polygons:
+        polygon.use_smooth = True
+    solidify = drape.modifiers.new("BS_ClothThickness", "SOLIDIFY")
+    solidify.thickness = 0.006
+    bpy.context.view_layer.objects.active = drape
+    bpy.ops.object.modifier_apply(modifier=solidify.name)
+    # Small top loops visibly attach the removable drape to the metal arch.
+    for x in (-0.62, -0.31, 0.0, 0.31, 0.62):
+        bpy.ops.mesh.primitive_torus_add(major_segments=12, minor_segments=6, major_radius=0.025, minor_radius=0.006, location=(x, -0.025, 1.89), rotation=(math.pi / 2, 0, 0))
+        bpy.context.object.name = "BS_DrapeAttachment"
+        bpy.context.object.data.materials.append(fabric_a)
 
 
 def balloon(name, position, scale, mat):
-    obj = base.ico(name, position, scale, mat, subdivisions=2)
+    obj = base.ico(name, position, scale, mat, subdivisions=3)
     obj.rotation_euler[2] = 0.25 * math.sin(position[0] * 11 + position[2] * 7)
+    for polygon in obj.data.polygons:
+        polygon.use_smooth = True
     return obj
 
 
@@ -81,9 +102,22 @@ def build_balloon_garland(_row):
         base.material("BS_BalloonPeach", (0.96, 0.61, 0.39, 1), roughness=0.27),
         base.material("BS_BalloonCream", (0.96, 0.86, 0.69, 1), roughness=0.32),
     ]
-    panel = base.cube("BS_PhotoWall", (1.68, 0.10, 1.94), (0.12, 0, 1.07), wall)
+    # Extruded arched silhouette gives the photo wall an intentional event-panel finish.
+    outline = [(-0.78, 0.10), (0.78, 0.10), (0.78, 1.16)]
+    outline.extend((0.78 * math.cos(angle), 1.16 + 0.78 * math.sin(angle)) for angle in [math.pi * i / 16 for i in range(1, 17)])
+    depth = 0.05
+    vertices = [(x + 0.12, -depth, z) for x, z in outline] + [(x + 0.12, depth, z) for x, z in outline]
+    count = len(outline)
+    faces = [tuple(reversed(range(count))), tuple(range(count, count * 2))]
+    faces.extend((i, (i + 1) % count, (i + 1) % count + count, i + count) for i in range(count))
+    mesh = bpy.data.meshes.new("BS_ArchedPhotoWallMesh")
+    mesh.from_pydata(vertices, [], faces)
+    mesh.update()
+    panel = bpy.data.objects.new("BS_ArchedPhotoWall", mesh)
+    bpy.context.collection.objects.link(panel)
+    panel.data.materials.append(wall)
     bevel = panel.modifiers.new("BS_SoftPanelEdges", "BEVEL")
-    bevel.width = 0.045
+    bevel.width = 0.025
     bevel.segments = 3
     bpy.context.view_layer.objects.active = panel
     bpy.ops.object.modifier_apply(modifier=bevel.name)
@@ -108,14 +142,25 @@ def build_balloon_garland(_row):
         balloon(f"BS_Balloon_{i:02d}", pos, (radius, radius * 0.92, radius * (1.02 + 0.10 * (i % 2))), palette[i % 3])
 
 
-def flower(name, position, petal, core, radius=0.055):
-    base.ico(name + "_Core", position, (radius * 0.35,) * 3, core)
+def flower(name, position, petal, core, radius=0.10):
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=10, ring_count=5, radius=radius * 0.30, location=position)
+    center_obj = bpy.context.object
+    center_obj.name = name + "_Core"
+    center_obj.data.materials.append(core)
     center = Vector(position)
-    for i in range(6):
-        angle = math.tau * i / 6
-        p = center + Vector((math.cos(angle) * radius * 0.55, 0, math.sin(angle) * radius * 0.55))
-        obj = base.ico(f"{name}_Petal_{i}", p, (radius * 0.55, radius * 0.24, radius * 0.32), petal)
-        obj.rotation_euler[1] = angle
+    for layer, petal_count in ((0, 8), (1, 6)):
+        reach = radius * (0.62 if layer == 0 else 0.40)
+        for i in range(petal_count):
+            angle = math.tau * (i + layer * 0.5) / petal_count
+            p = center + Vector((math.cos(angle) * reach, -0.012 * layer, math.sin(angle) * reach))
+            bpy.ops.mesh.primitive_uv_sphere_add(segments=8, ring_count=4, radius=1, location=p)
+            obj = bpy.context.object
+            obj.name = f"{name}_Petal_{layer}_{i}"
+            obj.scale = (radius * 0.42, radius * 0.16, radius * 0.24)
+            obj.rotation_euler[1] = angle
+            obj.data.materials.append(petal)
+            for polygon in obj.data.polygons:
+                polygon.use_smooth = True
 
 
 def build_floral_arch(_row):
@@ -130,21 +175,19 @@ def build_floral_arch(_row):
     base.cube("BS_FloralFootL", (0.30, 0.90, 0.04), (-1.25, 0, 0.02), stem)
     base.cube("BS_FloralFootR", (0.30, 0.90, 0.04), (1.25, 0, 0.02), stem)
     points = []
-    for layer in range(3):
-        for i in range(18):
-            z = 0.12 + i * 0.062
-            offset = (layer - 1) * 0.055
-            points.append((-1.31 + offset, (layer - 1) * 0.065, z))
-            points.append((1.31 + offset, (1 - layer) * 0.065, z))
-        for i in range(35):
-            angle = math.pi * i / 34
-            radius = 1.30 + (layer - 1) * 0.055
-            points.append((math.cos(angle) * radius, (layer - 1) * 0.065, 1.10 + math.sin(angle) * radius))
+    for i in range(16):
+        z = 0.12 + i * 0.065
+        points.extend(((-1.31 + 0.035 * math.sin(i), 0.02 * (i % 3), z), (1.31 + 0.035 * math.cos(i), -0.02 * (i % 3), z)))
+    for i in range(29):
+        angle = math.pi * i / 28
+        radius = 1.30 + 0.035 * math.sin(i * 1.7)
+        points.append((math.cos(angle) * radius, 0.025 * ((i % 3) - 1), 1.10 + math.sin(angle) * radius))
     for i, point in enumerate(points):
-        radius = 0.070 if i % 4 else 0.090
+        radius = 0.085 + 0.018 * ((i * 5) % 4)
         flower(f"BS_ArchFlower_{i:02d}", point, blush if i % 2 else ivory, core, radius)
         if i % 2 == 0:
-            base.ico(f"BS_ArchLeaf_{i:02d}", (point[0] * 0.98, point[1] + 0.04, point[2] - 0.045), (0.085, 0.026, 0.038), leaf)
+            leaf_obj = base.ico(f"BS_ArchLeaf_{i:02d}", (point[0] * 0.98, point[1] + 0.04, point[2] - 0.060), (0.105, 0.026, 0.045), leaf, subdivisions=2)
+            leaf_obj.rotation_euler[1] = 0.45 * math.sin(i)
 
 
 def build_fairy_light_curtain(_row):

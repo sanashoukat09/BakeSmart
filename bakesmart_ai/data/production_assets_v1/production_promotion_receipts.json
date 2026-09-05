@@ -13,6 +13,42 @@
       "reviewer_id": "sanashoukat09",
       "source_license_status": "cc0_confirmed"
     },
+    "prod-lighting-curtain": {
+      "artifact_sha256": "e9a57ee1e231991938b7334eb91f212946ddc2a42a50bb565a60c22ea7d12468",
+      "asset_id": "prod-lighting-curtain",
+      "catalog_id": "lighting-curtain",
+      "desktop_viewer_passed": true,
+      "mobile_viewer_passed": true,
+      "promoted_at": "2026-09-05T08:15:27.937587+00:00",
+      "redistribution_allowed": true,
+      "reviewed_at": "2026-09-05T08:10:49.624876Z",
+      "reviewer_id": "sanashoukat09",
+      "source_license_status": "cc0_confirmed"
+    },
+    "prod-lighting-led-candles": {
+      "artifact_sha256": "79a4aed5d003509c2c52c0e99b12eb6d89ebf17fe993e27460031ee37e3d741e",
+      "asset_id": "prod-lighting-led-candles",
+      "catalog_id": "lighting-led-candles",
+      "desktop_viewer_passed": true,
+      "mobile_viewer_passed": true,
+      "promoted_at": "2026-09-05T08:15:27.937587+00:00",
+      "redistribution_allowed": true,
+      "reviewed_at": "2026-09-05T08:11:09.101711Z",
+      "reviewer_id": "sanashoukat09",
+      "source_license_status": "cc0_confirmed"
+    },
+    "prod-lighting-uplight-set": {
+      "artifact_sha256": "a707b4516f65924e1b89bf23d5034ea45e83f961a2c1ca53ff3ef8d310dcb493",
+      "asset_id": "prod-lighting-uplight-set",
+      "catalog_id": "lighting-uplight-set",
+      "desktop_viewer_passed": true,
+      "mobile_viewer_passed": true,
+      "promoted_at": "2026-09-05T08:15:27.937587+00:00",
+      "redistribution_allowed": true,
+      "reviewed_at": "2026-09-05T08:10:58.660913Z",
+      "reviewer_id": "sanashoukat09",
+      "source_license_status": "cc0_confirmed"
+    },
     "prod-sign-mirror-welcome": {
       "artifact_sha256": "803c0d4ff422fb86884c6bb126405dffa2d65fe98b56f17ca3ca6e1993a3007d",
       "asset_id": "prod-sign-mirror-welcome",

@@ -9,6 +9,11 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "data/production_assets_v1/asset_manifest.csv"
 PLAN = ROOT / "data/production_assets_v1/production_batch2_plan.csv"
 VALIDATION = ROOT / "data/production_assets_v1/production_candidate_validation_report.json"
+CORRECTION_IDS = {
+    "prod-backdrop-round-arch",
+    "prod-backdrop-balloon-garland",
+    "prod-backdrop-floral-arch",
+}
 
 
 def rows(path: Path):
@@ -23,8 +28,8 @@ def main() -> int:
         if item.get("valid") is True
     }
     plan = {row["asset_id"]: row for row in rows(PLAN)}
-    if valid != set(plan):
-        raise SystemExit("Batch 2 validation must pass for all six planned assets")
+    if valid != CORRECTION_IDS:
+        raise SystemExit("Validation must pass for exactly the three backdrop corrections")
     with MANIFEST.open(encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
         fieldnames = reader.fieldnames

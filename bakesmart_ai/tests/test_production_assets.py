@@ -63,7 +63,7 @@ def test_production_manifest_covers_current_real_catalogue():
     assert summary.real_catalog_item_count == 30
     assert summary.mapped_catalog_item_count == 30
     assert summary.material_profile_count == 14
-    assert summary.production_ready_count == 3
+    assert summary.production_ready_count == 6
     assert summary.missing_glb_count == 21
     assert summary.pending_rights_review_count == 21
     assert summary.target_min_assets == 80

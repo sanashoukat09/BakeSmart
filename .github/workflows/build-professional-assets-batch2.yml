@@ -37,13 +37,16 @@ jobs:
           python -m pip install "pydantic>=2,<3"
           sudo apt-get update
           sudo apt-get install -y blender python3-numpy libegl1 libgl1-mesa-dri xvfb
-      - name: Build and validate six review candidates
+      - name: Build and validate three backdrop corrections
         working-directory: bakesmart_ai
         run: |
           set -euxo pipefail
           blender --background --python tools/build_cc0_production_batch2.py -- \
             --plan data/production_assets_v1/production_batch2_plan.csv \
-            --report data/production_assets_v1/production_candidate_build_report.json
+            --report data/production_assets_v1/production_candidate_build_report.json \
+            --asset-id prod-backdrop-round-arch \
+            --asset-id prod-backdrop-balloon-garland \
+            --asset-id prod-backdrop-floral-arch
           python tools/validate_production_candidates.py
           python tools/promote_geometry_review_batch2.py
       - name: Render all Batch 2 candidates
@@ -55,7 +58,7 @@ jobs:
           xvfb-run -a -s "-screen 0 1920x1080x24" blender -b \
             --python tools/render_production_asset_reviews.py -- \
             --output-dir "$RUNNER_TEMP/batch2-review-renders"
-          test "$(find "$RUNNER_TEMP/batch2-review-renders" -name front.png | wc -l)" -eq 6
+          test "$(find "$RUNNER_TEMP/batch2-review-renders" -name front.png | wc -l)" -eq 3
       - uses: actions/upload-artifact@v4
         with:
           name: production-asset-batch2-review-renders
@@ -71,9 +74,6 @@ jobs:
             bakesmart_ai/app/assets/production/backdrop-round-arch.glb \
             bakesmart_ai/app/assets/production/backdrop-balloon-garland.glb \
             bakesmart_ai/app/assets/production/backdrop-floral-arch.glb \
-            bakesmart_ai/app/assets/production/lighting-curtain.glb \
-            bakesmart_ai/app/assets/production/lighting-uplight-set.glb \
-            bakesmart_ai/app/assets/production/lighting-led-candles.glb \
             bakesmart_ai/data/production_assets_v1/asset_manifest.csv \
             bakesmart_ai/data/production_assets_v1/production_candidate_build_report.json \
             bakesmart_ai/data/production_assets_v1/production_candidate_validation_report.json
