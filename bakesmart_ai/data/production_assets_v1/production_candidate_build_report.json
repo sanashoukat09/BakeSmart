@@ -4,50 +4,6 @@
   "production_ready": false,
   "assets": [
     {
-      "asset_id": "prod-backdrop-round-arch",
-      "output": "app/assets/production/backdrop-round-arch.glb",
-      "source_ids": [
-        "pp-arch-kay-lousberg",
-        "ph-terlenka"
-      ],
-      "source_license_status": "cc0_confirmed",
-      "redistribution_allowed": true,
-      "true_dimensions_m": [
-        2.0,
-        0.55,
-        2.2
-      ],
-      "visible_mesh_bounds_m": [
-        2.0,
-        0.55,
-        2.2
-      ],
-      "triangle_count": 4112,
-      "status": "built_for_final_visual_review"
-    },
-    {
-      "asset_id": "prod-backdrop-balloon-garland",
-      "output": "app/assets/production/backdrop-balloon-garland.glb",
-      "source_ids": [
-        "oga-balloons-pack",
-        "pp-arch-creativetrio"
-      ],
-      "source_license_status": "cc0_confirmed",
-      "redistribution_allowed": true,
-      "true_dimensions_m": [
-        2.2,
-        0.55,
-        2.1
-      ],
-      "visible_mesh_bounds_m": [
-        2.2009,
-        0.55,
-        2.1
-      ],
-      "triangle_count": 24056,
-      "status": "built_for_final_visual_review"
-    },
-    {
       "asset_id": "prod-backdrop-floral-arch",
       "output": "app/assets/production/backdrop-floral-arch.glb",
       "source_ids": [
@@ -63,11 +19,11 @@
         2.5
       ],
       "visible_mesh_bounds_m": [
-        2.8,
+        2.8019,
         0.9,
-        2.498
+        2.4972
       ],
-      "triangle_count": 49440,
+      "triangle_count": 56128,
       "status": "built_for_final_visual_review"
     }
   ],
