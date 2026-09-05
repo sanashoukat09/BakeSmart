@@ -41,10 +41,12 @@ jobs:
         working-directory: bakesmart_ai
         run: |
           set -euxo pipefail
+          rm -f data/production_assets_v1/production_candidate_build_report.json
           blender --background --python tools/build_cc0_production_batch2.py -- \
             --plan data/production_assets_v1/production_batch2_plan.csv \
             --report data/production_assets_v1/production_candidate_build_report.json \
             --asset-id prod-backdrop-floral-arch
+          test -f data/production_assets_v1/production_candidate_build_report.json
           python tools/validate_production_candidates.py
           python tools/promote_geometry_review_batch2.py
       - name: Render all Batch 2 candidates

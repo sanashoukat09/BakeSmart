@@ -145,7 +145,7 @@ def build_balloon_garland(_row):
 def flower(name, position, outer, inner, core, radius=0.13):
     """Build a front-facing, overlapping rosette rather than a bead cluster."""
     center = Vector(position)
-    for layer, petal_count in ((0, 10), (1, 7)):
+    for layer, petal_count in ((0, 8), (1, 5)):
         reach = radius * (0.40 if layer == 0 else 0.22)
         petal_size = radius * (0.39 if layer == 0 else 0.31)
         for i in range(petal_count):
