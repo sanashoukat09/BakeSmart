@@ -69,5 +69,11 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
+      - name: Create non-secret Flutter test environment
+        run: |
+          echo "GEMINI_API_KEY=test-placeholder" > .env
+          echo "CLOUDINARY_CLOUD_NAME=test-placeholder" >> .env
+          echo "CLOUDINARY_UPLOAD_PRESET=test-placeholder" >> .env
+
       - name: Run Flutter tests
         run: flutter test

@@ -26,7 +26,7 @@ def test_vertical_slice_has_twelve_structurally_valid_review_glbs():
         for celebration in summary.celebrations
         if celebration.celebration == "wedding"
     )
-    assert wedding.production_ready_count == 1
+    assert wedding.production_ready_count == 3
 
 
 def test_review_binaries_pass_stage5_structural_contract():

@@ -30,6 +30,15 @@ def _review_registry(tmp_path: Path) -> ProductionAssetRegistry:
         writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
+    build_report = data_dir / "production_candidate_build_report.json"
+    build = json.loads(build_report.read_text(encoding="utf-8"))
+    build["assets"].append(
+        {
+            "asset_id": ASSET_ID,
+            "source_ids": ["test-source"],
+        }
+    )
+    build_report.write_text(json.dumps(build), encoding="utf-8")
     return ProductionAssetRegistry(data_dir=data_dir, package_root=PACKAGE_ROOT)
 
 
