@@ -6,7 +6,7 @@ def test_production_asset_summary_is_truthful(client):
     assert body["manifest_version"] == "production-assets-v1"
     assert body["total_asset_requirements"] == 30
     assert body["mapped_catalog_item_count"] == 30
-    assert body["production_ready_count"] == 6
+    assert body["production_ready_count"] == 8
     assert body["target_min_assets"] == 80
     assert body["library_target_met"] is False
     assert body["runtime_external_glb_assembly_ready"] is False
@@ -30,8 +30,8 @@ def test_production_asset_catalog_exposes_true_size_and_pbr_rules(client):
         "height_m": 2.2,
     }
     assert arch["max_uniform_scale"] == 1.02
-    assert arch["production_status"] == "geometry_review"
-    assert arch["renderable"] is False
+    assert arch["production_status"] == "production_ready"
+    assert arch["renderable"] is True
 
 
 def test_production_asset_validation_reports_missing_planned_glb(client):

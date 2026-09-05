@@ -37,15 +37,13 @@ jobs:
           python -m pip install "pydantic>=2,<3"
           sudo apt-get update
           sudo apt-get install -y blender python3-numpy libegl1 libgl1-mesa-dri xvfb
-      - name: Build and validate three backdrop corrections
+      - name: Build and validate the floral-arch correction
         working-directory: bakesmart_ai
         run: |
           set -euxo pipefail
           blender --background --python tools/build_cc0_production_batch2.py -- \
             --plan data/production_assets_v1/production_batch2_plan.csv \
             --report data/production_assets_v1/production_candidate_build_report.json \
-            --asset-id prod-backdrop-round-arch \
-            --asset-id prod-backdrop-balloon-garland \
             --asset-id prod-backdrop-floral-arch
           python tools/validate_production_candidates.py
           python tools/promote_geometry_review_batch2.py
@@ -58,7 +56,7 @@ jobs:
           xvfb-run -a -s "-screen 0 1920x1080x24" blender -b \
             --python tools/render_production_asset_reviews.py -- \
             --output-dir "$RUNNER_TEMP/batch2-review-renders"
-          test "$(find "$RUNNER_TEMP/batch2-review-renders" -name front.png | wc -l)" -eq 3
+          test "$(find "$RUNNER_TEMP/batch2-review-renders" -name front.png | wc -l)" -eq 1
       - uses: actions/upload-artifact@v4
         with:
           name: production-asset-batch2-review-renders
@@ -71,8 +69,6 @@ jobs:
           git config user.name "BakeSmart Asset Builder"
           git config user.email "bakesmart-asset-builder@users.noreply.github.com"
           git add \
-            bakesmart_ai/app/assets/production/backdrop-round-arch.glb \
-            bakesmart_ai/app/assets/production/backdrop-balloon-garland.glb \
             bakesmart_ai/app/assets/production/backdrop-floral-arch.glb \
             bakesmart_ai/data/production_assets_v1/asset_manifest.csv \
             bakesmart_ai/data/production_assets_v1/production_candidate_build_report.json \

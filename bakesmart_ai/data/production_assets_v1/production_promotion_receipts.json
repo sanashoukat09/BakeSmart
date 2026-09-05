@@ -1,6 +1,30 @@
 {
   "receipt_version": "production-promotion-v1",
   "receipts": {
+    "prod-backdrop-balloon-garland": {
+      "artifact_sha256": "3c5e8117f04917b8d1d1935be3ad7818ffc830538860c449184c6e74cc487196",
+      "asset_id": "prod-backdrop-balloon-garland",
+      "catalog_id": "backdrop-balloon-garland",
+      "desktop_viewer_passed": true,
+      "mobile_viewer_passed": true,
+      "promoted_at": "2026-09-05T08:33:01.274184+00:00",
+      "redistribution_allowed": true,
+      "reviewed_at": "2026-09-05T08:31:10.591956Z",
+      "reviewer_id": "sanashoukat09",
+      "source_license_status": "cc0_confirmed"
+    },
+    "prod-backdrop-round-arch": {
+      "artifact_sha256": "4493b4e0519555bccfd39d562497b8a79557870b2cec48a9bd6e73ca6e052cff",
+      "asset_id": "prod-backdrop-round-arch",
+      "catalog_id": "backdrop-round-arch",
+      "desktop_viewer_passed": true,
+      "mobile_viewer_passed": true,
+      "promoted_at": "2026-09-05T08:33:01.274184+00:00",
+      "redistribution_allowed": true,
+      "reviewed_at": "2026-09-05T08:31:05.206499Z",
+      "reviewer_id": "sanashoukat09",
+      "source_license_status": "cc0_confirmed"
+    },
     "prod-floor-marigold-clusters": {
       "artifact_sha256": "2c54abbaaec689dbf90a9b22894e1b7a7d531867a33e85706b46c024ed2e639d",
       "asset_id": "prod-floor-marigold-clusters",

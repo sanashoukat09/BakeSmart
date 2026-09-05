@@ -5,28 +5,28 @@
   "decisions": {
     "prod-backdrop-balloon-garland": {
       "asset_id": "prod-backdrop-balloon-garland",
-      "decision": "needs_correction",
-      "notes": "The garland is fuller, but the balloons still have visibly faceted shapes and the photo wall remains a plain rectangular board. Smooth the balloons and improve the wall shape and finish for a professional event backdrop.",
-      "reviewed_at": "2026-09-05T08:11:35.171535Z",
-      "artifact_sha256": "80dd43e96bf099143bdc3a0c09dde28de95f88d81884bf313abc4e146ab9edcc",
+      "decision": "approve",
+      "notes": "",
+      "reviewed_at": "2026-09-05T08:31:10.591956Z",
+      "artifact_sha256": "3c5e8117f04917b8d1d1935be3ad7818ffc830538860c449184c6e74cc487196",
       "manifest_changed": false,
       "production_promoted": false
     },
     "prod-backdrop-floral-arch": {
       "asset_id": "prod-backdrop-floral-arch",
       "decision": "needs_correction",
-      "notes": "Coverage is now dense and balanced, but the flowers resemble many tiny repeated beads rather than layered artificial flowers. Use fewer, larger recognizable flower heads with varied sizes, foliage and natural clustering.",
-      "reviewed_at": "2026-09-05T08:11:47.993128Z",
-      "artifact_sha256": "ebddc36c2a3be1c53bb7f138757d0e3e068cf032c45854c8669502da883e5c42",
+      "notes": "The arch coverage is improved, but the flower heads still resemble clusters of elongated beads rather than recognizable layered flowers. Replace them with clearer rose, peony or hydrangea-style blooms, add more foliage, vary flower sizes, and blend the pink and ivory colours naturally across both sides.",
+      "reviewed_at": "2026-09-05T08:31:24.888147Z",
+      "artifact_sha256": "1f11f5d09d6c104ad6cab74fdcf1b212adb2d79f2b56d6560d4a8178d767b126",
       "manifest_changed": false,
       "production_promoted": false
     },
     "prod-backdrop-round-arch": {
       "asset_id": "prod-backdrop-round-arch",
-      "decision": "needs_correction",
-      "notes": "The fabric now has folds, but it appears as separate rigid vertical boards rather than continuous draped fabric. The dark floating tie pieces also look incorrect. Replace the strips with a continuous soft fabric surface with natural folds and proper attachments.",
-      "reviewed_at": "2026-09-05T08:11:21.713827Z",
-      "artifact_sha256": "4002edf650a226c13536f5f704c457bc0df5e3e5faa154d980a5d742874fcbea",
+      "decision": "approve",
+      "notes": "",
+      "reviewed_at": "2026-09-05T08:31:05.206499Z",
+      "artifact_sha256": "4493b4e0519555bccfd39d562497b8a79557870b2cec48a9bd6e73ca6e052cff",
       "manifest_changed": false,
       "production_promoted": false
     },

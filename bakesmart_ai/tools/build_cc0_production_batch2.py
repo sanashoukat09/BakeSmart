@@ -142,32 +142,34 @@ def build_balloon_garland(_row):
         balloon(f"BS_Balloon_{i:02d}", pos, (radius, radius * 0.92, radius * (1.02 + 0.10 * (i % 2))), palette[i % 3])
 
 
-def flower(name, position, petal, core, radius=0.10):
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=10, ring_count=5, radius=radius * 0.30, location=position)
-    center_obj = bpy.context.object
-    center_obj.name = name + "_Core"
-    center_obj.data.materials.append(core)
+def flower(name, position, outer, inner, core, radius=0.13):
+    """Build a front-facing, overlapping rosette rather than a bead cluster."""
     center = Vector(position)
-    for layer, petal_count in ((0, 8), (1, 6)):
-        reach = radius * (0.62 if layer == 0 else 0.40)
+    for layer, petal_count in ((0, 10), (1, 7)):
+        reach = radius * (0.40 if layer == 0 else 0.22)
+        petal_size = radius * (0.39 if layer == 0 else 0.31)
         for i in range(petal_count):
             angle = math.tau * (i + layer * 0.5) / petal_count
-            p = center + Vector((math.cos(angle) * reach, -0.012 * layer, math.sin(angle) * reach))
-            bpy.ops.mesh.primitive_uv_sphere_add(segments=8, ring_count=4, radius=1, location=p)
-            obj = bpy.context.object
+            p = center + Vector((math.cos(angle) * reach, -0.010 * layer, math.sin(angle) * reach))
+            obj = base.ico(
+                f"{name}_Petal_{layer}_{i}",
+                p,
+                (petal_size, radius * 0.12, petal_size * 0.92),
+                outer if layer == 0 else inner,
+                subdivisions=2,
+            )
             obj.name = f"{name}_Petal_{layer}_{i}"
-            obj.scale = (radius * 0.42, radius * 0.16, radius * 0.24)
             obj.rotation_euler[1] = angle
-            obj.data.materials.append(petal)
-            for polygon in obj.data.polygons:
-                polygon.use_smooth = True
+    base.ico(name + "_Core", center + Vector((0, -0.022, 0)), (radius * 0.24, radius * 0.10, radius * 0.24), core, subdivisions=2)
 
 
 def build_floral_arch(_row):
     stem = base.material("BS_FloralArchStem", (0.16, 0.34, 0.12, 1), roughness=0.72)
     leaf = base.material("BS_FloralArchLeaf", (0.28, 0.48, 0.20, 1), roughness=0.68)
     blush = base.material("BS_FloralBlush", (0.92, 0.54, 0.60, 1), roughness=0.58)
+    rose = base.material("BS_FloralRose", (0.76, 0.30, 0.42, 1), roughness=0.60)
     ivory = base.material("BS_FloralIvory", (0.96, 0.88, 0.72, 1), roughness=0.61)
+    peach = base.material("BS_FloralPeach", (0.95, 0.68, 0.55, 1), roughness=0.60)
     core = base.material("BS_FloralCore", (0.73, 0.48, 0.12, 1), roughness=0.52)
     for x in (-1.345, 1.345):
         base.cylinder_between("BS_FloralPost", (x, 0, 0.04), (x, 0, 1.10), 0.015, stem, 8)
@@ -175,19 +177,22 @@ def build_floral_arch(_row):
     base.cube("BS_FloralFootL", (0.30, 0.90, 0.04), (-1.25, 0, 0.02), stem)
     base.cube("BS_FloralFootR", (0.30, 0.90, 0.04), (1.25, 0, 0.02), stem)
     points = []
-    for i in range(16):
-        z = 0.12 + i * 0.065
-        points.extend(((-1.31 + 0.035 * math.sin(i), 0.02 * (i % 3), z), (1.31 + 0.035 * math.cos(i), -0.02 * (i % 3), z)))
-    for i in range(29):
-        angle = math.pi * i / 28
+    for i in range(11):
+        z = 0.13 + i * 0.095
+        points.extend(((-1.31 + 0.045 * math.sin(i), 0.02 * (i % 3), z), (1.31 + 0.045 * math.cos(i), -0.02 * (i % 3), z)))
+    for i in range(21):
+        angle = math.pi * i / 20
         radius = 1.30 + 0.035 * math.sin(i * 1.7)
         points.append((math.cos(angle) * radius, 0.025 * ((i % 3) - 1), 1.10 + math.sin(angle) * radius))
+    palette = [(blush, rose), (ivory, peach), (peach, blush), (rose, blush), (ivory, blush)]
     for i, point in enumerate(points):
-        radius = 0.085 + 0.018 * ((i * 5) % 4)
-        flower(f"BS_ArchFlower_{i:02d}", point, blush if i % 2 else ivory, core, radius)
-        if i % 2 == 0:
-            leaf_obj = base.ico(f"BS_ArchLeaf_{i:02d}", (point[0] * 0.98, point[1] + 0.04, point[2] - 0.060), (0.105, 0.026, 0.045), leaf, subdivisions=2)
-            leaf_obj.rotation_euler[1] = 0.45 * math.sin(i)
+        radius = 0.105 + 0.014 * ((i * 5) % 4)
+        outer, inner = palette[(i * 3) % len(palette)]
+        flower(f"BS_ArchRose_{i:02d}", point, outer, inner, core, radius)
+        for side in (-1, 1):
+            leaf_position = (point[0] + side * radius * 0.62, point[1] + 0.035, point[2] - radius * 0.42)
+            leaf_obj = base.ico(f"BS_ArchLeaf_{i:02d}_{side}", leaf_position, (radius * 0.58, 0.022, radius * 0.23), leaf, subdivisions=2)
+            leaf_obj.rotation_euler[1] = side * (0.42 + 0.12 * math.sin(i))
 
 
 def build_fairy_light_curtain(_row):
