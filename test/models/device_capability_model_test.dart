@@ -54,7 +54,10 @@ void main() {
 
       expect(decision.mode, EventPreviewMode.interactive3d);
       expect(decision.resourcePath, startsWith('/viewer/'));
-      expect(decision.explanation, contains('no real AR scene'));
+      expect(
+        decision.explanation,
+        contains('does not include a real AR scene'),
+      );
     });
 
     test('uses the exact concept fallback when no viewer is available', () {
