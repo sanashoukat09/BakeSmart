@@ -14,10 +14,10 @@
     },
     "prod-backdrop-floral-arch": {
       "asset_id": "prod-backdrop-floral-arch",
-      "decision": "needs_correction",
-      "notes": "The arch coverage is improved, but the flower heads still resemble clusters of elongated beads rather than recognizable layered flowers. Replace them with clearer rose, peony or hydrangea-style blooms, add more foliage, vary flower sizes, and blend the pink and ivory colours naturally across both sides.",
-      "reviewed_at": "2026-09-05T08:31:24.888147Z",
-      "artifact_sha256": "1f11f5d09d6c104ad6cab74fdcf1b212adb2d79f2b56d6560d4a8178d767b126",
+      "decision": "approve",
+      "notes": "",
+      "reviewed_at": "2026-09-05T08:55:39.269988Z",
+      "artifact_sha256": "115e60ec5a0d78521dd8f130636eda37f912628ee8cb52eb6023f835a0471a91",
       "manifest_changed": false,
       "production_promoted": false
     },

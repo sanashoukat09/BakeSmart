@@ -13,6 +13,18 @@
       "reviewer_id": "sanashoukat09",
       "source_license_status": "cc0_confirmed"
     },
+    "prod-backdrop-floral-arch": {
+      "artifact_sha256": "115e60ec5a0d78521dd8f130636eda37f912628ee8cb52eb6023f835a0471a91",
+      "asset_id": "prod-backdrop-floral-arch",
+      "catalog_id": "backdrop-floral-arch",
+      "desktop_viewer_passed": true,
+      "mobile_viewer_passed": true,
+      "promoted_at": "2026-09-05T08:56:42.529023+00:00",
+      "redistribution_allowed": true,
+      "reviewed_at": "2026-09-05T08:55:39.269988Z",
+      "reviewer_id": "sanashoukat09",
+      "source_license_status": "cc0_confirmed"
+    },
     "prod-backdrop-round-arch": {
       "artifact_sha256": "4493b4e0519555bccfd39d562497b8a79557870b2cec48a9bd6e73ca6e052cff",
       "asset_id": "prod-backdrop-round-arch",
