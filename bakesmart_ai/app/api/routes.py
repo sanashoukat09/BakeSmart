@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
+from starlette.concurrency import run_in_threadpool
 
 from app.schemas.design import (
     AreaType,
@@ -146,7 +147,7 @@ async def analyze_venue_photo(
     request: VenuePhotoAnalysisRequest,
 ) -> VenuePhotoAnalysis:
     try:
-        return venue_photo_analyzer.analyze(request)
+        return await run_in_threadpool(venue_photo_analyzer.analyze, request)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,

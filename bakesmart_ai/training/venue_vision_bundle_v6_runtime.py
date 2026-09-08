@@ -266,10 +266,12 @@ class VenueVisionBundleV6Runtime:
         return result
 
     def _door_candidates(self, image: Image.Image) -> list[VenueVisionCandidate]:
-        pixels = np.array(image, dtype=np.float32, copy=True) / 255.0
+        detector_image = image.copy()
+        detector_image.thumbnail((640, 640), Image.Resampling.BILINEAR)
+        pixels = np.array(detector_image, dtype=np.float32, copy=True) / 255.0
         tensor = torch.from_numpy(pixels.transpose(2, 0, 1)).float().to(self.device)
         output = self.door_model([tensor])[0]
-        width, height = image.size
+        width, height = detector_image.size
         candidates: list[VenueVisionCandidate] = []
         for box, score in zip(output["boxes"], output["scores"]):
             raw_score = float(score.detach().cpu())
