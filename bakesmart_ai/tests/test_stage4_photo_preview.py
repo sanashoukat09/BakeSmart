@@ -143,7 +143,7 @@ def test_stage51_selects_distinct_theme_families_and_room_relative_scale(
     essential = builder._layout(request, decorations, "essential")
     statement = builder._layout(request, decorations, "statement")
     assert essential["backdrop_width"] < statement["backdrop_width"]
-    assert statement["backdrop_width"] >= int(1160 * 0.84)
+    assert statement["backdrop_width"] >= int(1160 * 0.92)
 
 
 def test_stage53_uses_backend_selected_theme_and_room_height(valid_design_request):
@@ -177,9 +177,49 @@ def test_stage53_uses_backend_selected_theme_and_room_height(valid_design_reques
     )
     low_layout = builder._layout(low_room, decorations, "balanced")
     tall_layout = builder._layout(tall_room, decorations, "balanced")
-    assert 555 <= low_layout["backdrop_height"] <= 630
-    assert 555 <= tall_layout["backdrop_height"] <= 630
+    assert 500 <= low_layout["backdrop_height"] <= 630
+    assert 500 <= tall_layout["backdrop_height"] <= 630
     assert low_layout["table_height"] > tall_layout["table_height"]
+
+
+def test_photo_layout_uses_detected_wall_floor_and_avoids_central_window(
+    valid_design_request,
+):
+    payload = valid_design_request
+    payload["space"]["photo_evidence"][0]["unconfirmed_candidates"] = [
+        {
+            "label": "wall",
+            "confidence": 0.49,
+            "bounding_box": [0.08, 0.08, 0.84, 0.74],
+            "area_fraction": 0.62,
+            "confirmed": False,
+        },
+        {
+            "label": "floor",
+            "confidence": 0.49,
+            "bounding_box": [0.0, 0.78, 1.0, 0.22],
+            "area_fraction": 0.22,
+            "confirmed": False,
+        },
+        {
+            "label": "window",
+            "confidence": 0.49,
+            "bounding_box": [0.40, 0.18, 0.20, 0.45],
+            "area_fraction": 0.09,
+            "confirmed": False,
+        },
+    ]
+    request = DesignRequest.model_validate(payload)
+    builder = PhotoPreviewBuilder()
+    decorations = [_decor("backdrop", 0), _decor("table-setting", 1)]
+
+    essential = builder._layout(request, decorations, "essential")
+    statement = builder._layout(request, decorations, "statement")
+
+    assert essential["ground_y"] == 580
+    assert essential["focal_x"] != 640
+    assert statement["backdrop_width"] <= 1076
+    assert statement["backdrop_height"] <= 522
 
 
 def test_stage53_extracts_cake_without_square_photo_card():

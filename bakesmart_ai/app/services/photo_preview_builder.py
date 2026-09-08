@@ -12,7 +12,8 @@ from app.schemas.design import DecorRecommendation, DesignRequest
 CANVAS_SIZE = (1280, 720)
 ASSET_DIR = Path(__file__).resolve().parents[1] / "assets" / "real_decor"
 PACKAGE_SCALE = {"essential": 0.9, "balanced": 1.0, "statement": 1.08}
-PACKAGE_FOCAL_COVERAGE = {"essential": 0.56, "balanced": 0.70, "statement": 0.84}
+PACKAGE_FOCAL_COVERAGE = {"essential": 0.60, "balanced": 0.76, "statement": 0.92}
+PACKAGE_WALL_HEIGHT_COVERAGE = {"essential": 0.72, "balanced": 0.82, "statement": 0.92}
 ASSET_FILES = {
     "backdrop": "backdrop.webp",
     "floor-arrangement": "floor-arrangement.webp",
@@ -350,11 +351,15 @@ class PhotoPreviewBuilder:
         scale = PACKAGE_SCALE[package_id]
         room_width = max(request.space.dimensions.width_m, 1.5)
         room_height = max(request.space.dimensions.height_m, 1.8)
-        pixels_per_metre_x = min(520.0, 1160.0 / room_width)
-        # The visible floor-to-ceiling region occupies about 625 pixels. Use
-        # the customer's height as the second scale axis instead of deriving
-        # every dimension from room width.
-        pixels_per_metre_y = 625.0 / room_height
+        wall_box, obstacle_boxes = self._photo_geometry(request)
+        wall_left, wall_top, wall_right, wall_bottom = wall_box
+        wall_width_px = wall_right - wall_left
+        wall_height_px = wall_bottom - wall_top
+        # The entered wall dimensions calibrate the detected wall rectangle.
+        # Horizontal and vertical scale remain independent because a single
+        # uncalibrated photograph can contain perspective distortion.
+        pixels_per_metre_x = wall_width_px / room_width
+        pixels_per_metre_y = wall_height_px / room_height
 
         def dimensions(category: str, default: tuple[float, float]) -> tuple[float, float]:
             for item in decorations:
@@ -366,40 +371,148 @@ class PhotoPreviewBuilder:
 
         backdrop_m = dimensions("backdrop", (min(2.4, room_width * 0.78), 2.1))
         table_m = dimensions("table-setting", (min(1.5, room_width * 0.52), 0.9))
-        focal_coverage_width = int(1160 * PACKAGE_FOCAL_COVERAGE[package_id])
+        focal_coverage_width = int(
+            wall_width_px * PACKAGE_FOCAL_COVERAGE[package_id]
+        )
         setup_width = min(
-            1160,
+            wall_width_px,
             max(
                 focal_coverage_width,
                 int(backdrop_m[0] * pixels_per_metre_x * scale),
             ),
         )
-        target_height_m = min(room_height * 0.9, max(backdrop_m[1], room_height * 0.76))
-        package_height_floor = {
-            "essential": 500,
-            "balanced": 555,
-            "statement": 620,
-        }[package_id]
+        target_height_m = min(
+            room_height * 0.94,
+            max(
+                backdrop_m[1],
+                room_height * PACKAGE_WALL_HEIGHT_COVERAGE[package_id],
+            ),
+        )
+        package_height_floor = int(
+            wall_height_px * PACKAGE_WALL_HEIGHT_COVERAGE[package_id]
+        )
         setup_height = min(
-            630,
+            wall_height_px,
             max(
                 package_height_floor,
                 int(target_height_m * pixels_per_metre_y * scale),
             ),
         )
-        focal_x = self._focal_x(request, decorations)
+        requested_focal_x = wall_left + int(
+            self._focal_x(request, decorations) / CANVAS_SIZE[0] * wall_width_px
+        )
+        focal_x = self._obstacle_aware_focal_x(
+            requested_focal_x,
+            setup_width,
+            wall_box,
+            obstacle_boxes,
+        )
         half = setup_width // 2
-        focal_x = min(CANVAS_SIZE[0] - half - 35, max(half + 35, focal_x))
+        focal_x = min(wall_right - half, max(wall_left + half, focal_x))
         return {
             "focal_x": focal_x,
-            "ground_y": 665,
+            "ground_y": wall_bottom,
             "backdrop_width": setup_width,
             "backdrop_height": setup_height,
-            "table_width": min(int(setup_width * 0.62), max(500, int(table_m[0] * pixels_per_metre_x * scale))),
-            "table_height": min(330, max(245, int(table_m[1] * pixels_per_metre_y * scale))),
+            "table_width": min(
+                int(setup_width * 0.62),
+                max(500, int(table_m[0] * pixels_per_metre_x * scale)),
+            ),
+            "table_height": min(
+                330,
+                max(245, int(table_m[1] * pixels_per_metre_y * scale)),
+            ),
             "floor_width": min(330, max(230, int(setup_width * 0.29))),
             "floor_height": min(260, max(175, int(setup_height * 0.39))),
         }
+
+    @staticmethod
+    def _photo_geometry(
+        request: DesignRequest,
+    ) -> tuple[tuple[int, int, int, int], list[tuple[int, int, int, int]]]:
+        """Map analysed wall/obstacle boxes through the ImageOps.fit crop."""
+        fallback = (60, 35, 1220, 665)
+        evidence = next(
+            (item for item in request.space.photo_evidence if item.angle.value == "wide"),
+            None,
+        )
+        if evidence is None:
+            return fallback, []
+        source_width = evidence.pixel_width
+        source_height = evidence.pixel_height
+        fit_scale = max(
+            CANVAS_SIZE[0] / source_width,
+            CANVAS_SIZE[1] / source_height,
+        )
+        crop_x = (source_width * fit_scale - CANVAS_SIZE[0]) / 2
+        crop_y = (source_height * fit_scale - CANVAS_SIZE[1]) / 2
+
+        def convert(box: tuple[float, float, float, float]) -> tuple[int, int, int, int]:
+            left, top, width, height = box
+            x1 = round(left * source_width * fit_scale - crop_x)
+            y1 = round(top * source_height * fit_scale - crop_y)
+            x2 = round((left + width) * source_width * fit_scale - crop_x)
+            y2 = round((top + height) * source_height * fit_scale - crop_y)
+            return (
+                max(0, min(CANVAS_SIZE[0], x1)),
+                max(0, min(CANVAS_SIZE[1], y1)),
+                max(0, min(CANVAS_SIZE[0], x2)),
+                max(0, min(CANVAS_SIZE[1], y2)),
+            )
+
+        walls = [
+            convert(item.bounding_box)
+            for item in evidence.unconfirmed_candidates
+            if item.label == "wall"
+        ]
+        wall = max(
+            walls,
+            key=lambda box: max(0, box[2] - box[0]) * max(0, box[3] - box[1]),
+            default=fallback,
+        )
+        if wall[2] - wall[0] < 400 or wall[3] - wall[1] < 300:
+            wall = fallback
+        floors = [
+            convert(item.bounding_box)
+            for item in evidence.unconfirmed_candidates
+            if item.label == "floor"
+        ]
+        if floors:
+            floor = max(floors, key=lambda box: (box[2] - box[0]) * (box[3] - box[1]))
+            floor_line = min(690, max(wall[1] + 300, floor[1] + 18))
+            wall = (wall[0], wall[1], wall[2], floor_line)
+        obstacles = [
+            convert(item.bounding_box)
+            for item in evidence.unconfirmed_candidates
+            if item.label in {"door", "window", "furniture"}
+        ]
+        return wall, obstacles
+
+    @staticmethod
+    def _obstacle_aware_focal_x(
+        requested_x: int,
+        setup_width: int,
+        wall_box: tuple[int, int, int, int],
+        obstacle_boxes: list[tuple[int, int, int, int]],
+    ) -> int:
+        left, _top, right, _bottom = wall_box
+        half = setup_width // 2
+        minimum = left + half
+        maximum = right - half
+        candidates = {min(maximum, max(minimum, requested_x)), minimum, maximum}
+
+        def score(center: int) -> float:
+            setup_left, setup_right = center - half, center + half
+            overlap = sum(
+                max(0, min(setup_right, box[2]) - max(setup_left, box[0]))
+                for box in obstacle_boxes
+            )
+            # Avoid covering a detected opening whenever moving the setup can
+            # materially reduce overlap. Staying near the requested metric
+            # centre is only the secondary preference.
+            return overlap * 10 + abs(center - requested_x) * 0.1
+
+        return min(candidates, key=score)
 
     def _place_asset(
         self,
