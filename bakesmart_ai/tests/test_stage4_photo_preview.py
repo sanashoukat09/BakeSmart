@@ -233,6 +233,24 @@ def test_stage53_extracts_cake_without_square_photo_card():
     assert extracted.getchannel("A").getextrema()[0] == 0
 
 
+def test_wall_fitted_asset_is_enlarged_to_calibrated_target():
+    builder = PhotoPreviewBuilder()
+    canvas = Image.new("RGBA", (1280, 720), (230, 230, 230, 255))
+
+    bounds = builder._place_asset(
+        canvas,
+        "backdrop",
+        style="romantic",
+        centre=(640, 360),
+        maximum=(900, 600),
+        room_light=1.0,
+    )
+
+    assert bounds is not None
+    assert bounds[2] - bounds[0] > 700
+    assert bounds[3] - bounds[1] > 550
+
+
 def test_stage4_builds_three_visibly_different_real_photo_composites(
     tmp_path: Path,
     valid_design_request,

@@ -465,10 +465,15 @@ class PhotoPreviewBuilder:
             for item in evidence.unconfirmed_candidates
             if item.label == "wall"
         ]
-        wall = max(
-            walls,
-            key=lambda box: max(0, box[2] - box[0]) * max(0, box[3] - box[1]),
-            default=fallback,
+        wall = (
+            (
+                min(box[0] for box in walls),
+                min(box[1] for box in walls),
+                max(box[2] for box in walls),
+                max(box[3] for box in walls),
+            )
+            if walls
+            else fallback
         )
         if wall[2] - wall[0] < 400 or wall[3] - wall[1] < 300:
             wall = fallback
@@ -542,7 +547,17 @@ class PhotoPreviewBuilder:
         bounds = significant_alpha.getbbox()
         if bounds is not None:
             asset = asset.crop(bounds)
-        asset.thumbnail(maximum, Image.Resampling.LANCZOS)
+        # thumbnail() only shrinks. Most transparent décor sources are around
+        # 400 px wide, while a calibrated wall target is commonly 700–1100 px;
+        # using thumbnail therefore ignored every requested enlargement. Resize
+        # explicitly so the visible cut-out actually reaches its metre-derived
+        # wall envelope while preserving aspect ratio.
+        fit_scale = min(maximum[0] / asset.width, maximum[1] / asset.height)
+        fitted_size = (
+            max(1, round(asset.width * fit_scale)),
+            max(1, round(asset.height * fit_scale)),
+        )
+        asset = asset.resize(fitted_size, Image.Resampling.LANCZOS)
         if mirror:
             asset = ImageOps.mirror(asset)
         rgb = ImageEnhance.Brightness(asset.convert("RGB")).enhance(room_light)
