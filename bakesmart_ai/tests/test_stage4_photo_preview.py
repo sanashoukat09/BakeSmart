@@ -124,7 +124,7 @@ def test_stage51_selects_distinct_theme_families_and_room_relative_scale(
     assert builder._style_family(playful) == "playful"
 
     decorations = [_decor("backdrop", 0), _decor("table-setting", 1)]
-    compact_layout = builder._layout(request, decorations, 1.0)
+    compact_layout = builder._layout(request, decorations, "balanced")
     larger_space = request.model_copy(
         update={
             "space": request.space.model_copy(
@@ -136,9 +136,14 @@ def test_stage51_selects_distinct_theme_families_and_room_relative_scale(
             )
         }
     )
-    large_layout = builder._layout(larger_space, decorations, 1.0)
-    assert compact_layout["backdrop_width"] > large_layout["backdrop_width"]
+    large_layout = builder._layout(larger_space, decorations, "balanced")
+    assert compact_layout["backdrop_width"] >= large_layout["backdrop_width"]
     assert 0 < compact_layout["focal_x"] < 1280
+
+    essential = builder._layout(request, decorations, "essential")
+    statement = builder._layout(request, decorations, "statement")
+    assert essential["backdrop_width"] < statement["backdrop_width"]
+    assert statement["backdrop_width"] >= int(1160 * 0.84)
 
 
 def test_stage53_uses_backend_selected_theme_and_room_height(valid_design_request):
@@ -170,10 +175,10 @@ def test_stage53_uses_backend_selected_theme_and_room_height(valid_design_reques
             )
         }
     )
-    low_layout = builder._layout(low_room, decorations, 1.0)
-    tall_layout = builder._layout(tall_room, decorations, 1.0)
-    assert 475 <= low_layout["backdrop_height"] <= 610
-    assert 475 <= tall_layout["backdrop_height"] <= 610
+    low_layout = builder._layout(low_room, decorations, "balanced")
+    tall_layout = builder._layout(tall_room, decorations, "balanced")
+    assert 555 <= low_layout["backdrop_height"] <= 630
+    assert 555 <= tall_layout["backdrop_height"] <= 630
     assert low_layout["table_height"] > tall_layout["table_height"]
 
 

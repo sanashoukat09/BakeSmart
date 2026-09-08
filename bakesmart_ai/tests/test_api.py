@@ -164,7 +164,7 @@ def test_viewer_and_glb_urls_are_real_local_resources(client, valid_design_reque
     assert "default-src 'self'" in viewer.headers["content-security-policy"]
     assert b'id="scene-canvas"' in viewer.content
     assert b"https://" not in viewer.content
-    assert b'/static/viewer.js?v=20260829-7' in viewer.content
+    assert b'/static/viewer.js?v=20260908-1' in viewer.content
     assert b"3D Planning Preview" in viewer.content
     assert b"PBR materials" not in viewer.content
     assert b"camera-calibrated" in viewer.content
@@ -190,6 +190,8 @@ def test_viewer_and_glb_urls_are_real_local_resources(client, valid_design_reque
     assert b"wheel" in renderer_core.content
     assert b"pbrMetallicRoughness" in renderer_core.content
     assert b"uShadowPass" in renderer_core.content
+    assert b"frameAsSubject" in renderer_core.content
+    assert b"subjectBounds" in renderer_core.content
     assert b"photo-fallback" in viewer.content
     assert renderer_core.content.count(b"precision highp float;") == 2
 

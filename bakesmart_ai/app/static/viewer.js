@@ -48,6 +48,7 @@
     label: "Procedural combined planning scene",
     translation: [0, 0, 0],
     uniformScale: 1.0,
+    frameAsSubject: false,
   }).then(async () => {
     const response = await fetch(modulesUrl, { cache: "no-store" });
     if (!response.ok) {

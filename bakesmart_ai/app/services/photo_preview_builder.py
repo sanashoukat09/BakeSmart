@@ -12,6 +12,7 @@ from app.schemas.design import DecorRecommendation, DesignRequest
 CANVAS_SIZE = (1280, 720)
 ASSET_DIR = Path(__file__).resolve().parents[1] / "assets" / "real_decor"
 PACKAGE_SCALE = {"essential": 0.9, "balanced": 1.0, "statement": 1.08}
+PACKAGE_FOCAL_COVERAGE = {"essential": 0.56, "balanced": 0.70, "statement": 0.84}
 ASSET_FILES = {
     "backdrop": "backdrop.webp",
     "floor-arrangement": "floor-arrangement.webp",
@@ -161,7 +162,7 @@ class PhotoPreviewBuilder:
         family = STYLE_FAMILY[style]
         composition = self._composition(request, package_id)
         by_category = {item.category: item for item in decorations}
-        layout = self._layout(request, decorations, scale)
+        layout = self._layout(request, decorations, package_id)
         focal_x = layout["focal_x"]
         ground_y = layout["ground_y"]
         room_light = self._room_light(canvas)
@@ -344,8 +345,9 @@ class PhotoPreviewBuilder:
         self,
         request: DesignRequest,
         decorations: list[DecorRecommendation],
-        scale: float,
+        package_id: str,
     ) -> dict[str, int]:
+        scale = PACKAGE_SCALE[package_id]
         room_width = max(request.space.dimensions.width_m, 1.5)
         room_height = max(request.space.dimensions.height_m, 1.8)
         pixels_per_metre_x = min(520.0, 1160.0 / room_width)
@@ -364,9 +366,27 @@ class PhotoPreviewBuilder:
 
         backdrop_m = dimensions("backdrop", (min(2.4, room_width * 0.78), 2.1))
         table_m = dimensions("table-setting", (min(1.5, room_width * 0.52), 0.9))
-        setup_width = min(1160, max(560, int(backdrop_m[0] * pixels_per_metre_x * scale)))
+        focal_coverage_width = int(1160 * PACKAGE_FOCAL_COVERAGE[package_id])
+        setup_width = min(
+            1160,
+            max(
+                focal_coverage_width,
+                int(backdrop_m[0] * pixels_per_metre_x * scale),
+            ),
+        )
         target_height_m = min(room_height * 0.9, max(backdrop_m[1], room_height * 0.76))
-        setup_height = min(610, max(475, int(target_height_m * pixels_per_metre_y * scale)))
+        package_height_floor = {
+            "essential": 500,
+            "balanced": 555,
+            "statement": 620,
+        }[package_id]
+        setup_height = min(
+            630,
+            max(
+                package_height_floor,
+                int(target_height_m * pixels_per_metre_y * scale),
+            ),
+        )
         focal_x = self._focal_x(request, decorations)
         half = setup_width // 2
         focal_x = min(CANVAS_SIZE[0] - half - 35, max(half + 35, focal_x))
@@ -401,7 +421,12 @@ class PhotoPreviewBuilder:
         # Stage 5.2 files intentionally have transparent canvases. Crop that
         # invisible margin before thumbnailing so the visible décor, rather
         # than its empty canvas, fills the requested physical dimensions.
-        bounds = asset.getchannel("A").getbbox()
+        alpha = asset.getchannel("A")
+        # Ignore nearly invisible export fringe pixels. Counting those pixels
+        # as content leaves large transparent margins and makes the visible
+        # decoration look much smaller than its intended focal-wall envelope.
+        significant_alpha = alpha.point(lambda value: 255 if value >= 24 else 0)
+        bounds = significant_alpha.getbbox()
         if bounds is not None:
             asset = asset.crop(bounds)
         asset.thumbnail(maximum, Image.Resampling.LANCZOS)
