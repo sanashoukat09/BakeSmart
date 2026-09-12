@@ -120,10 +120,10 @@ def clean_and_normalize(df: pd.DataFrame) -> pd.DataFrame:
     df['RecipeCategory'] = [clean_text(x) for x in df['RecipeCategory'].tolist()]
     df['Description'] = [clean_text(x) for x in df['Description'].tolist()]
     
-    # Parse durations to minutes
-    df['cook_time_mins'] = [parse_iso_duration(x) for x in df['CookTime'].tolist()]
-    df['prep_time_mins'] = [parse_iso_duration(x) for x in df['PrepTime'].tolist()]
-    df['total_time_mins'] = [parse_iso_duration(x) for x in df['TotalTime'].tolist()]
+    # Parse durations to minutes (default to 0 for no-cook/instant recipes)
+    df['cook_time_mins'] = [parse_iso_duration(x) or 0 for x in df['CookTime'].tolist()]
+    df['prep_time_mins'] = [parse_iso_duration(x) or 0 for x in df['PrepTime'].tolist()]
+    df['total_time_mins'] = [parse_iso_duration(x) or 0 for x in df['TotalTime'].tolist()]
     
     # Parse R-vector lists
     print("      Parsing R-vector columns (Ingredients, Keywords, Instructions, Images)...")
