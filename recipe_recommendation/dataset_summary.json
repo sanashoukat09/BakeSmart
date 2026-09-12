@@ -1,0 +1,199 @@
+{
+  "generated_at": "2026-09-12 12:39:47",
+  "recipes_dataset": {
+    "file_name": "recipes.csv",
+    "file_size_mb": 671.59,
+    "total_rows": 522517,
+    "total_columns": 28,
+    "columns": {
+      "RecipeId": {
+        "type": "int64",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "Name": {
+        "type": "string",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "AuthorId": {
+        "type": "int64",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "AuthorName": {
+        "type": "string",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "CookTime": {
+        "type": "string",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "PrepTime": {
+        "type": "string",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "TotalTime": {
+        "type": "string",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "DatePublished": {
+        "type": "timestamp[s, tz=UTC]",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "Description": {
+        "type": "string",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "Images": {
+        "type": "string",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "RecipeCategory": {
+        "type": "string",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "Keywords": {
+        "type": "string",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "RecipeIngredientQuantities": {
+        "type": "string",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "RecipeIngredientParts": {
+        "type": "string",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "AggregatedRating": {
+        "type": "double",
+        "missing_count": 253223,
+        "missing_percentage": 48.46
+      },
+      "ReviewCount": {
+        "type": "int64",
+        "missing_count": 247489,
+        "missing_percentage": 47.36
+      },
+      "Calories": {
+        "type": "double",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "FatContent": {
+        "type": "double",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "SaturatedFatContent": {
+        "type": "double",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "CholesterolContent": {
+        "type": "double",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "SodiumContent": {
+        "type": "double",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "CarbohydrateContent": {
+        "type": "double",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "FiberContent": {
+        "type": "double",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "SugarContent": {
+        "type": "double",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "ProteinContent": {
+        "type": "double",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "RecipeServings": {
+        "type": "int64",
+        "missing_count": 182911,
+        "missing_percentage": 35.01
+      },
+      "RecipeYield": {
+        "type": "string",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "RecipeInstructions": {
+        "type": "string",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      }
+    }
+  },
+  "reviews_dataset": {
+    "file_name": "reviews.csv",
+    "file_size_mb": 473.12,
+    "total_rows": 1401982,
+    "total_columns": 8,
+    "columns": {
+      "ReviewId": {
+        "type": "int64",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "RecipeId": {
+        "type": "int64",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "AuthorId": {
+        "type": "int64",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "AuthorName": {
+        "type": "string",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "Rating": {
+        "type": "int64",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "Review": {
+        "type": "string",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "DateSubmitted": {
+        "type": "timestamp[s, tz=UTC]",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      },
+      "DateModified": {
+        "type": "timestamp[s, tz=UTC]",
+        "missing_count": 0,
+        "missing_percentage": 0.0
+      }
+    }
+  }
+}
