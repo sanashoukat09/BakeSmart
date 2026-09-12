@@ -9,6 +9,7 @@ Run with:
 import os
 from typing import List, Optional
 from fastapi import FastAPI, Query, HTTPException
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 try:
@@ -16,11 +17,22 @@ try:
 except ImportError:
     from recommender import RecipeRecommender
 
+TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
+
 app = FastAPI(
     title="BakeSmart Recipe Suggestion API",
     description="Intelligent ingredient-based pantry matching and content-based recipe recommendation for BakeSmart FYP.",
     version="1.0.0"
 )
+
+@app.get("/", response_class=HTMLResponse)
+def serve_ui():
+    """Serves the interactive BakeSmart Recipe Recommendation web application."""
+    index_file = os.path.join(TEMPLATES_DIR, 'index.html')
+    if os.path.exists(index_file):
+        with open(index_file, 'r', encoding='utf-8') as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse(content="<h2>BakeSmart UI template not found</h2>", status_code=404)
 
 # Global singleton recommender instance (lazy loaded)
 recommender: Optional[RecipeRecommender] = None
