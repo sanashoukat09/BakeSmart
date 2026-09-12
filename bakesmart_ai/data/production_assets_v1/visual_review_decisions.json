@@ -75,6 +75,15 @@
       "manifest_changed": false,
       "production_promoted": false
     },
+    "prod-table-dessert-pedestals": {
+      "asset_id": "prod-table-dessert-pedestals",
+      "decision": "approve",
+      "notes": "Appearance approved by the user for revision v2. Keep as review candidate until physical-phone testing, lower-LOD decision, event-package assembly review, final rights/release review, and explicit production promotion are complete.",
+      "reviewed_at": "2026-09-10T01:30:03.270273Z",
+      "artifact_sha256": "90838700818cd623f07cc723179441be500fb7109159bbcc7e01af42c4111caf",
+      "manifest_changed": false,
+      "production_promoted": false
+    },
     "prod-table-low-floral": {
       "asset_id": "prod-table-low-floral",
       "decision": "approve",
