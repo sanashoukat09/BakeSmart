@@ -1,8 +1,8 @@
-# BakeSmart Recipe Suggestion Module
+# BakeSmart Recipe Suggestion & Recommendation Module
 
-This module contains the dataset inspection, data cleaning, and preprocessing pipeline for the Food.com Recipes & Reviews dataset as part of the **BakeSmart Final Year Project (FYP)**.
+This module contains the end-to-end intelligent recipe suggestion system for the **BakeSmart Final Year Project (FYP)**, powered by the Food.com dataset (520,298 recipes).
 
-All work in this module is developed on branch: **`zoha's-work`**.
+All development is maintained strictly on branch: **`zoha's-work`**.
 
 ---
 
@@ -12,79 +12,100 @@ All work in this module is developed on branch: **`zoha's-work`**.
 BakeSmart/
 ├── data/
 │   └── foodcom/
-│       ├── recipes.csv               # Original Food.com recipes dataset (unmodified, 671 MB)
-│       ├── reviews.csv               # Original Food.com reviews dataset (unmodified, 473 MB)
-│       ├── cleaned_recipes.parquet   # Preprocessed recipes dataset (binary columnar format, fast loading)
-│       └── cleaned_recipes.csv       # Preprocessed recipes dataset (standard CSV format)
+│       ├── recipes.csv                  # Original Food.com recipes dataset (unmodified, 671 MB)
+│       ├── reviews.csv                  # Original Food.com reviews dataset (unmodified, 473 MB)
+│       ├── cleaned_recipes.parquet      # Preprocessed recipes dataset (binary columnar format, 304 MB)
+│       ├── cleaned_recipes.csv          # Preprocessed recipes dataset (CSV export, 671 MB)
+│       ├── recipe_metadata_full.parquet # Fast metadata index (84 MB)
+│       ├── tfidf_matrix_full.joblib     # Pre-computed sparse TF-IDF matrix (131 MB)
+│       ├── tfidf_vectorizer_full.joblib # Trained TF-IDF vectorizer (0.39 MB)
+│       └── ingredient_index_full.joblib # Inverted ingredient lookup table (8.22 MB)
 └── recipe_recommendation/
     ├── __init__.py
-    ├── inspect_dataset.py            # Dataset inspection tool
-    ├── preprocess.py                 # 6-step dataset cleaning & similarity feature pipeline
-    ├── utils.py                      # R-vector parser, text cleaning, ingredient normalizer
-    ├── requirements.txt              # Module dependencies (pandas, pyarrow, numpy)
-    ├── dataset_summary.json          # Machine-readable inspection metrics
-    └── README.md                     # Module documentation
+    ├── inspect_dataset.py               # Multi-threaded dataset inspection
+    ├── preprocess.py                    # 6-step dataset cleaning & similarity pipeline
+    ├── utils.py                         # R-vector parser, duration parser, ingredient normalizer
+    ├── build_index.py                   # Index builder for TF-IDF & inverted ingredient index
+    ├── recommender.py                   # Core RecipeRecommender engine
+    ├── recommend_cli.py                 # Interactive & CLI recommendation tool
+    ├── api.py                           # FastAPI REST endpoints for BakeSmart integration
+    ├── test_recommender.py              # Automated test suite and latency benchmarks
+    ├── verify_cleaned.py                # Validation script for cleaned data
+    ├── requirements.txt                 # Dependencies: pandas, pyarrow, scikit-learn, fastapi, uvicorn
+    ├── dataset_summary.json             # Inspection metrics in JSON format
+    └── README.md                        # Documentation
 ```
 
 ---
 
-## 🔍 Dataset Inspection Summary
+## 🧠 Core Recommendation Capabilities
 
-| Dataset File | File Size | Row Count | Column Count | Key Highlights |
-| :--- | :--- | :--- | :--- | :--- |
-| **`recipes.csv`** | **671.59 MB** | **522,517** | **28** | Multi-line instructions, R-vector string arrays `c("...")`, 48.46% missing ratings |
-| **`reviews.csv`** | **473.12 MB** | **1,401,982** | **8** | Ratings 0-5, 212 empty reviews (0.02%), user interactions |
+### 1. Ingredient-Based Pantry Matching
+- **Concept**: Bakers or customers input available ingredients in their pantry (e.g. `flour, butter, sugar, chocolate`).
+- **Algorithm**:
+  - Uses an inverted index mapping 7,285 unique ingredients to candidate recipes.
+  - Computes recipe match ratio: $\frac{|\text{User} \cap \text{Recipe}|}{|\text{Recipe}|}$
+  - Computes pantry coverage: $\frac{|\text{User} \cap \text{Recipe}|}{|\text{User}|}$
+  - Applies Bayesian rating shrinkage: $\text{Rank} = 0.70 \cdot \text{MatchRatio} + 0.15 \cdot \text{PantryCoverage} + 0.15 \cdot \text{BayesianRating}$
+  - Returns match percentage, matched ingredients, and **missing ingredients needed**.
+  - **Latency**: $\approx 85\text{ ms}$ across 520,298 recipes.
 
----
+### 2. Content-Based "More Like This" Similarity
+- **Concept**: Suggests recipes closely related to a specific cake, pastry, or recipe ID.
+- **Algorithm**:
+  - TF-IDF vectorization with sublinear scaling over the engineered `similarity_soup`.
+  - Pairwise cosine similarity against sparse CSR matrix.
+  - Combines with quality prior ($0.80 \cdot \text{CosineSim} + 0.20 \cdot \text{RatingPrior}$).
+  - **Latency**: $\approx 210\text{ ms}$.
 
-## ⚙️ How to Run
-
-Dependencies are managed automatically using Python 3.11 and `uv` (fast package runner) or standard `pip`.
-
-### 1. Run Dataset Inspection
-```bash
-uv run --with pyarrow,pandas python recipe_recommendation/inspect_dataset.py
-```
-This generates:
-- Terminal diagnostic table showing data types, null counts, and missing percentages.
-- `recipe_recommendation/dataset_summary.json`
-
-### 2. Run Preprocessing Pipeline
-To process the full dataset:
-```bash
-uv run --with pyarrow,pandas python recipe_recommendation/preprocess.py
-```
-
-#### Fast Verification / Sampling Options:
-```bash
-# Process a sample of 5,000 recipes for quick testing
-uv run --with pyarrow,pandas python recipe_recommendation/preprocess.py --sample 5000
-
-# Filter exclusively for baking and bakery-related recipes (desserts, cakes, breads, etc.)
-uv run --with pyarrow,pandas python recipe_recommendation/preprocess.py --baking-only
-
-# Save only Parquet format (skipping CSV generation)
-uv run --with pyarrow,pandas python recipe_recommendation/preprocess.py --no-csv
-```
+### 3. Semantic & Keyword Filtered Search
+- Full query matching supporting dietary constraints (`Eggless`, `Gluten-Free`, `Sugar-Free`), category filtering (`Dessert`, `Cakes`, `Breads`), and maximum preparation time (e.g. `max_time <= 45 mins`).
 
 ---
 
-## 🧹 Preprocessing Steps
+## 🚀 How to Run
 
-1. **Dataset Loading**: Multi-threaded parsing of raw CSV with newlines-in-values support via PyArrow.
-2. **Column Selection & Dimensionality Reduction**: Retains 15 essential features, dropping uninformative metadata (e.g. `AuthorId`, `AuthorName`, `DatePublished`).
-3. **Missing Value Handling**:
-   - Drops recipes missing names or having empty ingredient lists (`character(0)`).
-   - Fills missing ratings (`0.0`), review counts (`0`), calories (`0.0`), and servings (`1`).
-4. **Data Normalization & Cleaning**:
-   - Parses R-style vectors `c("item1", "item2")` into structured Python lists.
-   - Normalizes compound ingredients into joined tokens (e.g. `all-purpose flour` $\to$ `all_purpose_flour`).
-   - Normalizes keywords and tags.
-   - Parses ISO-8601 durations (`PT45M`, `PT1H30M`) into total integer minutes (`prep_time_mins`, `cook_time_mins`, `total_time_mins`).
-   - Extracts primary image URLs from the `Images` array.
-5. **Similarity Feature Engineering**:
-   - Generates `similarity_soup`: weighted text concatenation combining recipe title, category, keywords, and normalized ingredients.
-   - Formatted specifically for downstream TF-IDF, CountVectorizer, Word2Vec, or Transformer embeddings.
-6. **Separated Storage**:
-   - Saves clean output to `data/foodcom/cleaned_recipes.parquet` and `data/foodcom/cleaned_recipes.csv`.
-   - Leaves original raw CSV files completely untouched.
+### 1. Run Recommender Test Suite
+```bash
+uv run --with pyarrow,pandas,scikit-learn,joblib python recipe_recommendation/test_recommender.py
+```
+
+### 2. Command-Line Interface (CLI)
+
+#### Pantry Ingredient Matching:
+```bash
+uv run --with pyarrow,pandas,scikit-learn,joblib python recipe_recommendation/recommend_cli.py --ingredients "flour, butter, sugar, chocolate" --top-n 5
+```
+
+#### Find Similar Recipes:
+```bash
+uv run --with pyarrow,pandas,scikit-learn,joblib python recipe_recommendation/recommend_cli.py --similar 38 --top-n 5
+```
+
+#### Search with Dietary & Time Filters:
+```bash
+uv run --with pyarrow,pandas,scikit-learn,joblib python recipe_recommendation/recommend_cli.py --search "blueberry muffin" --max-time 60 --dietary "eggless"
+```
+
+#### Interactive Mode:
+```bash
+uv run --with pyarrow,pandas,scikit-learn,joblib python recipe_recommendation/recommend_cli.py
+```
+
+---
+
+## 🌐 Running the FastAPI REST Service
+
+Start the API server:
+```bash
+uv run --with pyarrow,pandas,scikit-learn,joblib,fastapi,uvicorn uvicorn recipe_recommendation.api:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Interactive Swagger documentation is automatically available at:
+`http://localhost:8000/docs`
+
+### API Endpoints:
+* `POST /api/recommend/ingredients`: Body: `{"ingredients": ["flour", "cocoa", "butter"], "top_n": 5, "max_time_mins": 60}`
+* `GET /api/recommend/similar/{recipe_id}`: e.g. `/api/recommend/similar/38?top_n=5`
+* `GET /api/recipes/search`: e.g. `/api/recipes/search?q=cheesecake&top_n=5`
+* `GET /api/health`: Health status and total indexed recipe count.
