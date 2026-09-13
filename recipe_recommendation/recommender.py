@@ -27,10 +27,11 @@ DATA_DIR = os.path.join(BASE_DIR, 'data', 'foodcom')
 
 
 class RecipeRecommender:
-    def __init__(self, index_suffix: str = "_full", auto_load: bool = True):
+    def __init__(self, index_suffix: str = "_baking_1000", auto_load: bool = True):
         """
         Initializes the RecipeRecommender.
-        index_suffix: '_full' (520k all recipes) or '_baking' (baking-focused subset)
+        Default index_suffix: '_baking_1000' (1,000 curated baking recipes)
+        Also supports '_full' (520k recipes) or custom suffixes.
         """
         self.index_suffix = index_suffix
         self.meta_path = os.path.join(DATA_DIR, f'recipe_metadata{index_suffix}.parquet')
@@ -46,6 +47,58 @@ class RecipeRecommender:
         
         if auto_load:
             self.load_index()
+
+    def _format_recipe(self, row: pd.Series, extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Formats a recipe record for API/UI delivery.
+        Strictly excludes AuthorId, AuthorName, or any author profile metadata.
+        """
+        quants_list = []
+        if 'ingredients_with_quantities' in row and row['ingredients_with_quantities'] is not None:
+            quants_list = list(row['ingredients_with_quantities'])
+            
+        instructions = []
+        if 'instructions_list' in row and row['instructions_list'] is not None:
+            instructions = list(row['instructions_list'])
+            
+        sample_ings = []
+        if 'ingredients_normalized' in row and row['ingredients_normalized'] is not None:
+            sample_ings = [i.replace('_', ' ') for i in list(row['ingredients_normalized'])[:8]]
+            
+        data = {
+            "recipe_id": int(row["RecipeId"]),
+            "name": clean_text(str(row["Name"])),
+            "category": str(row["RecipeCategory"]),
+            "description": clean_text(str(row["Description"])) if pd.notna(row.get("Description")) else "",
+            "image_url": str(row["image_url"]) if pd.notna(row.get("image_url")) and row["image_url"] else None,
+            "rating": round(float(row["AggregatedRating"]), 1) if pd.notna(row.get("AggregatedRating")) else 0.0,
+            "reviews_count": int(row["ReviewCount"]) if pd.notna(row.get("ReviewCount")) else 0,
+            "servings": int(row["RecipeServings"]) if pd.notna(row.get("RecipeServings")) else 1,
+            "prep_time_mins": int(row["prep_time_mins"]) if pd.notna(row.get("prep_time_mins")) else 0,
+            "cook_time_mins": int(row["cook_time_mins"]) if pd.notna(row.get("cook_time_mins")) else 0,
+            "total_time_mins": int(row["total_time_mins"]) if pd.notna(row.get("total_time_mins")) else 0,
+            "calories": round(float(row["Calories"]), 1) if pd.notna(row.get("Calories")) else 0.0,
+            "ingredients_with_quantities": quants_list,
+            "instructions_list": instructions,
+            "sample_ingredients": sample_ings,
+        }
+        if extra:
+            data.update(extra)
+        return data
+
+    def get_recipe_details(self, recipe_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Retrieves all details for a single recipe by RecipeId.
+        Strictly excludes AuthorId, AuthorName.
+        """
+        if self.metadata_df is None:
+            self.load_index()
+            
+        idx = self.id_to_index.get(recipe_id)
+        if idx is None:
+            return None
+            
+        return self._format_recipe(self.metadata_df.iloc[idx])
 
     def is_indexed(self) -> bool:
         """Checks if all required index artifacts exist on disk."""
@@ -192,21 +245,14 @@ class RecipeRecommender:
             matched = sorted(list(clean_user_ings.intersection(recipe_ings_set)))
             missing = sorted(list(recipe_ings_set - clean_user_ings))
 
-            results.append({
-                "recipe_id": int(row["RecipeId"]),
-                "name": row["Name"],
-                "category": row["RecipeCategory"],
+            extra = {
                 "match_percentage": round(match_ratio * 100, 1),
                 "matched_ingredients": matched,
                 "missing_ingredients": missing,
                 "total_ingredients_count": len(recipe_ings_set),
-                "rating": float(row["AggregatedRating"]),
-                "reviews_count": int(row["ReviewCount"]),
-                "total_time_mins": int(row["total_time_mins"]) if pd.notna(row["total_time_mins"]) else None,
-                "calories": float(row["Calories"]),
-                "image_url": row["image_url"] if row["image_url"] else None,
                 "composite_score": round(comp_score, 4)
-            })
+            }
+            results.append(self._format_recipe(row, extra=extra))
 
         return results
 
@@ -266,19 +312,11 @@ class RecipeRecommender:
                 continue
             row = self.metadata_df.iloc[idx]
             raw_sim = sim_scores[idx]
-            results.append({
-                "recipe_id": int(row["RecipeId"]),
-                "name": row["Name"],
-                "category": row["RecipeCategory"],
+            extra = {
                 "similarity_percentage": round(float(raw_sim) * 100, 1),
-                "rating": float(row["AggregatedRating"]),
-                "reviews_count": int(row["ReviewCount"]),
-                "total_time_mins": int(row["total_time_mins"]) if pd.notna(row["total_time_mins"]) else None,
-                "calories": float(row["Calories"]),
-                "image_url": row["image_url"] if row["image_url"] else None,
-                "sample_ingredients": list(row["ingredients_normalized"])[:6],
                 "rank_score": round(float(final_scores[idx]), 4)
-            })
+            }
+            results.append(self._format_recipe(row, extra=extra))
 
         return results
 
@@ -324,17 +362,9 @@ class RecipeRecommender:
             if sim_scores[idx] <= 0:
                 continue
             row = self.metadata_df.iloc[idx]
-            results.append({
-                "recipe_id": int(row["RecipeId"]),
-                "name": row["Name"],
-                "category": row["RecipeCategory"],
-                "relevance_score": round(float(sim_scores[idx]) * 100, 1),
-                "rating": float(row["AggregatedRating"]),
-                "reviews_count": int(row["ReviewCount"]),
-                "total_time_mins": int(row["total_time_mins"]) if pd.notna(row["total_time_mins"]) else None,
-                "calories": float(row["Calories"]),
-                "image_url": row["image_url"] if row["image_url"] else None,
-                "sample_ingredients": list(row["ingredients_normalized"])[:6],
-            })
+            extra = {
+                "relevance_score": round(float(sim_scores[idx]) * 100, 1)
+            }
+            results.append(self._format_recipe(row, extra=extra))
 
         return results

@@ -21,6 +21,7 @@ import pyarrow.parquet as pq
 from utils import (
     parse_r_vector,
     clean_text,
+    pair_ingredients_and_quantities,
     normalize_ingredients_list,
     normalize_keywords_list,
     parse_iso_duration,
@@ -32,6 +33,8 @@ DATA_DIR = os.path.join(BASE_DIR, 'data', 'foodcom')
 INPUT_RECIPES_CSV = os.path.join(DATA_DIR, 'recipes.csv')
 OUTPUT_CLEANED_PARQUET = os.path.join(DATA_DIR, 'cleaned_recipes.parquet')
 OUTPUT_CLEANED_CSV = os.path.join(DATA_DIR, 'cleaned_recipes.csv')
+OUTPUT_BAKING_1000_PARQUET = os.path.join(DATA_DIR, 'cleaned_recipes_baking_1000.parquet')
+OUTPUT_BAKING_1000_CSV = os.path.join(DATA_DIR, 'cleaned_recipes_baking_1000.csv')
 
 # Baking / Bakery relevant categories for BakeSmart
 BAKING_CATEGORIES = {
@@ -54,11 +57,12 @@ def load_dataset(input_path: str, sample_size: int = None) -> pd.DataFrame:
     
     table = pv.read_csv(input_path, parse_options=parse_opts, convert_options=convert_opts)
     
-    # Columns to keep from raw dataset
+    # Columns to keep from raw dataset (strictly exclude AuthorId, AuthorName)
     selected_raw_columns = [
         'RecipeId', 'Name', 'CookTime', 'PrepTime', 'TotalTime',
         'Description', 'Images', 'RecipeCategory', 'Keywords',
-        'RecipeIngredientParts', 'AggregatedRating', 'ReviewCount',
+        'RecipeIngredientParts', 'RecipeIngredientQuantities',
+        'AggregatedRating', 'ReviewCount',
         'Calories', 'RecipeServings', 'RecipeInstructions'
     ]
     
@@ -126,11 +130,18 @@ def clean_and_normalize(df: pd.DataFrame) -> pd.DataFrame:
     df['total_time_mins'] = [parse_iso_duration(x) or 0 for x in df['TotalTime'].tolist()]
     
     # Parse R-vector lists
-    print("      Parsing R-vector columns (Ingredients, Keywords, Instructions, Images)...")
+    print("      Parsing R-vector columns (Ingredients, Quantities, Keywords, Instructions, Images)...")
     df['ingredients_raw'] = [parse_r_vector(x) for x in df['RecipeIngredientParts'].tolist()]
+    df['quantities_raw'] = [parse_r_vector(x) if 'RecipeIngredientQuantities' in df.columns else [] for x in df['RecipeIngredientQuantities'].tolist()]
     df['keywords_raw'] = [parse_r_vector(x) for x in df['Keywords'].tolist()]
-    df['instructions_list'] = [parse_r_vector(x) for x in df['RecipeInstructions'].tolist()]
+    df['instructions_list'] = [[clean_text(s) for s in parse_r_vector(x) if clean_text(s)] for x in df['RecipeInstructions'].tolist()]
     df['image_url'] = [extract_primary_image(x) for x in df['Images'].tolist()]
+    
+    # Pair ingredients with their quantities using smart culinary units
+    df['ingredients_with_quantities'] = [
+        pair_ingredients_and_quantities(parts, quants, ' '.join(instrs))
+        for parts, quants, instrs in zip(df['ingredients_raw'].tolist(), df['quantities_raw'].tolist(), df['instructions_list'].tolist())
+    ]
     
     # Drop recipes that ended up with 0 parsed ingredients
     df = df[[len(x) > 0 for x in df['ingredients_raw']]].copy()
@@ -168,9 +179,52 @@ def engineer_similarity_features(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def filter_top_baking_recipes(df: pd.DataFrame, limit: int = 1000) -> pd.DataFrame:
+    """
+    Curates the top N highest-quality recipes strictly focused on baking
+    (Cakes, Cookies, Breads, Pies, Pastries, Muffins, Scones, etc.)
+    with complete ingredients and multi-step instructions.
+    """
+    print(f"[*] Selecting top {limit:,} premier baking recipes...")
+    t0 = time.time()
+    
+    baking_title_keywords = {
+        'cake', 'cookie', 'bread', 'muffin', 'pie', 'brownie', 'tart', 'pastry',
+        'scone', 'biscuit', 'doughnut', 'cupcake', 'cheesecake', 'crust',
+        'cinnamon roll', 'cobbler', 'crisp', 'strudel', 'danish', 'croissant', 'fudge'
+    }
+    
+    cat_mask = df['RecipeCategory'].str.lower().isin(BAKING_CATEGORIES)
+    title_mask = df['Name'].str.lower().apply(lambda name: any(kw in name for kw in baking_title_keywords))
+    baking_mask = cat_mask | title_mask
+    df_baking = df[baking_mask].copy()
+    
+    # Exclude savory meat dishes that accidentally matched categories
+    non_baking_terms = ['meatloaf', 'meat loaf', 'chicken', 'pork', 'beef', 'salmon', 'tuna', 'turkey', 'pasta', 'casserole', 'stew', 'soup', 'chili', 'burger']
+    df_baking = df_baking[~df_baking['Name'].str.lower().apply(lambda name: any(term in name for term in non_baking_terms))].copy()
+    
+    # Quality filters: Must have at least 2 instruction steps and at least 3 ingredients
+    df_baking = df_baking[df_baking['instructions_list'].apply(lambda x: len(x) >= 2 if x is not None else False)].copy()
+    df_baking = df_baking[df_baking['ingredients_normalized'].apply(lambda x: len(x) >= 3 if x is not None else False)].copy()
+    
+    # Bayesian weighted rating shrinkage
+    v = df_baking['ReviewCount'].to_numpy(dtype=float)
+    R = df_baking['AggregatedRating'].to_numpy(dtype=float)
+    bayesian_score = (v / (v + 5.0)) * R + (5.0 / (v + 5.0)) * 4.0
+    df_baking['bayesian_temp'] = bayesian_score
+    
+    # Sort by quality and review popularity
+    df_sorted = df_baking.sort_values(by=['bayesian_temp', 'ReviewCount', 'AggregatedRating'], ascending=[False, False, False])
+    
+    top_df = df_sorted.head(limit).drop(columns=['bayesian_temp']).copy()
+    print(f"      Selected {len(top_df):,} baking recipes in {time.time() - t0:.2f}s")
+    return top_df
+
+
 def select_and_reorder_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
     Selects final clean columns and drops unnecessary raw strings.
+    AuthorId and AuthorName are strictly excluded.
     """
     print(f"[5/6] Finalizing column schema...")
     final_cols = [
@@ -188,6 +242,7 @@ def select_and_reorder_columns(df: pd.DataFrame) -> pd.DataFrame:
         'total_time_mins',
         'ingredients_normalized',
         'ingredients_text',
+        'ingredients_with_quantities',
         'keywords_normalized',
         'keywords_text',
         'instructions_list',
@@ -198,7 +253,12 @@ def select_and_reorder_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df_clean
 
 
-def save_cleaned_dataset(df: pd.DataFrame, save_csv: bool = True):
+def save_cleaned_dataset(
+    df: pd.DataFrame,
+    output_parquet: str = OUTPUT_CLEANED_PARQUET,
+    output_csv: str = OUTPUT_CLEANED_CSV,
+    save_csv: bool = True
+):
     """
     Saves the cleaned dataset to parquet and optionally CSV,
     keeping original datasets untouched.
@@ -207,19 +267,20 @@ def save_cleaned_dataset(df: pd.DataFrame, save_csv: bool = True):
     t0 = time.time()
     
     # 1. Save Parquet (Preserves list structures, highly compressed and fast)
-    df.to_parquet(OUTPUT_CLEANED_PARQUET, index=False, engine='pyarrow')
-    parquet_size_mb = os.path.getsize(OUTPUT_CLEANED_PARQUET) / (1024 * 1024)
-    print(f"      [OK] Saved Parquet: {OUTPUT_CLEANED_PARQUET} ({parquet_size_mb:.2f} MB)")
+    df.to_parquet(output_parquet, index=False, engine='pyarrow')
+    parquet_size_mb = os.path.getsize(output_parquet) / (1024 * 1024)
+    print(f"      [OK] Saved Parquet: {output_parquet} ({parquet_size_mb:.2f} MB)")
     
     # 2. Save CSV (Converts lists to comma/pipe separated strings for CSV compatibility)
     if save_csv:
         df_csv = df.copy()
-        df_csv['ingredients_normalized'] = df_csv['ingredients_normalized'].apply(lambda x: '|'.join(x))
-        df_csv['keywords_normalized'] = df_csv['keywords_normalized'].apply(lambda x: '|'.join(x))
-        df_csv['instructions_list'] = df_csv['instructions_list'].apply(lambda x: ' \\n '.join(x))
-        df_csv.to_csv(OUTPUT_CLEANED_CSV, index=False)
-        csv_size_mb = os.path.getsize(OUTPUT_CLEANED_CSV) / (1024 * 1024)
-        print(f"      [OK] Saved CSV:     {OUTPUT_CLEANED_CSV} ({csv_size_mb:.2f} MB)")
+        df_csv['ingredients_normalized'] = df_csv['ingredients_normalized'].apply(lambda x: '|'.join(x) if isinstance(x, list) else '')
+        df_csv['ingredients_with_quantities'] = df_csv['ingredients_with_quantities'].apply(lambda x: ' | '.join(x) if isinstance(x, list) else '')
+        df_csv['keywords_normalized'] = df_csv['keywords_normalized'].apply(lambda x: '|'.join(x) if isinstance(x, list) else '')
+        df_csv['instructions_list'] = df_csv['instructions_list'].apply(lambda x: ' \\n '.join(x) if isinstance(x, list) else '')
+        df_csv.to_csv(output_csv, index=False)
+        csv_size_mb = os.path.getsize(output_csv) / (1024 * 1024)
+        print(f"      [OK] Saved CSV:     {output_csv} ({csv_size_mb:.2f} MB)")
         
     print(f"      Saved cleaned data in {time.time() - t0:.2f}s")
 
@@ -228,7 +289,8 @@ def main():
     parser = argparse.ArgumentParser(description="Food.com Recipe Preprocessing Pipeline for BakeSmart")
     parser.add_argument('--input', type=str, default=INPUT_RECIPES_CSV, help='Path to raw recipes.csv')
     parser.add_argument('--sample', type=int, default=None, help='Sample N rows for fast verification')
-    parser.add_argument('--baking-only', action='store_true', help='Filter exclusively for baking/dessert recipes')
+    parser.add_argument('--baking-1000', action='store_true', default=True, help='Curate top 1,000 premier baking recipes')
+    parser.add_argument('--all-recipes', action='store_true', help='Process all 520k recipes without 1000 baking limit')
     parser.add_argument('--no-csv', action='store_true', help='Skip CSV output (save only parquet)')
     args = parser.parse_args()
     
@@ -239,19 +301,27 @@ def main():
     
     # Execute Pipeline
     df = load_dataset(args.input, sample_size=args.sample)
-    
-    if args.baking_only:
-        print(f"[*] Filtering for baking-specific categories...")
-        mask = df['RecipeCategory'].str.lower().isin(BAKING_CATEGORIES)
-        df = df[mask].copy()
-        print(f"    Baking recipes retained: {len(df):,}")
-        
     df = handle_missing_values(df)
     df = clean_and_normalize(df)
     df = engineer_similarity_features(df)
-    df_final = select_and_reorder_columns(df)
     
-    save_cleaned_dataset(df_final, save_csv=not args.no_csv)
+    if args.baking_1000 and not args.all_recipes:
+        df = filter_top_baking_recipes(df, limit=1000)
+        df_final = select_and_reorder_columns(df)
+        save_cleaned_dataset(
+            df_final,
+            output_parquet=OUTPUT_BAKING_1000_PARQUET,
+            output_csv=OUTPUT_BAKING_1000_CSV,
+            save_csv=not args.no_csv
+        )
+    else:
+        df_final = select_and_reorder_columns(df)
+        save_cleaned_dataset(
+            df_final,
+            output_parquet=OUTPUT_CLEANED_PARQUET,
+            output_csv=OUTPUT_CLEANED_CSV,
+            save_csv=not args.no_csv
+        )
     
     print("\n" + "=" * 75)
     print(f"  PREPROCESSING COMPLETED SUCCESSFULLY in {time.time() - total_start:.2f}s")

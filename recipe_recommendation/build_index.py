@@ -95,8 +95,9 @@ def build_tfidf_index(df: pd.DataFrame, max_features: int = 30000):
 
 def main():
     parser = argparse.ArgumentParser(description="Build indexes for recipe recommendation")
-    parser.add_argument('--baking-only', action='store_true', help='Build specialized index for baking/dessert recipes only')
-    parser.add_argument('--max-features', type=int, default=30000, help='Maximum TF-IDF features')
+    parser.add_argument('--baking-1000', action='store_true', default=True, help='Build index for 1,000 curated baking recipes')
+    parser.add_argument('--full', action='store_true', help='Build index for full 520k recipes')
+    parser.add_argument('--max-features', type=int, default=15000, help='Maximum TF-IDF features')
     parser.add_argument('--output-prefix', type=str, default=None, help='Custom prefix for index files')
     args = parser.parse_args()
     
@@ -104,26 +105,27 @@ def main():
     print("         BakeSmart Recipe Recommendation - Index Builder Starting         ")
     print("=" * 75)
     
-    if not os.path.exists(INPUT_PARQUET):
-        print(f"[ERROR] Cleaned dataset not found at: {INPUT_PARQUET}")
+    # Determine input dataset
+    if args.baking_1000 and not args.full:
+        input_file = os.path.join(DATA_DIR, 'cleaned_recipes_baking_1000.parquet')
+        suffix = "_baking_1000"
+    else:
+        input_file = os.path.join(DATA_DIR, 'cleaned_recipes.parquet')
+        suffix = "_full"
+
+    if args.output_prefix:
+        suffix = f"_{args.output_prefix}"
+
+    if not os.path.exists(input_file):
+        print(f"[ERROR] Cleaned dataset not found at: {input_file}")
         print("Please run 'python recipe_recommendation/preprocess.py' first.")
         sys.exit(1)
         
-    print(f"[*] Loading cleaned dataset from: {INPUT_PARQUET}")
+    print(f"[*] Loading cleaned dataset from: {input_file}")
     t_start = time.time()
-    table = pq.read_table(INPUT_PARQUET)
+    table = pq.read_table(input_file)
     df = table.to_pandas()
     print(f"    Loaded {len(df):,} recipes in {time.time() - t_start:.2f}s")
-    
-    suffix = "_baking" if args.baking_only else "_full"
-    if args.output_prefix:
-        suffix = f"_{args.output_prefix}"
-        
-    if args.baking_only:
-        print("[*] Filtering dataset for baking-specific categories...")
-        mask = df['RecipeCategory'].str.lower().isin(BAKING_CATEGORIES)
-        df = df[mask].reset_index(drop=True)
-        print(f"    Retained {len(df):,} baking recipes")
         
     # 1. Compute Bayesian Quality Ratings
     print("[*] Computing Bayesian quality rating scores...")
@@ -143,14 +145,20 @@ def main():
     ing_index_path = os.path.join(DATA_DIR, f'ingredient_index{suffix}.joblib')
     meta_parquet_path = os.path.join(DATA_DIR, f'recipe_metadata{suffix}.parquet')
     
-    # Keep lightweight metadata for fast recommendation serving
+    # Keep rich metadata including ingredients with quantities and step-by-step instructions
     meta_cols = [
         'RecipeId', 'Name', 'RecipeCategory', 'Description', 'image_url',
         'AggregatedRating', 'ReviewCount', 'Calories', 'RecipeServings',
         'prep_time_mins', 'cook_time_mins', 'total_time_mins',
         'ingredients_normalized', 'keywords_normalized', 'bayesian_rating'
     ]
-    df[meta_cols].to_parquet(meta_parquet_path, index=False, engine='pyarrow')
+    if 'ingredients_with_quantities' in df.columns:
+        meta_cols.append('ingredients_with_quantities')
+    if 'instructions_list' in df.columns:
+        meta_cols.append('instructions_list')
+
+    # Strictly exclude AuthorId and AuthorName
+    df[[c for c in meta_cols if c in df.columns]].to_parquet(meta_parquet_path, index=False, engine='pyarrow')
     
     joblib.dump(tfidf_matrix, tfidf_path, compress=3)
     joblib.dump(vectorizer, vectorizer_path, compress=3)

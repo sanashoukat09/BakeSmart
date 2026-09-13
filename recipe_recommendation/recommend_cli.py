@@ -135,11 +135,11 @@ def main():
     parser.add_argument('--dietary', type=str, help='Comma-separated dietary tags (e.g. eggless, gluten-free)')
     parser.add_argument('--max-time', type=int, help='Maximum total time in minutes')
     parser.add_argument('--top-n', type=int, default=5, help='Number of recommendations to return')
-    parser.add_argument('--baking-only', action='store_true', help='Use baking-specific index')
+    parser.add_argument('--all-recipes', action='store_true', help='Use full 520k recipes index')
     args = parser.parse_args()
 
     print_banner()
-    suffix = "_baking" if args.baking_only else "_full"
+    suffix = "_full" if args.all_recipes else "_baking_1000"
     recommender = RecipeRecommender(index_suffix=suffix)
 
     dietary = [x.strip() for x in args.dietary.split(',')] if args.dietary else None

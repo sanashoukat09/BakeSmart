@@ -28,14 +28,122 @@ def parse_r_vector(val: Optional[str]) -> List[str]:
     return cleaned_items
 
 
+import html
+
 def clean_text(text: Optional[str]) -> str:
     """
-    Cleans general text strings (removes excess spaces, non-printable characters).
+    Cleans general text strings (unescapes HTML entities, fixes degree symbols, removes excess spaces).
     """
     if not text or not isinstance(text, str):
         return ""
-    cleaned = re.sub(r'\s+', ' ', text).strip()
+    unescaped = html.unescape(text)
+    # Fix common encoding artifact for degree symbol in baking temperatures (e.g. 350 -> 350°)
+    unescaped = unescaped.replace('\ufffd', '°')
+    cleaned = re.sub(r'\s+', ' ', unescaped).strip()
     return cleaned
+
+
+def format_measured_ingredient(part: str, quant: str, instructions_text: str = "") -> str:
+    """
+    Intelligently formats an ingredient name and quantity with appropriate culinary units
+    (e.g., '1 1/2 cups milk', '1 cup warm water', '2 cups all-purpose flour', '1 tsp baking soda', '2 eggs').
+    """
+    clean_p = clean_text(part)
+    q = clean_text(quant) if quant and str(quant).strip() not in ('NA', 'character(0)', '0', 'None') else ""
+    if not q:
+        return clean_p
+    if not clean_p:
+        return q
+
+    part_lower = clean_p.lower()
+
+    # 1. If quantity already contains a unit of measurement (e.g. "1 cup", "2 tsp", "8 oz")
+    unit_regex = r'\b(cup|cups|c|tsp|teaspoon|teaspoons|tbsp|tablespoon|tablespoons|oz|ounce|ounces|lb|pound|pounds|stick|sticks|can|pkg|package|packet|pinch|dash|ml|g|gram|grams)\b'
+    if re.search(unit_regex, q, re.IGNORECASE):
+        return f"{q} {clean_p}"
+
+    # 2. Check if instructions text mentions this quantity + unit + ingredient
+    if instructions_text:
+        clean_search = re.escape(part_lower.split(',')[0].strip())
+        instr_pattern = rf'\b({re.escape(q)}\s*(?:cups?|c\.|teaspoons?|tsp\.?|tablespoons?|tbsp\.?|ounces?|oz\.?|sticks?|pkgs?|can|packet)\b(?:\s+of)?\s+{clean_search})'
+        match = re.search(instr_pattern, instructions_text, re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+
+    # 3. Determine culinary unit based on ingredient type
+    # Check if quantity represents a single/fractional amount (uses singular e.g. "1 cup", "1/2 cup")
+    is_singular = q in ('1', '1.0', '1/2', '1/3', '1/4', '2/3', '3/4', '1/8')
+
+    # A. Countable ingredients (no measurement unit needed)
+    if any(part_lower == c or part_lower.startswith(c + ' ') for c in ['egg', 'eggs']):
+        if 'white' in part_lower:
+            return f"{q} egg white" if q in ('1', '1.0') else f"{q} egg whites"
+        if 'yolk' in part_lower:
+            return f"{q} egg yolk" if q in ('1', '1.0') else f"{q} egg yolks"
+        return f"{q} egg" if q in ('1', '1.0') else f"{q} eggs"
+
+    if any(part_lower == c or part_lower.startswith(c + ' ') for c in ['banana', 'bananas']):
+        return f"{q} banana" if q in ('1', '1.0') else f"{q} bananas"
+
+    if any(part_lower == c or part_lower.startswith(c + ' ') for c in ['apple', 'apples']):
+        return f"{q} apple" if q in ('1', '1.0') else f"{q} apples"
+
+    if any(part_lower == c or part_lower.startswith(c + ' ') for c in ['lemon', 'lemons']):
+        return f"{q} lemon" if q in ('1', '1.0') else f"{q} lemons"
+
+    if any(part_lower == c or part_lower.startswith(c + ' ') for c in ['clove', 'cloves']):
+        return f"{q} clove" if q in ('1', '1.0') else f"{q} cloves"
+
+    # B. Butter / Margarine / Shortening (always cups in baking)
+    if any(b in part_lower for b in ['butter', 'margarine', 'shortening', 'lard']):
+        unit = 'cup' if is_singular else 'cups'
+        return f"{q} {unit} {clean_p}"
+
+    # C. Teaspoon items (spices, leaveners, extracts, salt)
+    tsp_regex = r'\b(baking soda|baking powder|salt|kosher salt|sea salt|table salt|cinnamon|ground cinnamon|vanilla|vanilla extract|almond extract|nutmeg|ground nutmeg|cream of tartar|allspice|cloves?|ground cloves|ginger|ground ginger|cardamom)\b'
+    if re.search(tsp_regex, part_lower) and 'unsalted' not in part_lower:
+        return f"{q} tsp {clean_p}"
+
+    # D. Yeast
+    if 'yeast' in part_lower:
+        if q in ('1', '1.0'):
+            return f"1 packet (or 2 1/4 tsp) {clean_p}"
+        return f"{q} tsp {clean_p}"
+
+    # E. Tablespoon items (juices, vinegars)
+    tbsp_items = ['lemon juice', 'lime juice', 'vinegar', 'apple cider vinegar']
+    if any(item in part_lower for item in tbsp_items):
+        unit = 'tbsp' if is_singular else 'tbsps'
+        return f"{q} {unit} {clean_p}"
+
+    # F. Cream cheese
+    if 'cream cheese' in part_lower:
+        if q in ('8', '8.0'):
+            return f"8 oz {clean_p}"
+        if q in ('1', '1.0'):
+            return f"1 pkg (8 oz) {clean_p}"
+        return f"{q} cup {clean_p}"
+
+    # G. Canned items (condensed milk, evaporated milk, pumpkin)
+    if any(item in part_lower for item in ['condensed milk', 'evaporated milk', 'pumpkin puree', 'canned pumpkin']):
+        return f"{q} can (14 oz) {clean_p}"
+
+    # H. Standard bulk baking ingredients (Flour, Sugar, Milk, Water, Cocoa, Oils, Chips, Nuts, Oats, etc.)
+    unit = 'cup' if is_singular else 'cups'
+    return f"{q} {unit} {clean_p}"
+
+
+def pair_ingredients_and_quantities(parts: List[str], quants: List[str], instructions_text: str = "") -> List[str]:
+    """
+    Pairs raw ingredient names with their corresponding measurements/quantities and intelligent culinary units.
+    E.g. parts=["milk", "warm water", "baking soda", "eggs"], quants=["1 1/2", "1", "1", "2"]
+      -> ["1 1/2 cups milk", "1 cup warm water", "1 tsp baking soda", "2 eggs"]
+    """
+    paired = []
+    for i, part in enumerate(parts):
+        q = quants[i] if i < len(quants) else ""
+        paired.append(format_measured_ingredient(part, q, instructions_text))
+    return paired
 
 
 def normalize_ingredient(ingredient: str) -> str:

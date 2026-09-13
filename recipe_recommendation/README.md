@@ -59,7 +59,12 @@ BakeSmart/
   - **Latency**: $\approx 210\text{ ms}$.
 
 ### 3. Semantic & Keyword Filtered Search
-- Full query matching supporting dietary constraints (`Eggless`, `Gluten-Free`, `Sugar-Free`), category filtering (`Dessert`, `Cakes`, `Breads`), and maximum preparation time (e.g. `max_time <= 45 mins`).
+- Full query matching supporting dietary constraints (`Eggless`, `Gluten-Free`), category filtering (`Dessert`, `Cakes`, `Breads`), and maximum preparation time (e.g. `max_time <= 45 mins`).
+
+### 4. Interactive Recipe Detail Modal & Culinary Measurements
+- Full ingredient quantities with standard baking units (`cups`, `tsp`, `tbsp`, `packet`, `can`, `oz`).
+- Step-by-step numbered baking directions.
+- Strict omission of author details.
 
 ---
 
@@ -79,12 +84,12 @@ uv run --with pyarrow,pandas,scikit-learn,joblib python recipe_recommendation/re
 
 #### Find Similar Recipes:
 ```bash
-uv run --with pyarrow,pandas,scikit-learn,joblib python recipe_recommendation/recommend_cli.py --similar 38 --top-n 5
+uv run --with pyarrow,pandas,scikit-learn,joblib python recipe_recommendation/recommend_cli.py --similar 2886 --top-n 5
 ```
 
 #### Search with Dietary & Time Filters:
 ```bash
-uv run --with pyarrow,pandas,scikit-learn,joblib python recipe_recommendation/recommend_cli.py --search "blueberry muffin" --max-time 60 --dietary "eggless"
+uv run --with pyarrow,pandas,scikit-learn,joblib python recipe_recommendation/recommend_cli.py --search "banana bread" --max-time 60
 ```
 
 #### Interactive Mode:
@@ -94,18 +99,22 @@ uv run --with pyarrow,pandas,scikit-learn,joblib python recipe_recommendation/re
 
 ---
 
-## 🌐 Running the FastAPI REST Service
+## 🌐 Running the FastAPI REST Service & Web UI
 
 Start the API server:
 ```bash
-uv run --with pyarrow,pandas,scikit-learn,joblib,fastapi,uvicorn uvicorn recipe_recommendation.api:app --host 0.0.0.0 --port 8000 --reload
+uv run --with pyarrow,pandas,scikit-learn,joblib,fastapi,uvicorn uvicorn recipe_recommendation.api:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-Interactive Swagger documentation is automatically available at:
-`http://localhost:8000/docs`
+Interactive Web UI:
+`http://127.0.0.1:8000/`
+
+Swagger API documentation:
+`http://127.0.0.1:8000/docs`
 
 ### API Endpoints:
 * `POST /api/recommend/ingredients`: Body: `{"ingredients": ["flour", "cocoa", "butter"], "top_n": 5, "max_time_mins": 60}`
-* `GET /api/recommend/similar/{recipe_id}`: e.g. `/api/recommend/similar/38?top_n=5`
-* `GET /api/recipes/search`: e.g. `/api/recipes/search?q=cheesecake&top_n=5`
+* `GET /api/recommend/similar/{recipe_id}`: e.g. `/api/recommend/similar/2886?top_n=5`
+* `GET /api/recipes/search`: e.g. `/api/recipes/search?q=banana+bread&top_n=5`
+* `GET /api/recipes/{recipe_id}`: e.g. `/api/recipes/2886` (Returns full ingredient quantities, steps, without author)
 * `GET /api/health`: Health status and total indexed recipe count.

@@ -41,8 +41,8 @@ recommender: Optional[RecipeRecommender] = None
 @app.on_event("startup")
 def startup_event():
     global recommender
-    # Default to full dataset index
-    recommender = RecipeRecommender(index_suffix="_full")
+    # Default to 1,000 curated baking recipes
+    recommender = RecipeRecommender(index_suffix="_baking_1000")
 
 
 class IngredientRecommendRequest(BaseModel):
@@ -140,3 +140,19 @@ def search_recipes(
         "total_results": len(results),
         "recipes": results
     }
+
+
+@app.get("/api/recipes/{recipe_id}")
+def get_recipe_details(recipe_id: int):
+    """
+    Returns full recipe details including ingredients with quantities and step-by-step instructions.
+    Strictly omits author info.
+    """
+    if not recommender:
+        raise HTTPException(status_code=503, detail="Recommender engine is not initialized.")
+
+    recipe = recommender.get_recipe_details(recipe_id)
+    if not recipe:
+        raise HTTPException(status_code=404, detail=f"Recipe with ID {recipe_id} not found.")
+
+    return recipe
