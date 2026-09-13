@@ -12,6 +12,15 @@
       "manifest_changed": false,
       "production_promoted": false
     },
+    "prod-backdrop-chiara-panels": {
+      "asset_id": "prod-backdrop-chiara-panels",
+      "decision": "approve",
+      "notes": "Appearance approved by the user for the corrected v21 GLB after front, angled, and rear/support review. Keep as review candidate until physical-phone testing, lower-LOD/package validation, final rights/release review, and explicit production promotion are complete.",
+      "reviewed_at": "2026-09-13T06:36:22.170783Z",
+      "artifact_sha256": "c1c9c094a3b9a66d88c1d16e5d1609c423086f9305ab17d90a8493df2906a9f5",
+      "manifest_changed": false,
+      "production_promoted": false
+    },
     "prod-backdrop-floral-arch": {
       "asset_id": "prod-backdrop-floral-arch",
       "decision": "approve",
